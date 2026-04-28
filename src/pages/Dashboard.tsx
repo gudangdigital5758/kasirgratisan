@@ -103,7 +103,7 @@ export default function Dashboard() {
       {/* Open Bills */}
       {openBillsCount != null && openBillsCount > 0 && (
         <Link to="/cashier">
-          <Card className="border-0 shadow-sm bg-warning/10 hover:shadow-md transition-shadow cursor-pointer">
+          <Card className="border-0 shadow-sm bg-warning/10 hover:shadow-md transition-shadow cursor-pointer mt-2">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-warning/20 text-warning flex items-center justify-center shrink-0">
                 <ClipboardList className="w-5 h-5" />
