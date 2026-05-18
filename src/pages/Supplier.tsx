@@ -10,8 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 export default function SupplierPage() {
+  const { can } = useAuth();
+
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -23,6 +27,10 @@ export default function SupplierPage() {
   const [notes, setNotes] = useState('');
 
   const suppliers = useLiveQuery(() => db.suppliers.where('isDeleted').equals(0).toArray());
+
+  if (!can('manage_supplier')) {
+    return <LockedPage title="Supplier" permissionLabel="Kelola Supplier" />;
+  }
 
   const filtered = suppliers?.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||

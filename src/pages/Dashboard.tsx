@@ -8,8 +8,11 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import BackupReminder, { shouldShowBackupReminder, exportBackupData } from '@/components/BackupReminder';
+import { useAuth } from '@/hooks/use-auth';
+import type { PermissionKey } from '@/lib/db';
 
 export default function Dashboard() {
+  const { can } = useAuth();
   const [backupDismissed, setBackupDismissed] = useState(false);
 
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
@@ -55,13 +58,14 @@ export default function Dashboard() {
   const totalProfit = todayTransactions?.reduce((sum, t) => sum + t.profit, 0) ?? 0;
   const txCount = todayTransactions?.length ?? 0;
 
-  const showBackup = !backupDismissed && storeSettings && shouldShowBackupReminder(storeSettings.lastBackupAt);
+  const showBackup = !backupDismissed && storeSettings && shouldShowBackupReminder(storeSettings.lastBackupAt) && can('manage_backup');
 
-  const quickActions = [
-    { to: '/cashier', icon: ShoppingCart, label: 'Kasir', color: 'bg-primary/10 text-primary' },
+  const quickActions: { to: string; icon: typeof ShoppingCart; label: string; color: string; perm?: PermissionKey }[] = [
+    { to: '/cashier', icon: ShoppingCart, label: 'Kasir', color: 'bg-primary/10 text-primary', perm: 'create_transaction' },
     { to: '/products', icon: Package, label: 'Produk', color: 'bg-accent/10 text-accent' },
-    { to: '/reports', icon: BarChart3, label: 'Laporan', color: 'bg-success/10 text-success' },
+    { to: '/reports', icon: BarChart3, label: 'Laporan', color: 'bg-success/10 text-success', perm: 'view_reports' },
   ];
+  const visibleActions = quickActions.filter((a) => !a.perm || can(a.perm));
 
   return (
     <div className="px-4 pt-6 space-y-5">
@@ -89,15 +93,17 @@ export default function Dashboard() {
             <p className="text-xs opacity-70 mt-1">{txCount} transaksi</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-1.5 text-success">
-              <TrendingUp className="w-4 h-4" />
-              <p className="text-xs font-medium">Profit Hari Ini</p>
-            </div>
-            <p className="text-xl font-bold mt-1">Rp {totalProfit.toLocaleString('id-ID')}</p>
-          </CardContent>
-        </Card>
+        {can('view_reports') && (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-1.5 text-success">
+                <TrendingUp className="w-4 h-4" />
+                <p className="text-xs font-medium">Profit Hari Ini</p>
+              </div>
+              <p className="text-xl font-bold mt-1">Rp {totalProfit.toLocaleString('id-ID')}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Open Bills */}
@@ -119,23 +125,25 @@ export default function Dashboard() {
       )}
 
       {/* Quick Actions */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground mb-3">Akses Cepat</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {quickActions.map(({ to, icon: Icon, label, color }) => (
-            <Link key={to} to={to}>
-              <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-4 flex flex-col items-center gap-2">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-semibold">{label}</span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+      {visibleActions.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Akses Cepat</h2>
+          <div className={`grid gap-3 ${visibleActions.length === 1 ? 'grid-cols-1' : visibleActions.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {visibleActions.map(({ to, icon: Icon, label, color }) => (
+              <Link key={to} to={to}>
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 flex flex-col items-center gap-2">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-semibold">{label}</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recent Transactions */}
       {recentTransactions && recentTransactions.length > 0 && (

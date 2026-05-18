@@ -12,10 +12,14 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 const REASONS = ['Rusak', 'Hilang', 'Kadaluarsa', 'Retur ke Supplier', 'Pemakaian Sendiri', 'Lainnya'];
 
 export default function StockOutPage() {
+  const { currentUser, can } = useAuth();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -24,6 +28,10 @@ export default function StockOutPage() {
 
   const stockOuts = useLiveQuery(() => db.stockOuts.orderBy('date').reverse().toArray());
   const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
+
+  if (!can('manage_stock_inout')) {
+    return <LockedPage title="Stock Out" permissionLabel="Stock In / Stock Out" />;
+  }
 
   const getProductName = (pid: number) => products?.find(p => p.id === pid)?.name ?? '-';
   const selectedProduct = products?.find(p => p.id === Number(productId));
@@ -53,6 +61,7 @@ export default function StockOutPage() {
       reason,
       date: new Date(),
       notes: notes.trim(),
+      createdBy: currentUser?.id,
     });
 
     await db.products.update(product.id!, {

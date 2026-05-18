@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { checkVersion } from "@/lib/version-check";
+import { AuthProvider } from "@/hooks/use-auth";
 import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Cashier from "./pages/Cashier";
@@ -16,6 +17,7 @@ import StockInPage from "./pages/StockIn";
 import StockOutPage from "./pages/StockOut";
 import TransactionHistory from "./pages/TransactionHistory";
 import StockReport from "./pages/StockReport";
+import UsersPage from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,21 +33,24 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/cashier" element={<Cashier />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/supplier" element={<SupplierPage />} />
-              <Route path="/stock-in" element={<StockInPage />} />
-              <Route path="/stock-out" element={<StockOutPage />} />
-              <Route path="/history" element={<TransactionHistory />} />
-              <Route path="/stock-report" element={<StockReport />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/cashier" element={<Cashier />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/supplier" element={<SupplierPage />} />
+                <Route path="/stock-in" element={<StockInPage />} />
+                <Route path="/stock-out" element={<StockOutPage />} />
+                <Route path="/history" element={<TransactionHistory />} />
+                <Route path="/stock-report" element={<StockReport />} />
+                <Route path="/users" element={<UsersPage />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

@@ -15,9 +15,10 @@ interface ReceiptProps {
   items: TransactionItemRecord[];
   storeSettings: StoreSettings | undefined;
   paymentMethodName: string;
+  cashierName?: string; // optional — shown only when multi-user is on
 }
 
-export default function Receipt({ open, onClose, transaction, items, storeSettings, paymentMethodName }: ReceiptProps) {
+export default function Receipt({ open, onClose, transaction, items, storeSettings, paymentMethodName, cashierName }: ReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -108,6 +109,7 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
       lines.push('--------------------------------\n');
       lines.push(`No: ${transaction.receiptNumber}\n`);
       lines.push(`${format(new Date(transaction.date), 'dd/MM/yyyy HH:mm')}\n`);
+      if (cashierName) lines.push(`Kasir: ${cashierName}\n`);
       lines.push('--------------------------------\n');
       
       lines.push('\x1B\x61\x00'); // Left align
@@ -177,6 +179,11 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
             <span>{format(new Date(transaction.date), 'dd/MM/yyyy HH:mm', { locale: id })}</span>
             <span>{paymentMethodName}</span>
           </div>
+          {cashierName && (
+            <div className="flex justify-between text-[10px]">
+              <span>Kasir: {cashierName}</span>
+            </div>
+          )}
 
           <div className="border-t border-dashed border-gray-400 my-2" />
 

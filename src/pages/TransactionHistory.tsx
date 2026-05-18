@@ -3,7 +3,7 @@ import { db, type Transaction, type TransactionItemRecord } from '@/lib/db';
 import { useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { ArrowLeft, Search, Receipt as ReceiptIcon, Calendar, ChevronRight, ShoppingBag, CalendarIcon, X, Trash2, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Search, Receipt as ReceiptIcon, Calendar, ChevronRight, ShoppingBag, CalendarIcon, X, Trash2, ShoppingCart, UserCircle2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import ReceiptDialog from '@/components/Receipt';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function TransactionHistory() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { can, multiUserEnabled } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -30,6 +33,7 @@ export default function TransactionHistory() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [restoreStock, setRestoreStock] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'open'>('all');
+  const [filterCashier, setFilterCashier] = useState<string>('all');
 
   const transactions = useLiveQuery(() =>
     db.transactions.orderBy('date').reverse().toArray()
@@ -50,6 +54,10 @@ export default function TransactionHistory() {
     txId ? (txItemsMap?.[txId] ?? []) : [];
   const paymentMethods = useLiveQuery(() => db.paymentMethods.toArray());
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const users = useLiveQuery(() => db.users.toArray());
+
+  const userById = (uid?: number) => (uid ? users?.find((u) => u.id === uid) : undefined);
+  const cashierName = (uid?: number) => userById(uid)?.name ?? '—';
 
   // Auto-open detail if txId is in URL
   const txIdParam = searchParams.get('txId');
@@ -69,6 +77,14 @@ export default function TransactionHistory() {
   const filtered = transactions?.filter(tx => {
     // Status filter
     if (filterStatus !== 'all' && tx.status !== filterStatus) return false;
+    // Cashier filter
+    if (filterCashier !== 'all') {
+      if (filterCashier === 'unknown') {
+        if (tx.createdBy !== undefined && tx.createdBy !== null) return false;
+      } else if (String(tx.createdBy) !== filterCashier) {
+        return false;
+      }
+    }
     // Date filter
     if (dateFrom) {
       const txDate = new Date(tx.date);
@@ -234,6 +250,29 @@ export default function TransactionHistory() {
         ))}
       </div>
 
+      {/* Cashier filter (only when multi-user is on) */}
+      {multiUserEnabled && users && users.length > 0 && (
+        <div className="mb-4">
+          <Select value={filterCashier} onValueChange={setFilterCashier}>
+            <SelectTrigger className="h-9 text-xs">
+              <div className="flex items-center gap-1.5">
+                <UserCircle2 className="w-3.5 h-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Filter Kasir" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kasir</SelectItem>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={String(u.id)}>
+                  {u.name} (@{u.username})
+                </SelectItem>
+              ))}
+              <SelectItem value="unknown">Tanpa Kasir (data lama)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Summary */}
       {filtered.length > 0 && (
         <div className="grid grid-cols-2 gap-2 mb-4">
@@ -298,6 +337,12 @@ export default function TransactionHistory() {
                         </div>
                         <p className="text-sm font-bold text-primary">{rp(tx.total)}</p>
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground truncate">
+                          {multiUserEnabled && (
+                            <span className="flex items-center gap-0.5">
+                              <UserCircle2 className="w-3 h-3" />
+                              {cashierName(tx.createdBy)}
+                            </span>
+                          )}
                           {tx.customerName && <span>👤 {tx.customerName}</span>}
                           {tx.tableNumber && <span>Meja {tx.tableNumber}</span>}
                           {tx.remarks && <span>📝 {tx.remarks}</span>}
@@ -343,6 +388,15 @@ export default function TransactionHistory() {
                    <span className="text-muted-foreground">Pembayaran</span>
                    <span>{selectedTx.status === 'open' ? '-' : getPaymentName(selectedTx.paymentMethodId)}</span>
                  </div>
+                 {multiUserEnabled && (
+                   <div className="flex justify-between text-xs">
+                     <span className="text-muted-foreground">Kasir</span>
+                     <span className="flex items-center gap-1">
+                       <UserCircle2 className="w-3 h-3" />
+                       {cashierName(selectedTx.createdBy)}
+                     </span>
+                   </div>
+                 )}
                  {selectedTx.customerName && (
                    <div className="flex justify-between text-xs">
                      <span className="text-muted-foreground">Pelanggan</span>
@@ -433,6 +487,8 @@ export default function TransactionHistory() {
                 variant="outline"
                 className="w-full h-11 text-destructive border-destructive/30 hover:bg-destructive/5"
                 onClick={() => { setRestoreStock(true); setDeleteDialogOpen(true); }}
+                disabled={!can('delete_transaction')}
+                title={!can('delete_transaction') ? 'Anda tidak punya akses untuk menghapus transaksi' : undefined}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Hapus Transaksi
@@ -451,6 +507,7 @@ export default function TransactionHistory() {
           items={getTxItems(selectedTx.id)}
           storeSettings={storeSettings}
           paymentMethodName={getPaymentName(selectedTx.paymentMethodId)}
+          cashierName={selectedTx.createdBy ? cashierName(selectedTx.createdBy) : undefined}
         />
       )}
 

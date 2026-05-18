@@ -12,8 +12,12 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 export default function StockInPage() {
+  const { currentUser, can } = useAuth();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [productId, setProductId] = useState('');
   const [supplierId, setSupplierId] = useState('');
@@ -25,6 +29,10 @@ export default function StockInPage() {
   const stockIns = useLiveQuery(() => db.stockIns.orderBy('date').reverse().toArray());
   const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
   const suppliers = useLiveQuery(() => db.suppliers.where('isDeleted').equals(0).toArray());
+
+  if (!can('manage_stock_inout')) {
+    return <LockedPage title="Stock In" permissionLabel="Stock In / Stock Out" />;
+  }
 
   const filtered = stockIns?.filter(si =>
     filterSupplier === 'all' || si.supplierId === Number(filterSupplier)
@@ -58,6 +66,7 @@ export default function StockInPage() {
       totalPrice: qty * price,
       date: new Date(),
       notes: notes.trim(),
+      createdBy: currentUser?.id,
     });
 
     // Calculate new weighted average HPP

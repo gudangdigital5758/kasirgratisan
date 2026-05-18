@@ -1,6 +1,42 @@
 import Dexie, { type Table } from 'dexie';
 
+// === Permission keys (CR-multiuser) ===
+export type PermissionKey =
+  | 'create_transaction'
+  | 'delete_transaction'
+  | 'manage_products'
+  | 'manage_categories_payments'
+  | 'manage_stock_inout'
+  | 'manage_supplier'
+  | 'view_reports'
+  | 'manage_backup'
+  | 'manage_store_settings';
+
+export const ALL_PERMISSIONS: PermissionKey[] = [
+  'create_transaction',
+  'delete_transaction',
+  'manage_products',
+  'manage_categories_payments',
+  'manage_stock_inout',
+  'manage_supplier',
+  'view_reports',
+  'manage_backup',
+  'manage_store_settings',
+];
+
 // === Interfaces ===
+
+export interface User {
+  id?: number;
+  username: string;       // unique, lowercase
+  pinHash: string;        // SHA-256 hex
+  name: string;           // display name
+  role: 'owner' | 'staff';
+  permissions: PermissionKey[]; // owner ignores this (has all)
+  isActive: number;       // 0/1 — IndexedDB can't index booleans
+  createdAt: Date;
+  lastLoginAt: Date | null;
+}
 
 export interface Category {
   id?: number;
@@ -28,6 +64,8 @@ export interface Product {
   updatedAt: Date;
   isDeleted: number; // 0 = active, 1 = deleted
   deletedAt: Date | null;
+  createdBy?: number; // userId (optional — undefined for legacy/single-user mode)
+  updatedBy?: number; // userId
 }
 
 export interface Supplier {
@@ -50,6 +88,7 @@ export interface StockIn {
   totalPrice: number;
   date: Date;
   notes: string;
+  createdBy?: number; // userId
 }
 
 export interface StockOut {
@@ -59,6 +98,7 @@ export interface StockOut {
   reason: string; // rusak, hilang, retur, dll
   date: Date;
   notes: string;
+  createdBy?: number; // userId
 }
 
 export interface HppHistory {
@@ -98,6 +138,7 @@ export interface Transaction {
   remarks?: string;
   openedAt?: Date;
   closedAt?: Date;
+  createdBy?: number; // userId — kasir pembuat transaksi
 }
 
 export interface TransactionItemRecord {
@@ -135,6 +176,7 @@ export interface StoreSettings {
   themeColor?: string; // HSL hue string e.g. "25" for orange
   logo?: string; // base64 JPEG compressed via compressImage()
   deviceId: string;
+  multiUserEnabled?: boolean; // CR-multiuser: opt-in flag
 }
 
 // === Database ===
@@ -150,6 +192,7 @@ class PosDatabase extends Dexie {
   transactions!: Table<Transaction>;
   transactionItems!: Table<TransactionItemRecord>;
   storeSettings!: Table<StoreSettings>;
+  users!: Table<User>;
   units!: Table<Unit>;
 
   constructor() {
@@ -343,6 +386,34 @@ class PosDatabase extends Dexie {
           // ignore unique-constraint races
         }
       }
+    });
+
+    // Version 6 — Multi-user (opt-in) + audit trail (createdBy/updatedBy)
+    // Notes:
+    //   * `users` is a NEW table; existing data is untouched.
+    //   * No createdBy/updatedBy is back-filled — existing rows keep undefined,
+    //     UI handles that as "—" (legacy).
+    //   * `multiUserEnabled` defaults to false → app behaves exactly like before
+    //     until owner activates the feature from Settings.
+    this.version(6).stores({
+      categories:       '++id, name, isDeleted',
+      products:         '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy',
+      suppliers:        '++id, name, isDeleted',
+      stockIns:         '++id, productId, supplierId, date, createdBy',
+      stockOuts:        '++id, productId, date, createdBy',
+      hppHistory:       '++id, productId, date',
+      paymentMethods:   '++id, name, category',
+      transactions:     '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy',
+      transactionItems: '++id, transactionId, productId',
+      storeSettings:    '++id',
+      units:            '++id, &name, isDeleted',
+      users:            '++id, &username, role, isActive',
+    }).upgrade(async (tx) => {
+      // Default multiUserEnabled = false on existing storeSettings
+      const storeTable = tx.table('storeSettings');
+      await storeTable.toCollection().modify((s: Partial<StoreSettings>) => {
+        if (s.multiUserEnabled === undefined) s.multiUserEnabled = false;
+      });
     });
   }
 }

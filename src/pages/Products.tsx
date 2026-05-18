@@ -14,8 +14,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/image-utils';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Produk() {
+  const { currentUser, can } = useAuth();
+  const canManage = can('manage_products');
+
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -114,19 +118,30 @@ export default function Produk() {
       barcode: barcode.trim() || undefined,
       photo: photo || undefined,
       updatedAt: new Date(),
+      updatedBy: currentUser?.id,
     };
 
     if (editProduct?.id) {
       await db.products.update(editProduct.id, data);
     } else {
-      await db.products.add({ ...data, createdAt: new Date(), isDeleted: 0, deletedAt: null } as Product);
+      await db.products.add({
+        ...data,
+        createdAt: new Date(),
+        createdBy: currentUser?.id,
+        isDeleted: 0,
+        deletedAt: null,
+      } as Product);
     }
     setDialogOpen(false);
   };
 
   const handleDelete = async () => {
     if (deleteId) {
-      await db.products.update(deleteId, { isDeleted: 1, deletedAt: new Date() });
+      await db.products.update(deleteId, {
+        isDeleted: 1,
+        deletedAt: new Date(),
+        updatedBy: currentUser?.id,
+      });
       setDeleteId(null);
     }
   };
@@ -139,10 +154,12 @@ export default function Produk() {
           <PackageIcon className="w-5 h-5 text-primary" />
           Produk
         </h1>
-        <Button size="sm" onClick={openAdd} className="h-9 gap-1.5">
-          <Plus className="w-4 h-4" />
-          Tambah
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openAdd} className="h-9 gap-1.5">
+            <Plus className="w-4 h-4" />
+            Tambah
+          </Button>
+        )}
       </div>
 
       {/* Search & Filter */}
@@ -177,9 +194,11 @@ export default function Produk() {
         <div className="text-center py-12">
           <PackageIcon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
           <p className="text-sm text-muted-foreground">Belum ada produk</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={openAdd}>
-            <Plus className="w-4 h-4 mr-1" /> Tambah Produk
-          </Button>
+          {canManage && (
+            <Button variant="outline" size="sm" className="mt-3" onClick={openAdd}>
+              <Plus className="w-4 h-4 mr-1" /> Tambah Produk
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -219,12 +238,16 @@ export default function Produk() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id!)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    {canManage ? (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(p.id!)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               </CardContent>

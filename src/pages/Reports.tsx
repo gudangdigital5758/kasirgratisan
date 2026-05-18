@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 export default function Laporan() {
+  const { can } = useAuth();
   const [period, setPeriod] = useState<'7' | '30'>('7');
   const days = Number(period);
 
@@ -22,6 +25,11 @@ export default function Laporan() {
     const txIds = transactions.map(t => t.id!).filter(Boolean);
     return db.transactionItems.where('transactionId').anyOf(txIds).toArray();
   }, [transactions]);
+
+  // Permission gate after all hooks have been called.
+  if (!can('view_reports')) {
+    return <LockedPage title="Laporan" permissionLabel="Lihat Laporan & Profit" />;
+  }
 
   const allItems = txItems ?? [];
 

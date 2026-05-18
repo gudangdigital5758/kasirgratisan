@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 interface CartItem {
   product: Product;
@@ -26,6 +28,8 @@ interface CartItem {
 }
 
 export default function Kasir() {
+  const { currentUser, can } = useAuth();
+
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -60,6 +64,11 @@ export default function Kasir() {
   const paymentMethods = useLiveQuery(() => db.paymentMethods.toArray());
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const openBills = useLiveQuery(() => db.transactions.where('status').equals('open').reverse().sortBy('date'));
+  const allUsers = useLiveQuery(() => db.users.toArray());
+
+  // Permission gate — kept render-side (not redirect) so the bottom nav stays
+  // intact. All hooks above run unconditionally; we just swap the rendered tree.
+  const allowed = can('create_transaction');
 
   const cartProductIds = new Set(cart.map(c => c.product.id));
 
@@ -152,7 +161,6 @@ export default function Kasir() {
         remarks: remarks.trim() || undefined,
         date: now,
       });
-
       await db.transactionItems.where('transactionId').equals(editingTxId).delete();
       const itemRecords: TransactionItemRecord[] = cart.map(c => ({
         transactionId: editingTxId,
@@ -212,6 +220,7 @@ export default function Kasir() {
         tableNumber: tableNumber.trim() || undefined,
         remarks: remarks.trim() || undefined,
         openedAt: now,
+        createdBy: currentUser?.id,
       };
 
       const txId = await db.transactions.add(txData);
@@ -388,6 +397,7 @@ export default function Kasir() {
         customerName: customerName.trim() || undefined,
         tableNumber: tableNumber.trim() || undefined,
         remarks: remarks.trim() || undefined,
+        createdBy: currentUser?.id,
       };
 
       const txId = await db.transactions.add(txData);
@@ -466,6 +476,12 @@ export default function Kasir() {
   }, [scanInput]);
 
   const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+
+  // After all hooks: if user can't create transactions, render the locked
+  // placeholder instead of the kasir UI. Bottom nav stays visible.
+  if (!allowed) {
+    return <LockedPage title="Kasir" permissionLabel="Buat Transaksi" />;
+  }
 
   return (
     <div className="px-4 pt-6 pb-4 h-[calc(100vh-4rem)]">
@@ -724,7 +740,7 @@ export default function Kasir() {
                 </Button>
               </div>
 
-              {editingTxId && (
+              {editingTxId && can('delete_transaction') && (
                 <Button
                   variant="outline"
                   className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
@@ -901,7 +917,7 @@ export default function Kasir() {
                 </Button>
               </div>
 
-              {editingTxId && (
+              {editingTxId && can('delete_transaction') && (
                 <Button
                   variant="outline"
                   className="w-full h-10 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
@@ -954,14 +970,16 @@ export default function Kasir() {
                       <Button size="sm" className="h-8 text-xs flex-1" onClick={() => loadOpenBill(bill)}>
                         Lanjutkan
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs text-destructive border-destructive/30"
-                        onClick={() => handleCancelFromList(bill)}
-                      >
-                        Batal
-                      </Button>
+                      {can('delete_transaction') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs text-destructive border-destructive/30"
+                          onClick={() => handleCancelFromList(bill)}
+                        >
+                          Batal
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1152,6 +1170,7 @@ export default function Kasir() {
           items={lastTxItems}
           storeSettings={storeSettings}
           paymentMethodName={paymentMethods?.find(pm => pm.id === lastTransaction.paymentMethodId)?.name || 'Tunai'}
+          cashierName={lastTransaction.createdBy ? allUsers?.find(u => u.id === lastTransaction.createdBy)?.name : undefined}
         />
       )}
 

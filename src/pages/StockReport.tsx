@@ -7,8 +7,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { format, subDays, startOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useAuth } from '@/hooks/use-auth';
+import LockedPage from '@/components/LockedPage';
 
 export default function StockReport() {
+  const { can } = useAuth();
   const [period, setPeriod] = useState<'7' | '30'>('7');
   const days = Number(period);
   const since = startOfDay(subDays(new Date(), days));
@@ -16,6 +19,10 @@ export default function StockReport() {
   const products = useLiveQuery(() => db.products.toArray());
   const stockIns = useLiveQuery(async () => db.stockIns.where('date').aboveOrEqual(since).toArray(), [days]);
   const stockOuts = useLiveQuery(async () => db.stockOuts.where('date').aboveOrEqual(since).toArray(), [days]);
+
+  if (!can('view_reports')) {
+    return <LockedPage title="Laporan Stok" permissionLabel="Lihat Laporan & Profit" />;
+  }
 
   const totalStockIn = stockIns?.reduce((s, si) => s + si.quantity, 0) ?? 0;
   const totalStockInValue = stockIns?.reduce((s, si) => s + si.totalPrice, 0) ?? 0;

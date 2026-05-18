@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type PaymentMethod, type Category, type Unit } from '@/lib/db';
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Store, CreditCard, Tag, Download, Upload, Plus, Trash2, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler } from 'lucide-react';
+import { Settings, Store, CreditCard, Tag, Download, Upload, Plus, Trash2, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut } from 'lucide-react';
 import ThemeColorPicker from '@/components/ThemeColorPicker';
 import { setThemeColor } from '@/hooks/use-theme-color';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,18 +9,38 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { exportBackupData } from '@/components/BackupReminder';
 import { compressImage } from '@/lib/image-utils';
+import { useAuth } from '@/hooks/use-auth';
+import { createUser, isValidPin, isValidUsername, saveSession } from '@/lib/auth';
 
 export default function Pengaturan() {
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const paymentMethods = useLiveQuery(() => db.paymentMethods.toArray());
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
+  const usersCount = useLiveQuery(() => db.users.count());
   const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
+
+  const { multiUserEnabled, currentUser, isOwner, can, logout } = useAuth();
+
+  // Multi-user activation
+  const [activateOpen, setActivateOpen] = useState(false);
+  const [actName, setActName] = useState('');
+  const [actUsername, setActUsername] = useState('');
+  const [actPin, setActPin] = useState('');
+  const [actPinConfirm, setActPinConfirm] = useState('');
+  const [activating, setActivating] = useState(false);
+
+  // Disable multi-user confirmation
+  const [disableOpen, setDisableOpen] = useState(false);
+
+  // Logout confirmation
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   // Store edit
   const [storeDialog, setStoreDialog] = useState(false);
@@ -90,6 +110,86 @@ export default function Pengaturan() {
       toast.error('Gagal memproses gambar');
     }
     if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
+  // === Multi-user activation ===
+
+  const openActivateDialog = () => {
+    setActName('');
+    setActUsername('');
+    setActPin('');
+    setActPinConfirm('');
+    setActivateOpen(true);
+  };
+
+  const handleActivateMultiUser = async () => {
+    if (!storeSettings?.id) return;
+    if (!actName.trim()) { toast.error('Nama pemilik wajib diisi'); return; }
+    if (!isValidUsername(actUsername)) {
+      toast.error('Username 3-20 karakter, hanya huruf/angka/underscore');
+      return;
+    }
+    if (!isValidPin(actPin)) {
+      toast.error('PIN harus 4-6 digit angka');
+      return;
+    }
+    if (actPin !== actPinConfirm) {
+      toast.error('Konfirmasi PIN tidak cocok');
+      return;
+    }
+
+    setActivating(true);
+    try {
+      // Check if owner already exists (idempotent — safety net)
+      const existingOwner = await db.users.where('role').equals('owner').first();
+      let ownerId = existingOwner?.id;
+
+      if (!existingOwner) {
+        const result = await createUser({
+          username: actUsername,
+          pin: actPin,
+          name: actName,
+          role: 'owner',
+          permissions: [],
+        });
+        if (!result.ok) {
+          toast.error(result.error || 'Gagal membuat akun pemilik');
+          return;
+        }
+        ownerId = result.userId;
+      }
+
+      // Flip the flag
+      await db.storeSettings.update(storeSettings.id, { multiUserEnabled: true });
+
+      // Persist session for the owner so they stay logged in immediately
+      if (ownerId && storeSettings.deviceId) {
+        saveSession(ownerId, storeSettings.deviceId);
+      }
+
+      toast.success('Multi-user aktif. Anda login sebagai pemilik.');
+      setActivateOpen(false);
+      // Reload so AuthProvider picks up the new session + flag from a clean state.
+      window.location.reload();
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  const handleDisableMultiUser = async () => {
+    if (!storeSettings?.id) return;
+    await db.storeSettings.update(storeSettings.id, { multiUserEnabled: false });
+    setDisableOpen(false);
+    toast.success('Multi-user dinonaktifkan');
+    // Force reload so AuthProvider re-evaluates state.
+    window.location.reload();
+  };
+
+  const handleLogout = () => {
+    logout();
+    setLogoutOpen(false);
+    // Reload to drop any in-memory state and route back to login screen cleanly.
+    window.location.reload();
   };
 
   const openPmAdd = () => { setPmEditId(null); setPmName(''); setPmCategory('tunai'); setPmDialog(true); };
@@ -207,6 +307,7 @@ export default function Pengaturan() {
           transactions: await db.transactions.toArray(),
           transactionItems: await db.transactionItems.toArray(),
           storeSettings: await db.storeSettings.toArray(),
+          users: await db.users.toArray(),
           units: await db.units.toArray(),
         };
 
@@ -216,6 +317,11 @@ export default function Pengaturan() {
           await db.stockIns.clear(); await db.stockOuts.clear(); await db.hppHistory.clear();
           await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
           await db.storeSettings.clear();
+          // Only clear users if backup file has them (v4+); preserve user accounts
+          // when restoring older backups (v1-v3) so login still works after restore.
+          if (Array.isArray(data.users)) {
+            await db.users.clear();
+          }
           await db.units.clear();
 
           // BulkAdd from file
@@ -228,6 +334,7 @@ export default function Pengaturan() {
           if (data.paymentMethods?.length) await db.paymentMethods.bulkAdd(data.paymentMethods);
           if (data.transactions?.length) await db.transactions.bulkAdd(data.transactions);
           if (data.storeSettings?.length) await db.storeSettings.bulkAdd(data.storeSettings);
+          if (data.users?.length) await db.users.bulkAdd(data.users);
 
           // Units (v3+ backup) or harvest from products (v1/v2 backup)
           if (Array.isArray(data.units) && data.units.length > 0) {
@@ -286,6 +393,7 @@ export default function Pengaturan() {
             await db.stockIns.clear(); await db.stockOuts.clear(); await db.hppHistory.clear();
             await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
             await db.storeSettings.clear();
+            await db.users.clear();
             await db.units.clear();
 
             if (snapshot.categories.length) await db.categories.bulkAdd(snapshot.categories);
@@ -298,6 +406,7 @@ export default function Pengaturan() {
             if (snapshot.transactions.length) await db.transactions.bulkAdd(snapshot.transactions);
             if (snapshot.transactionItems.length) await db.transactionItems.bulkAdd(snapshot.transactionItems);
             if (snapshot.storeSettings.length) await db.storeSettings.bulkAdd(snapshot.storeSettings);
+            if (snapshot.users.length) await db.users.bulkAdd(snapshot.users);
             if (snapshot.units.length) await db.units.bulkAdd(snapshot.units);
 
             toast.error('Import gagal, data dikembalikan');
@@ -327,7 +436,10 @@ export default function Pengaturan() {
       </h1>
 
       {/* Store Info */}
-      <Card className="border-0 shadow-sm cursor-pointer" onClick={openStoreEdit}>
+      <Card
+        className={`border-0 shadow-sm ${can('manage_store_settings') ? 'cursor-pointer' : 'cursor-default opacity-90'}`}
+        onClick={() => can('manage_store_settings') && openStoreEdit()}
+      >
         <CardContent className="p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden shrink-0">
             {storeSettings?.logo ? (
@@ -340,9 +452,84 @@ export default function Pengaturan() {
             <p className="text-sm font-semibold">{storeSettings?.storeName || 'Toko Saya'}</p>
             <p className="text-xs text-muted-foreground">{storeSettings?.address || 'Belum diatur'}</p>
           </div>
-          <Edit2 className="w-4 h-4 text-muted-foreground" />
+          {can('manage_store_settings') && <Edit2 className="w-4 h-4 text-muted-foreground" />}
         </CardContent>
       </Card>
+
+      {/* Karyawan & Akses (current user / multi-user activation) */}
+      {multiUserEnabled && currentUser ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${currentUser.role === 'owner' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}>
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{currentUser.name}</p>
+              <p className="text-[10px] text-muted-foreground">
+                @{currentUser.username} · {currentUser.role === 'owner' ? 'Pemilik' : 'Karyawan'}
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive" onClick={() => setLogoutOpen(true)}>
+              <LogOut className="w-3.5 h-3.5" />
+              Keluar
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Karyawan & Akses links/activation */}
+      {isOwner && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">Karyawan & Akses</h2>
+          {!multiUserEnabled ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <UsersIcon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">Aktifkan Multi-User</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Buat akun karyawan dengan akses terbatas. Data Anda tetap aman.
+                  </p>
+                </div>
+                <Button size="sm" className="h-8 text-xs" onClick={openActivateDialog}>
+                  Aktifkan
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Link to="/users">
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">Kelola Karyawan</p>
+                      <p className="text-[10px] text-muted-foreground">{usersCount ?? 0} akun terdaftar · atur akses per karyawan</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Multi-User Aktif</p>
+                    <p className="text-[10px] text-muted-foreground">Karyawan harus login untuk akses kasir</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setDisableOpen(true)}>
+                    Nonaktifkan
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Transaksi & Stok */}
       <div className="space-y-2">
@@ -356,45 +543,54 @@ export default function Pengaturan() {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/supplier">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Truck className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">Supplier</p><p className="text-[10px] text-muted-foreground">Kelola data supplier</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/stock-in">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center"><ArrowDownToLine className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">Stock In</p><p className="text-[10px] text-muted-foreground">Catat barang masuk & HPP otomatis</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/stock-out">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center"><ArrowUpFromLine className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">Stock Out</p><p className="text-[10px] text-muted-foreground">Catat barang keluar non-penjualan</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/stock-report">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Package className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">Laporan Stok</p><p className="text-[10px] text-muted-foreground">Lihat pergerakan stok per periode</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
+        {can('manage_supplier') && (
+          <Link to="/supplier">
+            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Truck className="w-4 h-4" /></div>
+                <div className="flex-1"><p className="text-sm font-semibold">Supplier</p><p className="text-[10px] text-muted-foreground">Kelola data supplier</p></div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+        {can('manage_stock_inout') && (
+          <>
+            <Link to="/stock-in">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center"><ArrowDownToLine className="w-4 h-4" /></div>
+                  <div className="flex-1"><p className="text-sm font-semibold">Stock In</p><p className="text-[10px] text-muted-foreground">Catat barang masuk & HPP otomatis</p></div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/stock-out">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center"><ArrowUpFromLine className="w-4 h-4" /></div>
+                  <div className="flex-1"><p className="text-sm font-semibold">Stock Out</p><p className="text-[10px] text-muted-foreground">Catat barang keluar non-penjualan</p></div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+          </>
+        )}
+        {can('view_reports') && (
+          <Link to="/stock-report">
+            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Package className="w-4 h-4" /></div>
+                <div className="flex-1"><p className="text-sm font-semibold">Laporan Stok</p><p className="text-[10px] text-muted-foreground">Lihat pergerakan stok per periode</p></div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       {/* Payment Methods */}
+      {can('manage_categories_payments') && (
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -417,8 +613,10 @@ export default function Pengaturan() {
           ))}
         </CardContent>
       </Card>
+      )}
 
       {/* Categories */}
+      {can('manage_categories_payments') && (
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -441,6 +639,7 @@ export default function Pengaturan() {
           ))}
         </CardContent>
       </Card>
+      )}
 
       {/* Units */}
       <Card className="border-0 shadow-sm">
@@ -467,6 +666,7 @@ export default function Pengaturan() {
       </Card>
 
       {/* Theme Color */}
+      {can('manage_store_settings') && (
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-1.5"><Palette className="w-4 h-4" /> Warna Tema</CardTitle>
@@ -478,8 +678,10 @@ export default function Pengaturan() {
           />
         </CardContent>
       </Card>
+      )}
 
       {/* Backup & Restore */}
+      {can('manage_backup') && (
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-1.5"><Download className="w-4 h-4" /> Backup & Restore</CardTitle>
@@ -496,6 +698,7 @@ export default function Pengaturan() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* About */}
       <Card className="border-0 shadow-sm">
@@ -645,6 +848,74 @@ export default function Pengaturan() {
         </DialogContent>
       </Dialog>
 
+      {/* Multi-User Activation Dialog */}
+      <Dialog open={activateOpen} onOpenChange={setActivateOpen}>
+        <DialogContent className="max-w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Aktifkan Multi-User</DialogTitle>
+            <DialogDescription className="text-xs">
+              Buat akun pemilik. Setelah aktif, Anda harus login dengan username & PIN ini setiap kali buka aplikasi.
+              Data toko Anda tetap utuh.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Nama Anda *</Label>
+              <Input value={actName} onChange={e => setActName(e.target.value)} placeholder="Contoh: Pak Budi" className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Username *</Label>
+              <Input
+                value={actUsername}
+                onChange={e => setActUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                placeholder="Contoh: owner"
+                className="h-11 font-mono"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <p className="text-[10px] text-muted-foreground">3-20 karakter, huruf/angka/underscore. Tidak bisa diubah.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>PIN *</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={actPin}
+                onChange={e => setActPin(e.target.value.replace(/\D/g, ''))}
+                placeholder="4-6 digit angka"
+                className="h-11 font-mono text-center tracking-widest"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Konfirmasi PIN *</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={actPinConfirm}
+                onChange={e => setActPinConfirm(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ketik ulang PIN"
+                className="h-11 font-mono text-center tracking-widest"
+              />
+            </div>
+            <div className="bg-warning/10 border border-warning/30 rounded-xl p-3 text-xs text-foreground">
+              <p className="font-semibold mb-1">Penting:</p>
+              <p className="text-muted-foreground">
+                Catat username & PIN dengan baik. Jika lupa, satu-satunya cara untuk reset adalah dengan menghapus
+                data aplikasi (data toko juga terhapus). Pastikan Anda sudah backup.
+              </p>
+            </div>
+            <Button className="w-full h-11" onClick={handleActivateMultiUser} disabled={activating}>
+              {activating ? 'Mengaktifkan…' : 'Aktifkan Multi-User'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Unit Dialog */}
       <Dialog open={unitDialog} onOpenChange={setUnitDialog}>
         <DialogContent className="max-w-[95vw] rounded-xl">
@@ -668,6 +939,43 @@ export default function Pengaturan() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Disable Multi-User Confirmation */}
+      <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
+        <AlertDialogContent className="max-w-[90vw] rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nonaktifkan Multi-User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aplikasi akan kembali ke mode tanpa login. Akun karyawan tetap tersimpan dan akan aktif kembali
+              jika multi-user diaktifkan lagi. Data transaksi tetap utuh.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDisableMultiUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Nonaktifkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Logout Confirmation */}
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent className="max-w-[90vw] rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Keluar dari Akun?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan diarahkan ke halaman login. Pastikan tidak ada open bill yang belum disimpan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Keluar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Unit Delete Confirm */}
       <AlertDialog open={!!unitDeleteTarget} onOpenChange={(o) => { if (!o) setUnitDeleteTarget(null); }}>
