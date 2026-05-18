@@ -41,6 +41,14 @@ export default function Produk() {
 
   const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
+  const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
+
+  // Compose dropdown options: active master units + current product's unit if it has been deleted/renamed
+  const unitOptions = (() => {
+    const names = (units ?? []).map(u => u.name);
+    if (unit && !names.includes(unit)) names.push(unit);
+    return names;
+  })();
 
   const filtered = products?.filter(p => {
     const q = search.toLowerCase();
@@ -344,9 +352,13 @@ export default function Produk() {
                 <Select value={unit} onValueChange={setUnit}>
                   <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'].map(u => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
+                    {unitOptions.length === 0 ? (
+                      <SelectItem value="pcs">pcs</SelectItem>
+                    ) : (
+                      unitOptions.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

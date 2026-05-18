@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type PaymentMethod, type Category } from '@/lib/db';
+import { db, type PaymentMethod, type Category, type Unit } from '@/lib/db';
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Store, CreditCard, Tag, Download, Upload, Plus, Trash2, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Users as UsersIcon, ShieldCheck, LogOut } from 'lucide-react';
+import { Settings, Store, CreditCard, Tag, Download, Upload, Plus, Trash2, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut } from 'lucide-react';
 import ThemeColorPicker from '@/components/ThemeColorPicker';
 import { setThemeColor } from '@/hooks/use-theme-color';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +24,7 @@ export default function Pengaturan() {
   const paymentMethods = useLiveQuery(() => db.paymentMethods.toArray());
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
   const usersCount = useLiveQuery(() => db.users.count());
+  const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
 
   const { multiUserEnabled, currentUser, isOwner, can, logout } = useAuth();
 
@@ -60,6 +61,14 @@ export default function Pengaturan() {
   const [catIcon, setCatIcon] = useState('📦');
   const [catColor, setCatColor] = useState('#FF6B35');
   const [catEditId, setCatEditId] = useState<number | null>(null);
+
+  // Unit
+  const [unitDialog, setUnitDialog] = useState(false);
+  const [unitName, setUnitName] = useState('');
+  const [unitEditId, setUnitEditId] = useState<number | null>(null);
+  const [unitOriginalName, setUnitOriginalName] = useState('');
+  const [unitDeleteTarget, setUnitDeleteTarget] = useState<Unit | null>(null);
+  const [unitDeleteUsage, setUnitDeleteUsage] = useState(0);
 
   // Storage info (CR-9)
   const [storageUsage, setStorageUsage] = useState<{ usage: number; quota: number } | null>(null);
@@ -205,6 +214,68 @@ export default function Pengaturan() {
   };
   const deleteCat = async (id: number) => { await db.categories.update(id, { isDeleted: 1, deletedAt: new Date() }); toast.success('Dihapus'); };
 
+  const openUnitAdd = () => {
+    setUnitEditId(null);
+    setUnitName('');
+    setUnitOriginalName('');
+    setUnitDialog(true);
+  };
+  const openUnitEdit = (u: Unit) => {
+    setUnitEditId(u.id!);
+    setUnitName(u.name);
+    setUnitOriginalName(u.name);
+    setUnitDialog(true);
+  };
+  const saveUnit = async () => {
+    const name = unitName.trim();
+    if (!name) return;
+
+    // Uniqueness check (active units only — soft-deleted records still occupy &name index,
+    // but we want to surface a clearer message on conflict)
+    const existing = await db.units.where('name').equals(name).first();
+    if (existing && existing.id !== unitEditId) {
+      if (existing.isDeleted === 1) {
+        toast.error(`Satuan "${name}" pernah dihapus. Pakai nama lain atau pulihkan via backup.`);
+      } else {
+        toast.error(`Satuan "${name}" sudah ada`);
+      }
+      return;
+    }
+
+    try {
+      if (unitEditId) {
+        await db.units.update(unitEditId, { name });
+        // Cascade rename to all products using the old name so the dropdown stays consistent
+        if (unitOriginalName && unitOriginalName !== name) {
+          await db.products.where('unit').equals(unitOriginalName).modify({ unit: name, updatedAt: new Date() });
+        }
+      } else {
+        await db.units.add({
+          name,
+          isDefault: 0,
+          createdAt: new Date(),
+          isDeleted: 0,
+          deletedAt: null,
+        });
+      }
+      setUnitDialog(false);
+      toast.success('Satuan disimpan');
+    } catch {
+      toast.error('Gagal menyimpan satuan');
+    }
+  };
+  const requestDeleteUnit = async (u: Unit) => {
+    const usage = await db.products.where('unit').equals(u.name).filter(p => p.isDeleted === 0).count();
+    setUnitDeleteUsage(usage);
+    setUnitDeleteTarget(u);
+  };
+  const confirmDeleteUnit = async () => {
+    if (!unitDeleteTarget?.id) return;
+    await db.units.update(unitDeleteTarget.id, { isDeleted: 1, deletedAt: new Date() });
+    setUnitDeleteTarget(null);
+    toast.success('Satuan dihapus');
+  };
+
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -237,6 +308,7 @@ export default function Pengaturan() {
           transactionItems: await db.transactionItems.toArray(),
           storeSettings: await db.storeSettings.toArray(),
           users: await db.users.toArray(),
+          units: await db.units.toArray(),
         };
 
         try {
@@ -245,11 +317,12 @@ export default function Pengaturan() {
           await db.stockIns.clear(); await db.stockOuts.clear(); await db.hppHistory.clear();
           await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
           await db.storeSettings.clear();
-          // Only clear users if backup file has them (v3+); preserve user accounts
-          // when restoring older backups (v1/v2) so login still works after restore.
+          // Only clear users if backup file has them (v4+); preserve user accounts
+          // when restoring older backups (v1-v3) so login still works after restore.
           if (Array.isArray(data.users)) {
             await db.users.clear();
           }
+          await db.units.clear();
 
           // BulkAdd from file
           if (data.categories?.length) await db.categories.bulkAdd(data.categories);
@@ -262,6 +335,30 @@ export default function Pengaturan() {
           if (data.transactions?.length) await db.transactions.bulkAdd(data.transactions);
           if (data.storeSettings?.length) await db.storeSettings.bulkAdd(data.storeSettings);
           if (data.users?.length) await db.users.bulkAdd(data.users);
+
+          // Units (v3+ backup) or harvest from products (v1/v2 backup)
+          if (Array.isArray(data.units) && data.units.length > 0) {
+            await db.units.bulkAdd(data.units);
+          } else {
+            const now = new Date();
+            const defaults = ['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'];
+            const seen = new Set<string>();
+            const toAdd: any[] = [];
+
+            for (const name of defaults) {
+              seen.add(name);
+              toAdd.push({ name, isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null });
+            }
+            if (Array.isArray(data.products)) {
+              for (const p of data.products) {
+                const u = (p?.unit as string | undefined)?.trim();
+                if (!u || seen.has(u)) continue;
+                seen.add(u);
+                toAdd.push({ name: u, isDefault: 0, createdAt: now, isDeleted: 0, deletedAt: null });
+              }
+            }
+            if (toAdd.length) await db.units.bulkAdd(toAdd);
+          }
 
           // Handle transactionItems
           if (data.transactionItems?.length) {
@@ -297,6 +394,7 @@ export default function Pengaturan() {
             await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
             await db.storeSettings.clear();
             await db.users.clear();
+            await db.units.clear();
 
             if (snapshot.categories.length) await db.categories.bulkAdd(snapshot.categories);
             if (snapshot.products.length) await db.products.bulkAdd(snapshot.products);
@@ -309,6 +407,7 @@ export default function Pengaturan() {
             if (snapshot.transactionItems.length) await db.transactionItems.bulkAdd(snapshot.transactionItems);
             if (snapshot.storeSettings.length) await db.storeSettings.bulkAdd(snapshot.storeSettings);
             if (snapshot.users.length) await db.users.bulkAdd(snapshot.users);
+            if (snapshot.units.length) await db.units.bulkAdd(snapshot.units);
 
             toast.error('Import gagal, data dikembalikan');
           } catch {
@@ -541,6 +640,30 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
       )}
+
+      {/* Units */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-1.5"><Ruler className="w-4 h-4" /> Satuan</CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openUnitAdd}><Plus className="w-3 h-3" />Tambah</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {units && units.length === 0 && (
+            <p className="text-xs text-muted-foreground py-1.5">Belum ada satuan</p>
+          )}
+          {units?.map(u => (
+            <div key={u.id} className="flex items-center justify-between py-1.5">
+              <span className="text-sm font-medium">{u.name}</span>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openUnitEdit(u)}><Edit2 className="w-3 h-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => requestDeleteUnit(u)}><Trash2 className="w-3 h-3" /></Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       {/* Theme Color */}
       {can('manage_store_settings') && (
@@ -793,6 +916,30 @@ export default function Pengaturan() {
         </DialogContent>
       </Dialog>
 
+      {/* Unit Dialog */}
+      <Dialog open={unitDialog} onOpenChange={setUnitDialog}>
+        <DialogContent className="max-w-[95vw] rounded-xl">
+          <DialogHeader><DialogTitle>{unitEditId ? 'Edit' : 'Tambah'} Satuan</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Nama Satuan</Label>
+              <Input
+                value={unitName}
+                onChange={e => setUnitName(e.target.value)}
+                placeholder="Contoh: pak, lusin, mangkok"
+                className="h-11"
+              />
+              {unitEditId && unitOriginalName && unitName.trim() && unitName.trim() !== unitOriginalName && (
+                <p className="text-[11px] text-muted-foreground">
+                  Semua produk yang memakai "{unitOriginalName}" akan otomatis di-rename ke "{unitName.trim()}".
+                </p>
+              )}
+            </div>
+            <Button className="w-full h-11" onClick={saveUnit} disabled={!unitName.trim()}>Simpan</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Disable Multi-User Confirmation */}
       <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
         <AlertDialogContent className="max-w-[90vw] rounded-xl">
@@ -826,6 +973,24 @@ export default function Pengaturan() {
             <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Keluar
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unit Delete Confirm */}
+      <AlertDialog open={!!unitDeleteTarget} onOpenChange={(o) => { if (!o) setUnitDeleteTarget(null); }}>
+        <AlertDialogContent className="max-w-[90vw] rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Satuan "{unitDeleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {unitDeleteUsage > 0
+                ? `Saat ini dipakai oleh ${unitDeleteUsage} produk. Produk yang sudah ada tetap menyimpan satuan "${unitDeleteTarget?.name}", tapi satuan ini tidak akan muncul lagi di pilihan saat tambah/edit produk baru.`
+                : 'Satuan ini tidak dipakai oleh produk manapun. Aman untuk dihapus.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUnit} className="bg-destructive text-destructive-foreground">Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

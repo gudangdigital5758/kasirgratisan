@@ -156,6 +156,15 @@ export interface TransactionItemRecord {
   notes?: string;
 }
 
+export interface Unit {
+  id?: number;
+  name: string; // satuan: pcs, kg, liter, dll
+  isDefault: number; // 0 = user-added, 1 = seeded default
+  createdAt: Date;
+  isDeleted: number; // 0 = active, 1 = deleted
+  deletedAt: Date | null;
+}
+
 export interface StoreSettings {
   id?: number;
   storeName: string;
@@ -184,6 +193,7 @@ class PosDatabase extends Dexie {
   transactionItems!: Table<TransactionItemRecord>;
   storeSettings!: Table<StoreSettings>;
   users!: Table<User>;
+  units!: Table<Unit>;
 
   constructor() {
     super('kasirgratisan-db');
@@ -324,14 +334,68 @@ class PosDatabase extends Dexie {
       }
     });
 
-    // Version 5 — Multi-user (opt-in) + audit trail (createdBy/updatedBy)
+    // Version 5 — Units master table (CRUD-able from Settings)
+    this.version(5).stores({
+      categories:       '++id, name, isDeleted',
+      products:         '++id, name, &sku, categoryId, barcode, isDeleted',
+      suppliers:        '++id, name, isDeleted',
+      stockIns:         '++id, productId, supplierId, date',
+      stockOuts:        '++id, productId, date',
+      hppHistory:       '++id, productId, date',
+      paymentMethods:   '++id, name, category',
+      transactions:     '++id, date, &receiptNumber, paymentMethodId, status, orderNumber',
+      transactionItems: '++id, transactionId, productId',
+      storeSettings:    '++id',
+      units:            '++id, &name, isDeleted',
+    }).upgrade(async (tx) => {
+      // Seed default units + harvest unique units already used by products
+      const unitsTable = tx.table('units');
+      const prodTable = tx.table('products');
+      const now = new Date();
+
+      const defaults = ['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'];
+      const seen = new Set<string>();
+
+      for (const name of defaults) {
+        seen.add(name);
+        await unitsTable.add({
+          name,
+          isDefault: 1,
+          createdAt: now,
+          isDeleted: 0,
+          deletedAt: null,
+        });
+      }
+
+      // Harvest custom units already used by existing products (e.g. 'mangkok', 'gelas')
+      const allProducts = await prodTable.toArray();
+      for (const p of allProducts) {
+        const u = ((p as any).unit as string | undefined)?.trim();
+        if (!u) continue;
+        if (seen.has(u)) continue;
+        seen.add(u);
+        try {
+          await unitsTable.add({
+            name: u,
+            isDefault: 0,
+            createdAt: now,
+            isDeleted: 0,
+            deletedAt: null,
+          });
+        } catch {
+          // ignore unique-constraint races
+        }
+      }
+    });
+
+    // Version 6 — Multi-user (opt-in) + audit trail (createdBy/updatedBy)
     // Notes:
     //   * `users` is a NEW table; existing data is untouched.
     //   * No createdBy/updatedBy is back-filled — existing rows keep undefined,
     //     UI handles that as "—" (legacy).
     //   * `multiUserEnabled` defaults to false → app behaves exactly like before
     //     until owner activates the feature from Settings.
-    this.version(5).stores({
+    this.version(6).stores({
       categories:       '++id, name, isDeleted',
       products:         '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy',
       suppliers:        '++id, name, isDeleted',
@@ -342,6 +406,7 @@ class PosDatabase extends Dexie {
       transactions:     '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy',
       transactionItems: '++id, transactionId, productId',
       storeSettings:    '++id',
+      units:            '++id, &name, isDeleted',
       users:            '++id, &username, role, isActive',
     }).upgrade(async (tx) => {
       // Default multiUserEnabled = false on existing storeSettings
@@ -372,6 +437,22 @@ export async function seedDefaultData() {
       { name: 'Tunai', category: 'tunai', isDefault: true, createdAt: new Date() },
       { name: 'Transfer Bank', category: 'transfer', isDefault: false, createdAt: new Date() },
       { name: 'QRIS', category: 'qris', isDefault: false, createdAt: new Date() },
+    ]);
+  }
+
+  const unitCount = await db.units.count();
+  if (unitCount === 0) {
+    const now = new Date();
+    await db.units.bulkAdd([
+      { name: 'pcs',     isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'kg',      isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'gram',    isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'liter',   isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'ml',      isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'porsi',   isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'cup',     isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'botol',   isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
+      { name: 'bungkus', isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null },
     ]);
   }
 

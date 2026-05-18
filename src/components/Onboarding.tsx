@@ -81,6 +81,29 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       { name: 'UD Minuman Jaya', phone: '08222333444', address: 'Jl. Raya Industri No. 8', notes: 'Supplier minuman', createdAt: now, isDeleted: 0, deletedAt: null },
     ];
 
+    // Ensure all units used by sample products exist in master units table.
+    // seedDefaultData() already adds the 9 default units; here we only add
+    // the extras that the sample data uses (e.g. 'mangkok', 'gelas').
+    const sampleUnits = Array.from(new Set(dummyProducts.map(p => p.unit).filter(Boolean)));
+    const existingUnits = await db.units.toArray();
+    const existingNames = new Set(existingUnits.map(u => u.name));
+    const unitNow = new Date();
+    for (const u of sampleUnits) {
+      if (existingNames.has(u)) continue;
+      try {
+        await db.units.add({
+          name: u,
+          isDefault: 1,
+          createdAt: unitNow,
+          isDeleted: 0,
+          deletedAt: null,
+        });
+        existingNames.add(u);
+      } catch {
+        // unique-constraint race: ignore
+      }
+    }
+
     await db.products.bulkAdd(dummyProducts);
     await db.suppliers.bulkAdd(dummySuppliers);
 
