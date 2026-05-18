@@ -168,6 +168,22 @@ Got suggestions, feature ideas, or found a bug? Submit and vote on our board:
 
 ---
 
+## 👥 Community
+
+Join the Telegram group to discuss the app, ask questions, and share tips with other users:
+
+👉 **[t.me/kasirgratisan](https://t.me/kasirgratisan)**
+
+---
+
+## ☕ Support the Developer
+
+KasirGratisan is built and maintained for free. If you find it useful, you can buy the developer a coffee to support continued development:
+
+👉 **[traktir.jipraks.com](https://traktir.jipraks.com/)**
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Here's how:
