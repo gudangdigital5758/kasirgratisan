@@ -110,6 +110,9 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
       lines.push(`No: ${transaction.receiptNumber}\n`);
       lines.push(`${format(new Date(transaction.date), 'dd/MM/yyyy HH:mm')}\n`);
       if (cashierName) lines.push(`Kasir: ${cashierName}\n`);
+      if (transaction.customerName) lines.push(`Pelanggan: ${transaction.customerName}\n`);
+      if (transaction.tableNumber) lines.push(`Meja: ${transaction.tableNumber}\n`);
+      if (transaction.remarks) lines.push(`Catatan: ${transaction.remarks}\n`);
       lines.push('--------------------------------\n');
       
       lines.push('\x1B\x61\x00'); // Left align
@@ -182,6 +185,21 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
           {cashierName && (
             <div className="flex justify-between text-[10px]">
               <span>Kasir: {cashierName}</span>
+            </div>
+          )}
+          {transaction.customerName && (
+            <div className="flex justify-between text-[10px]">
+              <span>Pelanggan: {transaction.customerName}</span>
+            </div>
+          )}
+          {transaction.tableNumber && (
+            <div className="flex justify-between text-[10px]">
+              <span>Meja: {transaction.tableNumber}</span>
+            </div>
+          )}
+          {transaction.remarks && (
+            <div className="text-[10px]">
+              <span>Catatan: {transaction.remarks}</span>
             </div>
           )}
 

@@ -391,6 +391,7 @@ export default function Kasir() {
         profit: totalProfit,
         customerName: customerName.trim() || undefined,
         tableNumber: tableNumber.trim() || undefined,
+        remarks: remarks.trim() || undefined,
         closedAt: new Date(),
       });
 
