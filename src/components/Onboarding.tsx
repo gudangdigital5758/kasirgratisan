@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Store, MapPin, Phone, ChevronRight, ChevronLeft, ShoppingCart, Package, BarChart3, Shield, Database, Palette, Download, CheckCircle2, Globe } from 'lucide-react';
+import { Store, MapPin, Phone, ChevronRight, ChevronLeft, ShoppingCart, Package, BarChart3, Shield, Database, Palette, Download, CheckCircle2, Globe, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { db } from '@/lib/db';
+import { db, type Product } from '@/lib/db';
 import { markAllFeaturesSeen } from '@/lib/whats-new';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -51,6 +51,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [phone, setPhone] = useState('');
   const [loadDummy, setLoadDummy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [themeColor, setThemeColorState] = useState('25');
   const [installDone, setInstallDone] = useState(false);
   const { canInstall, isInstalled, install } = usePWAInstall();
@@ -140,6 +141,107 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       { transactionId: tx3Id as number, productId: 4, productName: 'Sate Ayam (10 tusuk)', quantity: 1, price: 18000, hpp: 10000, discountType: discNull, discountValue: 0, discountAmount: 0, subtotal: 18000 },
       { transactionId: tx3Id as number, productId: 7, productName: 'Es Jeruk', quantity: 1, price: 7000, hpp: 2500, discountType: discNull, discountValue: 0, discountAmount: 0, subtotal: 7000 },
     ]);
+  };
+
+  const handleRestore = () => {
+    if (restoring) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setRestoring(true);
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.version) { toast.error('File backup tidak valid'); setRestoring(false); return; }
+
+        const hasSomeData = ['categories', 'products', 'suppliers', 'transactions', 'paymentMethods'].some(
+          key => Array.isArray(data[key]) && data[key].length > 0,
+        );
+        if (!hasSomeData) { toast.error('File backup tidak berisi data'); setRestoring(false); return; }
+
+        // Fresh install: clear seeded defaults then load from file.
+        await db.categories.clear(); await db.products.clear(); await db.suppliers.clear();
+        await db.stockIns.clear(); await db.stockOuts.clear(); await db.hppHistory.clear();
+        await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
+        await db.storeSettings.clear();
+        if (Array.isArray(data.users)) await db.users.clear();
+        await db.units.clear();
+        if (Array.isArray(data.expenseCategories) || Array.isArray(data.expenses)) {
+          await db.expenseCategories.clear();
+          await db.expenses.clear();
+        }
+        if (Array.isArray(data.customers)) await db.customers.clear();
+
+        if (data.categories?.length) await db.categories.bulkAdd(data.categories);
+        if (data.products?.length) {
+          const normalized = (data.products as Product[]).map((p) =>
+            p && p.trackStock === undefined ? { ...p, trackStock: true } : p,
+          );
+          await db.products.bulkAdd(normalized);
+        }
+        if (data.suppliers?.length) await db.suppliers.bulkAdd(data.suppliers);
+        if (data.customers?.length) await db.customers.bulkAdd(data.customers);
+        if (data.stockIns?.length) await db.stockIns.bulkAdd(data.stockIns);
+        if (data.stockOuts?.length) await db.stockOuts.bulkAdd(data.stockOuts);
+        if (data.hppHistory?.length) await db.hppHistory.bulkAdd(data.hppHistory);
+        if (data.paymentMethods?.length) await db.paymentMethods.bulkAdd(data.paymentMethods);
+        if (data.transactions?.length) await db.transactions.bulkAdd(data.transactions);
+        if (data.users?.length) await db.users.bulkAdd(data.users);
+        if (data.expenseCategories?.length) await db.expenseCategories.bulkAdd(data.expenseCategories);
+        if (data.expenses?.length) await db.expenses.bulkAdd(data.expenses);
+
+        // Units (v3+ backup) or harvest from products (v1/v2 backup)
+        if (Array.isArray(data.units) && data.units.length > 0) {
+          await db.units.bulkAdd(data.units);
+        } else {
+          const now = new Date();
+          const defaults = ['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'];
+          const seen = new Set<string>();
+          const toAdd: Array<{ name: string; isDefault: number; createdAt: Date; isDeleted: number; deletedAt: null }> = [];
+          for (const name of defaults) { seen.add(name); toAdd.push({ name, isDefault: 1, createdAt: now, isDeleted: 0, deletedAt: null }); }
+          if (Array.isArray(data.products)) {
+            for (const p of data.products as Product[]) {
+              const u = p?.unit?.trim();
+              if (!u || seen.has(u)) continue;
+              seen.add(u);
+              toAdd.push({ name: u, isDefault: 0, createdAt: now, isDeleted: 0, deletedAt: null });
+            }
+          }
+          if (toAdd.length) await db.units.bulkAdd(toAdd);
+        }
+
+        if (data.transactionItems?.length) await db.transactionItems.bulkAdd(data.transactionItems);
+
+        // Restored storeSettings carries onboardingDone from the source device.
+        // Force it true so the wizard closes and the app opens straight away.
+        if (data.storeSettings?.length) {
+          const restored = data.storeSettings.map((s: Record<string, unknown>) => ({ ...s, onboardingDone: true }));
+          await db.storeSettings.bulkAdd(restored);
+        } else {
+          await db.storeSettings.add({
+            storeName: 'Toko Saya',
+            address: '',
+            phone: '',
+            receiptFooter: 'Terima kasih atas kunjungan Anda!',
+            onboardingDone: true,
+            lastBackupAt: null,
+            deviceId: crypto.randomUUID(),
+          });
+        }
+
+        await markAllFeaturesSeen();
+        toast.success('Data berhasil di-restore!');
+        onComplete();
+      } catch {
+        toast.error('Gagal membaca / restore file backup');
+      } finally {
+        setRestoring(false);
+      }
+    };
+    input.click();
   };
 
   const handleFinish = async () => {
@@ -283,6 +385,22 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </div>
               <h2 className="text-2xl font-bold tracking-tight">Setup Toko Kamu</h2>
               <p className="text-sm text-muted-foreground">Informasi ini akan tampil di struk belanja</p>
+            </div>
+
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">Sudah punya backup?</p>
+                  <p className="text-[11px] text-muted-foreground leading-snug">Restore file JSON dari device lama tanpa perlu setup toko ulang.</p>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full h-10 text-sm gap-2" onClick={handleRestore} disabled={restoring}>
+                <Upload className="w-4 h-4" />
+                {restoring ? 'Restore data...' : 'Restore Toko dari Backup'}
+              </Button>
             </div>
 
             <div className="space-y-4">
