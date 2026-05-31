@@ -67,8 +67,12 @@ export default function Produk() {
   const getCategoryColor = (catId: number) => categories?.find(c => c.id === catId)?.color ?? '#999';
 
   const openAdd = () => {
+    if (!categories || categories.length === 0) {
+      toast.error('Buat kategori terlebih dahulu sebelum menambah produk');
+      return;
+    }
     setEditProduct(null);
-    setName(''); setSku(''); setCategoryId(categories?.[0]?.id?.toString() ?? ''); setPrice(''); setHpp(''); setStock(''); setTrackStock(true); setUnit('pcs'); setBarcode(''); setDescription(''); setPhoto(undefined);
+    setName(''); setSku(''); setCategoryId(categories[0]?.id?.toString() ?? ''); setPrice(''); setHpp(''); setStock(''); setTrackStock(true); setUnit('pcs'); setBarcode(''); setDescription(''); setPhoto(undefined);
     setDialogOpen(true);
   };
 
@@ -336,11 +340,13 @@ export default function Produk() {
               <div className="space-y-1.5">
                 <Label>Kategori *</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Pilih" /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
                   <SelectContent>
-                    {categories?.map(c => (
+                    {(categories && categories.length > 0) ? categories.map(c => (
                       <SelectItem key={c.id} value={c.id!.toString()}>{c.icon} {c.name}</SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="__empty" disabled>Belum ada kategori</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
