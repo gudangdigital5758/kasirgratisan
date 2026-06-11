@@ -4,12 +4,14 @@ import { db, seedDefaultData } from '@/lib/db';
 import { useEffect } from 'react';
 import BottomNav from './BottomNav';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useCloudAutoBackup } from '@/hooks/use-cloud-auto-backup';
 import Onboarding from '@/components/Onboarding';
 import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function AppLayout() {
   useThemeColor(); // Apply saved theme color on mount
+  useCloudAutoBackup(); // Auto cloud backup on app open (if enabled & subscribed)
   const { multiUserEnabled, currentUser, loading } = useAuth();
 
   useEffect(() => {

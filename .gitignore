@@ -28,6 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Internal API docs — do not publish
+API.md
+
 # Android / Capacitor build outputs
 assets/
 android/.gradle/

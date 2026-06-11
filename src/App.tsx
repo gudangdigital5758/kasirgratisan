@@ -9,6 +9,8 @@ import { initAnalytics } from "@/lib/analytics";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar } from "@capacitor/status-bar";
 import { AuthProvider } from "@/hooks/use-auth";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { CloudAuthProvider } from "@/hooks/use-cloud-auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import AppLayout from "./components/layout/AppLayout";
@@ -31,9 +33,14 @@ import ExpenseCategoriesSettings from "./pages/settings/ExpenseCategoriesSetting
 import UnitsSettings from "./pages/settings/UnitsSettings";
 import ThemeSettings from "./pages/settings/ThemeSettings";
 import BackupRestoreSettings from "./pages/settings/BackupRestoreSettings";
+import CloudBackupSettings from "./pages/settings/CloudBackupSettings";
+import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
+import CloudBackupsSettings from "./pages/settings/CloudBackupsSettings";
+import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
 const App = () => {
   useEffect(() => {
@@ -56,6 +63,8 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
+             <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+              <CloudAuthProvider>
               <AnalyticsTracker />
               <Routes>
                 <Route element={<AppLayout />}>
@@ -211,9 +220,43 @@ const App = () => {
                       </ErrorBoundary>
                     }
                   />
+                  <Route
+                    path="/settings/cloud-backup"
+                    element={
+                      <ErrorBoundary>
+                        <CloudBackupSettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/auto"
+                    element={
+                      <ErrorBoundary>
+                        <CloudAutoBackupSettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/backups"
+                    element={
+                      <ErrorBoundary>
+                        <CloudBackupsSettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/history"
+                    element={
+                      <ErrorBoundary>
+                        <CloudHistorySettings />
+                      </ErrorBoundary>
+                    }
+                  />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </CloudAuthProvider>
+             </GoogleOAuthProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

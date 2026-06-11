@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Store, MapPin, Phone, ChevronRight, ChevronLeft, ShoppingCart, Package, BarChart3, Shield, Database, Palette, Download, CheckCircle2, Globe, Upload } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Store, MapPin, Phone, ChevronRight, ChevronLeft, ShoppingCart, Package, BarChart3, Shield, Database, Palette, Download, CheckCircle2, Globe, Upload, Cloud, Loader2, DownloadCloud, LogOut, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,11 @@ import ThemeColorPicker from '@/components/ThemeColorPicker';
 import { applyThemeColor } from '@/hooks/use-theme-color';
 import { usePWAInstall } from '@/hooks/use-pwa-install';
 import { isNativePlatform } from '@/lib/printer';
+import { useCloudAuth } from '@/hooks/use-cloud-auth';
+import { GoogleLogin } from '@react-oauth/google';
+import { listBackups, downloadBackup, type CloudBackup } from '@/lib/cloud-api';
+import { restoreFromBackupData } from '@/lib/backup';
+import { format } from 'date-fns';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -62,6 +67,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [themeColor, setThemeColorState] = useState('215');
+  const { isLoggedIn: cloudLoggedIn, login: cloudLogin, googleUser: cloudUser, logout: cloudLogout } = useCloudAuth();
+  const [showCloud, setShowCloud] = useState(false);
+  const [cloudBackups, setCloudBackups] = useState<CloudBackup[]>([]);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudRestoringId, setCloudRestoringId] = useState<string | null>(null);
   const [installDone, setInstallDone] = useState(false);
   const { canInstall, isInstalled, install } = usePWAInstall();
 
@@ -254,6 +264,68 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     input.click();
   };
 
+  // Tutup wizard onboarding setelah restore berhasil (paksa onboardingDone).
+  const finishAfterRestore = async (successMsg: string) => {
+    const s = await db.storeSettings.toCollection().first();
+    if (s?.id) {
+      await db.storeSettings.update(s.id, { onboardingDone: true });
+    } else {
+      await db.storeSettings.add({
+        storeName: 'Toko Saya',
+        address: '',
+        phone: '',
+        receiptFooter: 'Terima kasih atas kunjungan Anda!',
+        onboardingDone: true,
+        lastBackupAt: null,
+        deviceId: crypto.randomUUID(),
+      });
+    }
+    await markAllFeaturesSeen();
+    toast.success(successMsg);
+    onComplete();
+  };
+
+  const loadCloudBackups = async () => {
+    setCloudLoading(true);
+    try {
+      const { items } = await listBackups({ page: 1, limit: 50 });
+      setCloudBackups(items);
+    } catch {
+      toast.error('Gagal memuat daftar backup cloud');
+    } finally {
+      setCloudLoading(false);
+    }
+  };
+
+  // Saat login cloud berhasil & panel terbuka, ambil daftar backup.
+  useEffect(() => {
+    if (showCloud && cloudLoggedIn) loadCloudBackups();
+  }, [showCloud, cloudLoggedIn]);
+
+  const handleCloudRestore = async (backup: CloudBackup) => {
+    if (cloudRestoringId) return;
+    // Tutup modal LEBIH DULU. Restore akan menulis onboardingDone=true yang
+    // memicu AppLayout melepas Onboarding; jika modal masih terbuka saat itu,
+    // Radix meninggalkan `pointer-events:none` di body → layar freeze.
+    setShowCloud(false);
+    setCloudRestoringId(backup.id);
+    setRestoring(true);
+    const toastId = toast.loading('Memulihkan data dari cloud…');
+    try {
+      const data = await downloadBackup(backup.id);
+      await restoreFromBackupData(data);
+      toast.dismiss(toastId);
+      await finishAfterRestore('Data berhasil di-restore dari cloud!');
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err instanceof Error ? err.message : 'Gagal restore dari cloud');
+      setShowCloud(true); // buka lagi agar user bisa coba lagi
+    } finally {
+      setCloudRestoringId(null);
+      setRestoring(false);
+    }
+  };
+
   const handleFinish = async () => {
     if (!storeName.trim()) return;
     setSaving(true);
@@ -419,7 +491,129 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 <Upload className="w-4 h-4" />
                 {restoring ? 'Restore data...' : 'Restore Toko dari Backup'}
               </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-10 text-sm gap-2"
+                onClick={() => setShowCloud(true)}
+                disabled={restoring}
+              >
+                <Cloud className="w-4 h-4" />
+                Restore dari Cloud
+              </Button>
             </div>
+
+            {showCloud && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                onClick={() => !cloudRestoringId && setShowCloud(false)}
+              >
+              <div
+                className="w-full max-w-md rounded-xl bg-background p-4 shadow-lg max-h-[85vh] overflow-y-auto space-y-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-base font-bold flex items-center gap-2">
+                      <Cloud className="w-5 h-5 text-primary" />
+                      Restore dari Cloud
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Login dengan akun Google, lalu pilih backup untuk dipulihkan.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 -mr-1 -mt-1"
+                    disabled={!!cloudRestoringId}
+                    onClick={() => setShowCloud(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {!cloudLoggedIn ? (
+                  <div className="space-y-3 py-2 text-center">
+                    <p className="text-xs text-muted-foreground">Login Google untuk melihat backup di cloud.</p>
+                    <div className="flex justify-center">
+                      <GoogleLogin
+                        onSuccess={(cr) => {
+                          if (cr.credential) cloudLogin(cr.credential).catch(() => toast.error('Gagal login'));
+                          else toast.error('Login Google gagal');
+                        }}
+                        onError={() => toast.error('Login Google gagal')}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Account info + logout */}
+                    <div className="flex items-center gap-3 rounded-xl border p-3">
+                      {cloudUser?.picture ? (
+                        <img src={cloudUser.picture} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                          {cloudUser?.name?.charAt(0) ?? '?'}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{cloudUser?.name ?? 'Akun Google'}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{cloudUser?.email}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-muted-foreground shrink-0"
+                        disabled={!!cloudRestoringId}
+                        onClick={() => { cloudLogout(); setCloudBackups([]); }}
+                      >
+                        <LogOut className="w-4 h-4" /> Ganti
+                      </Button>
+                    </div>
+
+                    {/* Backup list */}
+                    <div className="space-y-2">
+                      {cloudLoading ? (
+                        <div className="flex items-center justify-center py-6 text-muted-foreground">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        </div>
+                      ) : cloudBackups.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-6">
+                          Tidak ada backup di cloud untuk akun ini.
+                        </p>
+                      ) : (
+                        cloudBackups.map((b) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            disabled={!!cloudRestoringId}
+                            onClick={() => handleCloudRestore(b)}
+                            className="flex w-full items-center gap-2 rounded-lg border p-2.5 text-left hover:bg-muted/60 disabled:opacity-60"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{b.fileName}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {(b.fileSize / (1024 * 1024)).toFixed(2)} MB · {format(new Date(b.createdAt), 'dd MMM yyyy HH:mm')}
+                              </p>
+                            </div>
+                            {cloudRestoringId === b.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                            ) : (
+                              <DownloadCloud className="w-4 h-4 text-primary shrink-0" />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    {cloudRestoringId && (
+                      <p className="text-[10px] text-muted-foreground text-center">Memulihkan data… jangan tutup aplikasi.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="space-y-2">

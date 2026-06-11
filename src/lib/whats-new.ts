@@ -1,4 +1,4 @@
-import { Wallet, AlertTriangle, Infinity as InfinityIcon, Users as UsersIcon, FileSpreadsheet, PackageSearch, Sparkles, type LucideIcon } from 'lucide-react';
+import { Wallet, AlertTriangle, Infinity as InfinityIcon, Users as UsersIcon, FileSpreadsheet, PackageSearch, Sparkles, Cloud, type LucideIcon } from 'lucide-react';
 import { db } from './db';
 
 /**
@@ -28,6 +28,16 @@ export interface WhatsNewFeature {
 }
 
 export const FEATURES: WhatsNewFeature[] = [
+  {
+    id: '2026-06-cloud-backup',
+    title: 'Backup Otomatis ke Cloud',
+    description:
+      'Data toko kini bisa dibackup otomatis ke cloud yang aman — tetap aman walau HP hilang, rusak, atau ganti perangkat. Login dengan akun Google, pilih paket langganan, lalu atur jadwal backup otomatis. Kamu juga bisa restore data langsung dari cloud kapan saja.',
+    icon: Cloud,
+    iconColor: 'text-primary bg-primary/10',
+    publishedAt: '2026-06-11',
+    cta: { label: 'Aktifkan Cloud Backup', to: '/settings/cloud-backup' },
+  },
   {
     id: '2026-06-rebrand-freekasir',
     title: 'Wajah Baru: FreeKasir',

@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart } from 'lucide-react';
+import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud } from 'lucide-react';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { FEATURES, getUnseenFeatures } from '@/lib/whats-new';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { compressImage } from '@/lib/image-utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { createUser, isValidPin, isValidUsername, saveSession } from '@/lib/auth';
 import { isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { usePWAInstall } from '@/hooks/use-pwa-install';
@@ -34,6 +35,7 @@ export default function Pengaturan() {
   );
 
   const { multiUserEnabled, currentUser, isOwner, can, logout } = useAuth();
+  const { isLoggedIn: cloudLoggedIn, isSubscribed: cloudSubscribed } = useCloudAuth();
 
   // PWA install
   const { canInstall, isInstalled, isIOS, install } = usePWAInstall();
@@ -238,6 +240,32 @@ export default function Pengaturan() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
+  // Status kartu Cloud Backup di Settings.
+  const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
+  const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
+    ? {
+        theme: 'bg-destructive/10 ring-destructive/20',
+        iconWrap: 'bg-destructive/15 text-destructive',
+        badge: 'bg-destructive text-white',
+        badgeText: 'BELUM AKTIF',
+        desc: 'Data toko belum terbackup otomatis. Aktifkan agar aman walau HP hilang, rusak, atau ganti perangkat.',
+      }
+    : !cloudAutoOn
+    ? {
+        theme: 'bg-warning/10 ring-warning/20',
+        iconWrap: 'bg-warning/15 text-warning',
+        badge: 'bg-warning text-white',
+        badgeText: 'PERLU DIATUR',
+        desc: 'Langganan aktif, tapi backup otomatis belum dinyalakan. Atur jadwalnya agar data tersimpan rutin.',
+      }
+    : {
+        theme: 'bg-success/10 ring-success/20',
+        iconWrap: 'bg-success/15 text-success',
+        badge: 'bg-success text-white',
+        badgeText: 'AKTIF',
+        desc: 'Backup otomatis aktif. Data toko aman tersimpan di cloud.',
+      };
+
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
       <h1 className="text-xl font-bold flex items-center gap-2">
@@ -265,6 +293,31 @@ export default function Pengaturan() {
           {can('manage_store_settings') && <Edit2 className="w-4 h-4 text-muted-foreground" />}
         </CardContent>
       </Card>
+
+      {/* Cloud Backup — featured, status-aware */}
+      {can('manage_backup') && (
+        <Link to="/settings/cloud-backup">
+          <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${cloudStatus.iconWrap}`}>
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold">Cloud Backup</p>
+                  <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
+                    {cloudStatus.badgeText}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                  {cloudStatus.desc}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Install as App — hidden when already installed */}
       {!isInstalled && (

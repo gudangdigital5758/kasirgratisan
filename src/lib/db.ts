@@ -223,6 +223,9 @@ export interface StoreSettings {
   deviceId: string;
   multiUserEnabled?: boolean; // CR-multiuser: opt-in flag
   seenWhatsNewIds?: string[]; // IDs of "What's New" features the user has dismissed
+  cloudAutoBackupInterval?: 'off' | 'hourly' | 'daily' | 'weekly'; // auto cloud backup cadence (default off)
+  cloudAutoBackupHours?: number; // interval jam bila cloudAutoBackupInterval === 'hourly'
+  lastCloudBackupAt?: Date | null; // last successful upload to cloud
 }
 
 // === Database ===

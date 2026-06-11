@@ -2,6 +2,7 @@ import { X, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/db';
+import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Capacitor } from '@capacitor/core';
@@ -65,28 +66,8 @@ export function shouldShowBackupReminder(lastBackupAt: Date | string | null): bo
 
 // Export all data as JSON and trigger download
 export async function exportBackupData() {
-  const data = {
-    version: 5,
-    exportedAt: new Date().toISOString(),
-    categories: await db.categories.toArray(),
-    products: await db.products.toArray(),
-    suppliers: await db.suppliers.toArray(),
-    customers: await db.customers.toArray(),
-    stockIns: await db.stockIns.toArray(),
-    stockOuts: await db.stockOuts.toArray(),
-    hppHistory: await db.hppHistory.toArray(),
-    paymentMethods: await db.paymentMethods.toArray(),
-    transactions: await db.transactions.toArray(),
-    transactionItems: await db.transactionItems.toArray(),
-    storeSettings: await db.storeSettings.toArray(),
-    users: await db.users.toArray(),
-    units: await db.units.toArray(),
-    expenseCategories: await db.expenseCategories.toArray(),
-    expenses: await db.expenses.toArray(),
-  };
-
-  const fileName = `freekasir-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  const jsonString = JSON.stringify(data, null, 2);
+  const fileName = backupFileName();
+  const jsonString = await buildBackupJsonString();
 
   if (Capacitor.isNativePlatform()) {
     try {
