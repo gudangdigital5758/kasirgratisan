@@ -16,6 +16,7 @@ import { isNativePlatform } from '@/lib/printer';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { GoogleLogin } from '@react-oauth/google';
 import { listBackups, downloadBackup, type CloudBackup } from '@/lib/cloud-api';
+import { nativeGoogleSignIn } from '@/lib/google-auth';
 import { restoreFromBackupData } from '@/lib/backup';
 import { format } from 'date-fns';
 
@@ -74,6 +75,19 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [cloudBackups, setCloudBackups] = useState<CloudBackup[]>([]);
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudRestoringId, setCloudRestoringId] = useState<string | null>(null);
+  const [cloudLoginBusy, setCloudLoginBusy] = useState(false);
+
+  const handleNativeCloudLogin = async () => {
+    setCloudLoginBusy(true);
+    try {
+      const idToken = await nativeGoogleSignIn();
+      await cloudLogin(idToken);
+    } catch {
+      toast.error('Login Google gagal');
+    } finally {
+      setCloudLoginBusy(false);
+    }
+  };
   const [installDone, setInstallDone] = useState(false);
   const { canInstall, isInstalled, install } = usePWAInstall();
 
@@ -539,13 +553,20 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   <div className="space-y-3 py-2 text-center">
                     <p className="text-xs text-muted-foreground">Login Google untuk melihat backup di cloud.</p>
                     <div className="flex justify-center">
-                      <GoogleLogin
-                        onSuccess={(cr) => {
-                          if (cr.credential) cloudLogin(cr.credential).catch(() => toast.error('Gagal login'));
-                          else toast.error('Login Google gagal');
-                        }}
-                        onError={() => toast.error('Login Google gagal')}
-                      />
+                      {isNative ? (
+                        <Button className="h-11 gap-2" disabled={cloudLoginBusy} onClick={handleNativeCloudLogin}>
+                          {cloudLoginBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                          Lanjut dengan Google
+                        </Button>
+                      ) : (
+                        <GoogleLogin
+                          onSuccess={(cr) => {
+                            if (cr.credential) cloudLogin(cr.credential).catch(() => toast.error('Gagal login'));
+                            else toast.error('Login Google gagal');
+                          }}
+                          onError={() => toast.error('Login Google gagal')}
+                        />
+                      )}
                     </div>
                   </div>
                 ) : (

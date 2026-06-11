@@ -12,6 +12,8 @@ import {
   isTokenValid,
 } from '@/lib/cloud-auth';
 import { initOneSignal, oneSignalLogin, oneSignalLogout } from '@/lib/onesignal';
+import { nativeGoogleSignOut } from '@/lib/google-auth';
+import { isNativePlatform } from '@/lib/printer';
 
 interface GoogleUser {
   email?: string;
@@ -79,6 +81,7 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     setGoogleUser(null);
     setProfile(null);
     oneSignalLogout();
+    if (isNativePlatform()) nativeGoogleSignOut();
   }, []);
 
   const login = useCallback(
