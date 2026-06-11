@@ -9,6 +9,8 @@
  * setelah profil diambil, dan oneSignalLogout() saat logout.
  */
 
+import { isNativePlatform } from '@/lib/printer';
+
 interface OneSignalApi {
   init(opts: Record<string, unknown>): Promise<void>;
   login(externalId: string): Promise<void>;
@@ -29,8 +31,11 @@ const APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined;
 
 let initialized = false;
 
-/** Apakah browser mendukung push notification. */
+/** Apakah platform mendukung push notification (web SDK ini — web/PWA saja). */
 export function isPushSupported(): boolean {
+  // OneSignal Web SDK tidak berlaku di WebView native (Android pakai plugin
+  // terpisah + FCM — ditunda). Jadi push hanya untuk web/PWA dulu.
+  if (isNativePlatform()) return false;
   return (
     typeof window !== 'undefined' &&
     'Notification' in window &&

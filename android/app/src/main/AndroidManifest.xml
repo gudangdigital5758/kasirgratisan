@@ -33,6 +33,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Kamera untuk scan barcode/QR (SKU & barcode produk, kasir) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- Bluetooth (printer struk) -->
     <!-- Android <= 11 (API 30) -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

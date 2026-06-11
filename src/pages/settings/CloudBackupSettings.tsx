@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
+import { isNativePlatform } from '@/lib/printer';
+import { nativeGoogleSignIn } from '@/lib/google-auth';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { fetchPlans, checkoutPlan, verifyPayment, listBackups, type Plan } from '@/lib/cloud-api';
 import { buildBackupJsonString } from '@/lib/backup';
@@ -83,6 +85,18 @@ export default function CloudBackupSettings() {
   if (!can('manage_backup')) {
     return <LockedPage title="Cloud Backup" permissionLabel="Kelola Backup" />;
   }
+
+  const handleNativeLogin = async () => {
+    setBusy('login');
+    try {
+      const idToken = await nativeGoogleSignIn();
+      await login(idToken);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Login Google gagal');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const handleSubscribe = async (planId: string) => {
     setBusy(`checkout:${planId}`);
@@ -198,13 +212,20 @@ export default function CloudBackupSettings() {
               </p>
             </div>
             <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={(cr) => {
-                  if (cr.credential) login(cr.credential).catch(() => toast.error('Gagal login'));
-                  else toast.error('Login Google gagal');
-                }}
-                onError={() => toast.error('Login Google gagal')}
-              />
+              {isNativePlatform() ? (
+                <Button className="h-11 gap-2" disabled={busy === 'login'} onClick={handleNativeLogin}>
+                  {busy === 'login' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                  Lanjut dengan Google
+                </Button>
+              ) : (
+                <GoogleLogin
+                  onSuccess={(cr) => {
+                    if (cr.credential) login(cr.credential).catch(() => toast.error('Gagal login'));
+                    else toast.error('Login Google gagal');
+                  }}
+                  onError={() => toast.error('Login Google gagal')}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

@@ -43,3 +43,4 @@ android/.idea/
 *.aab
 *.keystore
 *.jks
+keystore.properties
