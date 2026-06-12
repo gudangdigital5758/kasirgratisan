@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart3, TrendingUp, ShoppingCart, Package, DollarSign, ArrowDown, ArrowUp, Minus, Wallet, CreditCard, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +13,8 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
 import ExportReportDialog from '@/components/reports/ExportReportDialog';
+import UserTypeModal from '@/components/UserTypeModal';
+import { shouldShowUserTypeSurvey } from '@/lib/user-type';
 
 export default function Laporan() {
   const { can } = useAuth();
@@ -20,7 +22,15 @@ export default function Laporan() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [includeExpenses, setIncludeExpenses] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  const [surveyOpen, setSurveyOpen] = useState(false);
   const days = period === 'daily' ? 1 : Number(period);
+
+  useEffect(() => {
+    if (shouldShowUserTypeSurvey()) {
+      const t = setTimeout(() => setSurveyOpen(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const dateRange = (() => {
     if (period === 'daily') {
@@ -151,6 +161,8 @@ export default function Laporan() {
         defaultStartMs={dateRange.start.getTime()}
         defaultEndMs={dateRange.end.getTime()}
       />
+
+      <UserTypeModal open={surveyOpen} onClose={() => setSurveyOpen(false)} />
 
       <Tabs value={period} onValueChange={v => setPeriod(v as 'daily' | '7' | '30')}>
         <TabsList className="w-full">
