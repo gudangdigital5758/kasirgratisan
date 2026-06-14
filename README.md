@@ -81,9 +81,9 @@ npm run build
 npm run preview
 ```
 
-### Android APK Build (Capacitor)
+### Android Build (Capacitor)
 
-This project can also run as an Android APK using Capacitor while keeping the PWA/web version working from the same codebase.
+This project can also run as a native Android app using Capacitor while keeping the PWA/web version working from the same codebase.
 
 Requirements:
 
@@ -91,23 +91,47 @@ Requirements:
 - Android SDK configured
 - JDK 21 (Android Studio bundled JBR works)
 
-Build debug APK:
+#### Set JAVA_HOME
+
+**macOS / Linux:**
 
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+```
+
+> Adjust the path if your Android Studio is installed elsewhere.
+
+#### Build debug APK
+
+```bash
 npm run build
 npx cap sync android
 cd android
 ./gradlew assembleDebug
 ```
 
-Output APK:
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### Build release AAB (for Play Store)
 
 ```bash
-android/app/build/outputs/apk/debug/app-debug.apk
+npm run build
+npx cap sync android
+cd android
+./gradlew bundleRelease
 ```
 
-Useful scripts:
+Output: `android/app/build/outputs/bundle/release/app-release.aab`
+
+> The release AAB must be signed before uploading to Google Play. See [Android signing docs](https://developer.android.com/studio/publish/app-signing).
+
+#### Useful scripts
 
 ```bash
 npm run cap:sync      # build web bundle and sync Capacitor
