@@ -624,6 +624,27 @@ class PosDatabase extends Dexie {
         if (s.allowDebt === undefined) s.allowDebt = false;
       });
     });
+
+    // Version 12 - Add unit index to products table for units management renaming/deletion checks.
+    this.version(12).stores({
+      categories:        '++id, name, isDeleted',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit',
+      suppliers:         '++id, name, isDeleted',
+      customers:         '++id, name, isDeleted',
+      stockIns:          '++id, productId, supplierId, date, createdBy',
+      stockOuts:         '++id, productId, date, createdBy',
+      hppHistory:        '++id, productId, date',
+      paymentMethods:    '++id, name, category',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted',
+      users:             '++id, &username, role, isActive',
+      expenseCategories: '++id, name, isDeleted',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted',
+      debts:             '++id, &transactionId, customerId, status, createdAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy',
+    });
   }
 }
 
