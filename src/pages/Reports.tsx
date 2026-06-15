@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, ShoppingCart, Package, DollarSign, ArrowDown, ArrowUp, Minus, Wallet, CreditCard, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, ShoppingCart, Package, DollarSign, ArrowDown, ArrowUp, Minus, Wallet, CreditCard, Download, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -15,14 +15,21 @@ import LockedPage from '@/components/LockedPage';
 import ExportReportDialog from '@/components/reports/ExportReportDialog';
 import UserTypeModal from '@/components/UserTypeModal';
 import { shouldShowUserTypeSurvey } from '@/lib/user-type';
+import { toast } from 'sonner';
+import { isNativePlatform, printRawNativeBluetooth, getDailyReportESCPOSData, type DailyReportPrintData } from '@/lib/printer';
+import DailyReportReceipt from '@/components/reports/DailyReportReceipt';
 
 export default function Laporan() {
-  const { can } = useAuth();
-  const [period, setPeriod] = useState<'daily' | '7' | '30'>('7');
+  const { can, currentUser } = useAuth();
+  const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const [period, setPeriod] = useState<'daily' | '7' | '30'>('daily');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [includeExpenses, setIncludeExpenses] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [surveyOpen, setSurveyOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportData, setReportData] = useState<DailyReportPrintData | null>(null);
   const days = period === 'daily' ? 1 : Number(period);
 
   useEffect(() => {
@@ -143,6 +150,39 @@ export default function Laporan() {
 
   const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
+  const handlePrintDailyReport = () => {
+    const itemsCount = allItems.reduce((s, item) => s + item.quantity, 0);
+    const formattedDate = format(new Date(`${selectedDate}T00:00:00`), 'dd-MM-yyyy');
+    
+    const data: DailyReportPrintData = {
+      dateStr: formattedDate,
+      periodStr: `${formattedDate} 00:00 - 23:59`,
+      txCount,
+      itemCount: itemsCount,
+      grossSales: totalRevenue,
+      discount: totalDiscount,
+      netSales: netSales,
+      paymentBreakdown: paymentBreakdown.map(method => ({
+        name: method.name,
+        amount: method.amount,
+        count: method.count
+      })),
+      topProducts: topProducts.map(p => ({
+        name: p.name,
+        qty: p.qty,
+        revenue: p.revenue
+      })),
+      storeSettings,
+      cashierName: currentUser?.name || 'Owner',
+      includeExpenses,
+      expensesAmount: appliedExpenses,
+      netProfit: netProfit
+    };
+
+    setReportData(data);
+    setReportOpen(true);
+  };
+
   return (
     <div className="px-4 pt-6 pb-20 space-y-5">
       <div className="flex items-center justify-between gap-2">
@@ -163,6 +203,14 @@ export default function Laporan() {
       />
 
       <UserTypeModal open={surveyOpen} onClose={() => setSurveyOpen(false)} />
+
+      {reportData && (
+        <DailyReportReceipt
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          data={reportData}
+        />
+      )}
 
       <Tabs value={period} onValueChange={v => setPeriod(v as 'daily' | '7' | '30')}>
         <TabsList className="w-full">
@@ -191,6 +239,19 @@ export default function Laporan() {
               </div>
               <Switch id="include-expenses" checked={includeExpenses} onCheckedChange={setIncludeExpenses} />
             </div>
+            <Button
+              className="w-full gap-2 mt-2"
+              onClick={handlePrintDailyReport}
+              disabled={txCount === 0}
+            >
+              <Printer className="w-4 h-4" />
+              Cetak Laporan Closing
+            </Button>
+            {txCount === 0 && (
+              <p className="text-[10px] text-destructive text-center mt-1.5 font-medium">
+                * Belum ada transaksi penjualan pada tanggal terpilih
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

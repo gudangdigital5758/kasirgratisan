@@ -120,7 +120,125 @@ export const getESCPOSData = ({
   return lines.join('');
 };
 
-export const printNativeBluetooth = async (printData: PrintData, toast: { info: (m: string) => void; success: (m: string) => void; error: (m: string) => void }): Promise<boolean> => {
+export interface DailyReportPrintData {
+  dateStr: string;
+  periodStr: string;
+  txCount: number;
+  itemCount: number;
+  grossSales: number;
+  discount: number;
+  netSales: number;
+  paymentBreakdown: Array<{ name: string; amount: number; count: number }>;
+  topProducts: Array<{ name: string; qty: number; revenue: number }>;
+  storeSettings: StoreSettings | undefined;
+  cashierName?: string;
+  includeExpenses?: boolean;
+  expensesAmount?: number;
+  netProfit?: number;
+}
+
+export const getDailyReportESCPOSData = ({
+  dateStr,
+  periodStr,
+  txCount,
+  itemCount,
+  grossSales,
+  discount,
+  netSales,
+  paymentBreakdown,
+  topProducts,
+  storeSettings,
+  cashierName,
+  includeExpenses,
+  expensesAmount = 0,
+  netProfit = 0,
+}: DailyReportPrintData): string => {
+  const lines: string[] = [];
+  const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+
+  const formatRow = (label: string, value: string) => {
+    const spaceCount = 32 - label.length - value.length;
+    return `${label}${' '.repeat(Math.max(1, spaceCount))}${value}\n`;
+  };
+
+  lines.push('\x1B\x61\x01'); // Center align
+  lines.push(`${storeSettings?.storeName || 'Toko'}\n`);
+  if (storeSettings?.address) lines.push(`${storeSettings.address}\n`);
+  if (storeSettings?.phone) lines.push(`${storeSettings.phone}\n`);
+  lines.push('================================\n');
+  lines.push('       DAILY SALES REPORT       \n');
+  lines.push(`           ${dateStr}           \n`);
+  lines.push('================================\n\n');
+
+  lines.push('\x1B\x61\x00'); // Left align
+  lines.push(`Periode:\n`);
+  lines.push(`${periodStr}\n\n`);
+
+  lines.push(`Jumlah Transaksi : ${txCount}\n`);
+  lines.push(`Jumlah Item      : ${itemCount}\n\n`);
+
+  lines.push('--------------------------------\n');
+  lines.push('PENJUALAN\n');
+  lines.push('--------------------------------\n');
+  lines.push(formatRow('Gross Sales', rp(grossSales)));
+  if (discount > 0) {
+    lines.push(formatRow('Discount', `-${rp(discount)}`));
+  }
+  lines.push(formatRow('Net Sales', rp(netSales)));
+  lines.push('\n');
+
+  if (includeExpenses && expensesAmount > 0) {
+    lines.push('--------------------------------\n');
+    lines.push('PENGELUARAN & LABA NETTO\n');
+    lines.push('--------------------------------\n');
+    lines.push(formatRow('Net Sales', rp(netSales)));
+    lines.push(formatRow('Expenses', `-${rp(expensesAmount)}`));
+    lines.push(formatRow('Net Profit', rp(netProfit)));
+    lines.push('\n');
+  }
+
+  lines.push('--------------------------------\n');
+  lines.push('PEMBAYARAN\n');
+  lines.push('--------------------------------\n');
+  if (paymentBreakdown.length === 0) {
+    lines.push('Belum ada pembayaran\n');
+  } else {
+    paymentBreakdown.forEach(method => {
+      lines.push(formatRow(method.name, rp(method.amount)));
+    });
+  }
+  lines.push('\n');
+
+  lines.push('--------------------------------\n');
+  lines.push('PRODUK TERLARIS\n');
+  lines.push('--------------------------------\n');
+  if (topProducts.length === 0) {
+    lines.push('Belum ada penjualan produk\n');
+  } else {
+    topProducts.forEach((p, idx) => {
+      const num = `${idx + 1}. `;
+      const qtyStr = `${p.qty}`;
+      const maxNameLen = 32 - num.length - qtyStr.length - 2;
+      const truncatedName = p.name.length > maxNameLen ? p.name.substring(0, maxNameLen) + '..' : p.name;
+      const label = `${num}${truncatedName}`;
+      lines.push(formatRow(label, qtyStr));
+    });
+  }
+  lines.push('\n');
+
+  lines.push('================================\n');
+  lines.push('\x1B\x61\x01'); // Center
+  lines.push('         END OF REPORT          \n');
+  if (cashierName) lines.push(`Dicetak oleh: ${cashierName}\n`);
+  lines.push('================================\n\n\n\n');
+
+  return lines.join('');
+};
+
+export const printRawNativeBluetooth = async (
+  rawText: string,
+  toast: { info: (m: string) => void; success: (m: string) => void; error: (m: string) => void }
+): Promise<boolean> => {
   if (!window.bluetoothSerial) {
     toast.error('Plugin Bluetooth tidak tersedia.');
     return false;
@@ -155,15 +273,14 @@ export const printNativeBluetooth = async (printData: PrintData, toast: { info: 
             window.bluetoothSerial?.connect(
               printer.address,
               () => {
-                toast.info('Mencetak struk...');
+                toast.info('Mencetak...');
                 const encoder = new TextEncoder();
-                const rawText = getESCPOSData(printData);
                 const data = encoder.encode(rawText);
 
                 window.bluetoothSerial?.write(
                   data,
                   () => {
-                    toast.success('Struk berhasil dicetak!');
+                    toast.success('Berhasil dicetak!');
                     window.bluetoothSerial?.disconnect(() => {}, () => {});
                     resolve(true);
                   },
@@ -192,4 +309,9 @@ export const printNativeBluetooth = async (printData: PrintData, toast: { info: 
       }
     );
   });
+};
+
+export const printNativeBluetooth = async (printData: PrintData, toast: { info: (m: string) => void; success: (m: string) => void; error: (m: string) => void }): Promise<boolean> => {
+  const rawText = getESCPOSData(printData);
+  return printRawNativeBluetooth(rawText, toast);
 };

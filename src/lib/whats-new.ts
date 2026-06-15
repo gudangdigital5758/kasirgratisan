@@ -1,4 +1,4 @@
-import { Wallet, AlertTriangle, Infinity as InfinityIcon, Users as UsersIcon, FileSpreadsheet, PackageSearch, Sparkles, Cloud, type LucideIcon } from 'lucide-react';
+import { Wallet, AlertTriangle, Infinity as InfinityIcon, Users as UsersIcon, FileSpreadsheet, PackageSearch, Sparkles, Cloud, Printer, type LucideIcon } from 'lucide-react';
 import { db } from './db';
 
 /**
@@ -28,6 +28,16 @@ export interface WhatsNewFeature {
 }
 
 export const FEATURES: WhatsNewFeature[] = [
+  {
+    id: '2026-06-print-daily-closing',
+    title: 'Cetak Laporan Closing Harian',
+    description:
+      'Kini kamu bisa mempratinjau, mengunduh, membagikan, dan mencetak laporan closing penjualan harian langsung ke printer thermal Bluetooth. Halaman Laporan kini otomatis membuka tab Harian secara default, lengkap dengan indikator jika belum ada transaksi di hari tersebut.',
+    icon: Printer,
+    iconColor: 'text-primary bg-primary/10',
+    publishedAt: '2026-06-15',
+    cta: { label: 'Buka Laporan', to: '/reports' },
+  },
   {
     id: '2026-06-cloud-backup',
     title: 'Backup Otomatis ke Cloud',
