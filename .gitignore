@@ -30,6 +30,7 @@ dist-ssr
 
 # Internal API docs — do not publish
 API.md
+DASHBOARD.md
 
 # Android / Capacitor build outputs
 assets/

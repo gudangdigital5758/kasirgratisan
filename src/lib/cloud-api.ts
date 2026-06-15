@@ -13,11 +13,15 @@ export function setCloudTokenGetter(fn: () => string | null) {
 }
 
 // === Types ===
+export type PlanCategory = 'STORAGE' | 'SYNC';
+
 export interface Plan {
   id: string;
   name: string;
   storageLimitMb: number;
   price: number;
+  category: PlanCategory;
+  maxStores: number | null;
 }
 
 export interface StorageUsage {
@@ -44,6 +48,8 @@ export interface CloudUser {
   picture?: string;
   planId: string | null;
   storageLimitMb: number;
+  syncExpiry: string | null;
+  maxStores?: number | null; // batas jumlah toko sesuai paket sync aktif
   createdAt: string;
 }
 
@@ -57,9 +63,23 @@ export interface CloudBackup {
   updatedAt: string;
 }
 
+export interface CloudStore {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    products: number;
+    storeTransactions: number;
+    backups: number;
+  };
+}
+
 export interface UserProfile {
   user: CloudUser;
   subscription: Subscription | null;
+  syncSubscription: Subscription | null;
   storageUsage: StorageUsage;
   backups: CloudBackup[];
 }
@@ -178,14 +198,15 @@ export async function listBackups(params?: PageParams): Promise<Paginated<CloudB
   return { items, pagination: data.pagination ?? fallbackPagination(items, params) };
 }
 
-/** Upload satu file JSON backup (multipart). */
-export async function uploadBackup(jsonString: string, fileName: string): Promise<CloudBackup> {
+/** Upload satu file JSON backup (multipart). storeId wajib jika user punya sync subscription aktif. */
+export async function uploadBackup(jsonString: string, fileName: string, storeId?: string): Promise<CloudBackup> {
   const form = new FormData();
   const blob = new Blob([jsonString], { type: 'application/json' });
   form.append('file', blob, fileName);
+  if (storeId) form.append('storeId', storeId);
   const res = await fetch(`${BASE_URL}/api/backups`, {
     method: 'POST',
-    headers: authHeaders(), // jangan set Content-Type — biarkan browser set boundary
+    headers: authHeaders(),
     body: form,
   });
   if (!res.ok) await parseError(res);
@@ -235,6 +256,45 @@ export async function fetchPaymentHistory(params?: PageParams): Promise<Paginate
   const data = await res.json();
   const items: PaymentTransaction[] = data.history ?? [];
   return { items, pagination: data.pagination ?? fallbackPagination(items, params) };
+}
+
+// === Store Management ===
+
+export async function fetchStores(): Promise<CloudStore[]> {
+  const res = await fetch(`${BASE_URL}/api/stores`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.stores ?? [];
+}
+
+export async function createStore(name: string): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
+}
+
+export async function renameStore(id: string, name: string): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
+}
+
+export async function deleteStore(id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) await parseError(res);
 }
 
 export { CloudApiError };

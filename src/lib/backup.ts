@@ -161,6 +161,13 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       if (toAdd.length) await db.units.bulkAdd(toAdd);
     }
 
+    // cloudStoreId bersifat device-specific — jangan bawa dari backup
+    // supaya user harus pilih ulang toko setelah restore.
+    const restoredSettings = await db.storeSettings.toCollection().first();
+    if (restoredSettings?.id && restoredSettings.cloudStoreId) {
+      await db.storeSettings.update(restoredSettings.id, { cloudStoreId: null });
+    }
+
     // transactionItems (v2+) atau migrasi dari items[] embedded (v1).
     if (data.transactionItems?.length) {
       await db.transactionItems.bulkAdd(data.transactionItems);

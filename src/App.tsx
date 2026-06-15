@@ -36,8 +36,8 @@ import ThemeSettings from "./pages/settings/ThemeSettings";
 import BackupRestoreSettings from "./pages/settings/BackupRestoreSettings";
 import CloudBackupSettings from "./pages/settings/CloudBackupSettings";
 import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
-import CloudBackupsSettings from "./pages/settings/CloudBackupsSettings";
 import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
+import CloudStoreSettings from "./pages/settings/CloudStoreSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -246,18 +246,18 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/backups"
-                    element={
-                      <ErrorBoundary>
-                        <CloudBackupsSettings />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
                     path="/settings/cloud-backup/history"
                     element={
                       <ErrorBoundary>
                         <CloudHistorySettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/stores"
+                    element={
+                      <ErrorBoundary>
+                        <CloudStoreSettings />
                       </ErrorBoundary>
                     }
                   />

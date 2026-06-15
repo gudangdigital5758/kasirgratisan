@@ -28,6 +28,7 @@ interface CloudAuthValue {
   loadingProfile: boolean;
   isLoggedIn: boolean;
   isSubscribed: boolean;
+  isSyncSubscribed: boolean;
   login: (idToken: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -113,6 +114,7 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     loadingProfile,
     isLoggedIn: !!token,
     isSubscribed: !!profile?.subscription?.hasActiveSubscription,
+    isSyncSubscribed: !!profile?.syncSubscription?.hasActiveSubscription,
     login,
     logout,
     refreshProfile,

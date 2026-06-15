@@ -16,11 +16,11 @@ const DEFAULT_HOURS = 6;
 
 export default function CloudAutoBackupSettings() {
   const { can } = useAuth();
-  const { isLoggedIn, isSubscribed } = useCloudAuth();
+  const { isLoggedIn, isSyncSubscribed } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
 
   if (!can('manage_backup')) {
-    return <LockedPage title="Backup Otomatis" permissionLabel="Kelola Backup" />;
+    return <LockedPage title="Sinkronisasi Otomatis" permissionLabel="Kelola Backup" />;
   }
 
   const interval: Interval = (storeSettings?.cloudAutoBackupInterval as Interval) ?? 'off';
@@ -36,7 +36,7 @@ export default function CloudAutoBackupSettings() {
       : value === 'hourly' ? `setiap ${patch.cloudAutoBackupHours ?? hours} jam`
       : value === 'daily' ? 'harian'
       : 'mingguan';
-    toast.success(`Auto-backup ${label}`);
+    toast.success(`Sinkronisasi otomatis ${label}`);
   };
 
   const saveHours = async (raw: string) => {
@@ -57,21 +57,21 @@ export default function CloudAutoBackupSettings() {
         </Link>
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Clock className="w-5 h-5 text-primary" />
-          Backup Otomatis
+          Sinkronisasi Otomatis
         </h1>
       </div>
 
-      {!isLoggedIn || !isSubscribed ? (
+      {!isLoggedIn || !isSyncSubscribed ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 text-center text-sm text-muted-foreground">
-            Aktifkan langganan cloud dulu untuk mengatur backup otomatis.
+            Aktifkan langganan Cloud Sync dulu untuk mengatur sinkronisasi otomatis.
           </CardContent>
         </Card>
       ) : (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 space-y-3">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">Jadwal Backup Otomatis</p>
+              <p className="text-sm font-medium">Jadwal Sinkronisasi Otomatis</p>
               <Select value={interval} onValueChange={(v) => setInterval(v as Interval)}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -98,7 +98,7 @@ export default function CloudAutoBackupSettings() {
               )}
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Backup berjalan otomatis saat aplikasi dibuka bila sudah lewat dari interval. (PWA tidak menjalankan backup di latar belakang saat aplikasi tertutup.)
+              Sinkronisasi berjalan otomatis saat aplikasi dibuka bila sudah lewat dari interval. (PWA tidak menjalankan sinkronisasi di latar belakang saat aplikasi tertutup.)
             </p>
           </CardContent>
         </Card>

@@ -36,7 +36,7 @@ export default function Pengaturan() {
   const activeDebts = useLiveQuery(() => db.debts.where('status').anyOf('unpaid', 'partial').toArray());
 
   const { multiUserEnabled, currentUser, isOwner, can, logout } = useAuth();
-  const { isLoggedIn: cloudLoggedIn, isSubscribed: cloudSubscribed } = useCloudAuth();
+  const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
 
   // PWA install
   const { canInstall, isInstalled, isIOS, install } = usePWAInstall();
@@ -247,15 +247,24 @@ export default function Pengaturan() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
-  // Status kartu Cloud Backup di Settings.
+  // Status kartu Cloud Sync di Settings.
   const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
+  const cloudStoreLinked = !!storeSettings?.cloudStoreId;
   const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
     ? {
         theme: 'bg-destructive/10 ring-destructive/20',
         iconWrap: 'bg-destructive/15 text-destructive',
         badge: 'bg-destructive text-white',
         badgeText: 'BELUM AKTIF',
-        desc: 'Data toko belum terbackup otomatis. Aktifkan agar aman walau HP hilang, rusak, atau ganti perangkat.',
+        desc: 'Aktifkan Cloud Sync untuk memantau laporan toko secara real-time di dashboard.freekasir.com — buka dari HP atau laptop mana saja, data aman walau perangkat hilang atau ganti.',
+      }
+    : !cloudStoreLinked
+    ? {
+        theme: 'bg-warning/10 ring-warning/20',
+        iconWrap: 'bg-warning/15 text-warning',
+        badge: 'bg-warning text-white',
+        badgeText: 'PILIH TOKO',
+        desc: 'Langganan aktif, tapi perangkat belum terhubung ke toko. Pilih toko agar data bisa disinkronkan.',
       }
     : !cloudAutoOn
     ? {
@@ -263,14 +272,14 @@ export default function Pengaturan() {
         iconWrap: 'bg-warning/15 text-warning',
         badge: 'bg-warning text-white',
         badgeText: 'PERLU DIATUR',
-        desc: 'Langganan aktif, tapi backup otomatis belum dinyalakan. Atur jadwalnya agar data tersimpan rutin.',
+        desc: 'Toko sudah terhubung, tapi sinkronisasi otomatis belum dinyalakan. Atur jadwalnya agar data tersinkron rutin.',
       }
     : {
         theme: 'bg-success/10 ring-success/20',
         iconWrap: 'bg-success/15 text-success',
         badge: 'bg-success text-white',
         badgeText: 'AKTIF',
-        desc: 'Backup otomatis aktif. Data toko aman tersimpan di cloud.',
+        desc: 'Sinkronisasi aktif. Pantau laporan toko real-time di dashboard.freekasir.com dari perangkat mana saja.',
       };
 
   return (
@@ -301,7 +310,7 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
 
-      {/* Cloud Backup — featured, status-aware */}
+      {/* Cloud Sync — featured, status-aware */}
       {can('manage_backup') && (
         <Link to="/settings/cloud-backup" className="block mt-2">
           <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
@@ -311,7 +320,7 @@ export default function Pengaturan() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold">Cloud Backup</p>
+                  <p className="text-sm font-bold">Cloud Sync</p>
                   <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
                     {cloudStatus.badgeText}
                   </span>
@@ -319,6 +328,13 @@ export default function Pengaturan() {
                 <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
                   {cloudStatus.desc}
                 </p>
+                {cloudLoggedIn && cloudSubscribed && (
+                  <p className="text-[10px] text-muted-foreground/80 mt-1">
+                    {storeSettings?.lastCloudBackupAt
+                      ? `Terakhir sync: ${new Date(storeSettings.lastCloudBackupAt).toLocaleString('id-ID')}`
+                      : 'Belum pernah disinkronkan'}
+                  </p>
+                )}
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </CardContent>

@@ -250,6 +250,7 @@ export interface StoreSettings {
   cloudAutoBackupHours?: number; // interval jam bila cloudAutoBackupInterval === 'hourly'
   lastCloudBackupAt?: Date | null; // last successful upload to cloud
   allowDebt?: boolean; // opt-in pembayaran sebagian/seluruhnya sebagai hutang
+  cloudStoreId?: string | null; // cloud store ID yang di-bind ke device ini untuk sync
 }
 
 // === Database ===

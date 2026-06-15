@@ -35,14 +35,14 @@ function intervalMs(
  * tiap app dibuka (saat kondisi siap), dijaga ref agar tidak dobel.
  */
 export function useCloudAutoBackup() {
-  const { isLoggedIn, isSubscribed, refreshProfile } = useCloudAuth();
+  const { isLoggedIn, isSyncSubscribed, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const ranRef = useRef(false);
 
   useEffect(() => {
     if (ranRef.current) return;
     if (!storeSettings) return;
-    if (!isLoggedIn || !isSubscribed) return;
+    if (!isLoggedIn || !isSyncSubscribed) return;
 
     const ms = intervalMs(storeSettings.cloudAutoBackupInterval, storeSettings.cloudAutoBackupHours);
     if (ms === null) return;
@@ -51,12 +51,15 @@ export function useCloudAutoBackup() {
     const due = Date.now() - last >= ms;
     if (!due) return;
 
+    const storeId = storeSettings.cloudStoreId ?? undefined;
+    if (isSyncSubscribed && !storeId) return; // sync aktif tapi belum pilih toko
+
     ranRef.current = true; // tandai sudah jalan untuk sesi ini
 
     (async () => {
       try {
         const json = await buildBackupJsonString();
-        await uploadBackup(json, backupFileName());
+        await uploadBackup(json, backupFileName(), storeId);
         if (storeSettings.id) {
           await db.storeSettings.update(storeSettings.id, { lastCloudBackupAt: new Date() });
         }
@@ -70,5 +73,5 @@ export function useCloudAutoBackup() {
         }
       }
     })();
-  }, [storeSettings, isLoggedIn, isSubscribed, refreshProfile]);
+  }, [storeSettings, isLoggedIn, isSyncSubscribed, refreshProfile]);
 }
