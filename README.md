@@ -9,6 +9,7 @@ A free, offline-first, open source Point of Sale (POS) Progressive Web App built
 - **POS / Cashier** — Full cashier interface with cart, per-item & per-transaction discounts, payment method selection, and automatic change calculation
 - **Open Bill** — Save transactions as open bills for later checkout, with customer name, table number, per-item notes, and remarks (also shown on the receipt)
 - **Multi-User Mode** — Optional opt-in mode with owner + staff roles and granular per-staff permissions (e.g. manage products, view reports, do refunds). Staff log in with username + 4-6 digit PIN
+- **Multi-Language** — Full Bahasa Indonesia, English, and Bahasa Malaysia translations via i18next. Language can be switched from Settings or during onboarding
 - **Responsive Layout** — Mobile-first phone UI with landscape/tablet mode featuring side-by-side cashier (products + cart) and adaptive grid columns
 - **Barcode Scanning** — Scan product barcodes via camera (supports EAN-13, EAN-8, UPC-A, UPC-E, Code-128, Code-39, ITF, Code-93, QR) with robust permission handling for installed PWAs, or manual keyboard entry
 - **Product Management** — Complete CRUD with categories, SKU (unique & required), units, optional descriptions (searchable, previewable in cashier), photos, and barcode support
@@ -42,7 +43,8 @@ A free, offline-first, open source Point of Sale (POS) Progressive Web App built
 | Forms & Validation | React Hook Form + Zod |
 | State | @tanstack/react-query |
 | Icons | Lucide React |
-| Date | date-fns (id locale) |
+| i18n | i18next + react-i18next |
+| Date | date-fns (id, en-US, ms locales) |
 | PWA | vite-plugin-pwa (Workbox) |
 | Barcode | html5-qrcode (camera scanner + manual input) |
 | Receipt | html2canvas (to PNG), Web Bluetooth Print (PWA), Bluetooth Classic (Android APK via Capacitor) |
@@ -166,7 +168,14 @@ src/
 │   ├── Receipt.tsx          # Receipt component (view, download, share, Bluetooth print)
 │   ├── BarcodeScanner.tsx   # Barcode/QR scanner with PWA-aware permission handling
 │   ├── ThemeColorPicker.tsx # Accent color picker (8 presets)
+│   ├── LanguageSwitcher.tsx # Language picker (ID, EN, MS)
 │   └── ui/                  # shadcn/ui components (40+)
+├── i18n/
+│   ├── index.ts             # i18next initialization
+│   └── locales/
+│       ├── id/               # Bahasa Indonesia
+│       ├── en/               # English
+│       └── ms/               # Bahasa Malaysia
 ├── pages/
 │   ├── Dashboard.tsx        # Home: stats, quick actions, low stock alerts
 │   ├── Cashier.tsx          # POS / cashier (barcode scan input, camera scanner, side-by-side cart on landscape)
@@ -257,7 +266,10 @@ Contributions are welcome! Here's how:
 
 ### Guidelines
 
-- All UI text is in **Bahasa Indonesia** (the app targets Indonesian users)
+- UI text uses **i18next** — add new strings to `src/i18n/locales/{id,en,ms}/` JSON files inside the appropriate namespace (`common`, `settings`, `products`, `reports`, `dashboard`, `onboarding`)
+- Use `useTranslation('namespace')` hook and `t('key')` in components
+- Currency and number formatting should be locale-aware using `i18n.language` and `NUMBER_LOCALES` / `CURRENCY_SYMBOL` maps
+- Date formatting should use `date-fns` with locale from `LOCALES` map
 - Use existing `shadcn/ui` components from `src/components/ui/`
 - All monetary values are stored as numbers representing Indonesian Rupiah (no decimals)
 - Format numbers using `toLocaleString('id-ID')`
