@@ -204,13 +204,14 @@ export default function CloudBackupSettings() {
           })
           .finished(() => {
             setBusy(null);
-          })
-          .error((err: any) => {
-            if (err.code !== 2 && err.code !== 'PAYMENT_CANCELLED') {
-              toast.error(`Google Play Billing Error: ${err.message}`);
-            }
-            setBusy(null);
           });
+
+        store.error((err: any) => {
+          if (err.code !== 2 && err.code !== 'PAYMENT_CANCELLED') {
+            toast.error(`Google Play Billing Error: ${err.message}`);
+          }
+          setBusy(null);
+        });
 
         store.initialize([Platform.GOOGLE_PLAY]);
         (window as any).isGooglePlayBillingInitialized = true;
