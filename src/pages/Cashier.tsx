@@ -1233,11 +1233,11 @@ export default function Kasir() {
 
       {/* Checkout Dialog */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="max-w-[95vw] rounded-xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] md:max-w-lg rounded-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2 shrink-0">
             <DialogTitle>{t('cashier.checkout.title')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
+          <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-4">
             <div className="text-center py-3 bg-primary/5 rounded-xl">
               <p className="text-sm text-muted-foreground">{t('cashier.checkout.totalLabel')}</p>
               <p className="text-3xl font-bold text-primary">{rp(total)}</p>
@@ -1358,7 +1358,7 @@ export default function Kasir() {
             )}
 
             <Button
-              className="w-full h-12 text-base font-semibold"
+              className="w-full h-12 text-base font-semibold shrink-0"
               onClick={handleCheckout}
               disabled={
                 useDebt
