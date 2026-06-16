@@ -5,15 +5,20 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { Product } from '@/lib/db';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import { useTranslation } from 'react-i18next';
+
+const NUMBER_LOCALES: Record<string, string> = {
+  id: 'id-ID',
+  en: 'en-US',
+  ms: 'id-ID',
+};
 
 interface ProductPickerProps {
   products: Product[];
-  value: string; // selected product id as string
+  value: string;
   onChange: (id: string) => void;
-  /** Optional extra filter, e.g. only products with stock > 0 */
   filter?: (p: Product) => boolean;
   placeholder?: string;
-  /** Tampilkan HPP terakhir pada kartu produk terpilih (mis. halaman stock). */
   showHpp?: boolean;
 }
 
@@ -22,9 +27,11 @@ export default function ProductPicker({
   value,
   onChange,
   filter,
-  placeholder = 'Cari nama, SKU, atau barcode...',
+  placeholder,
   showHpp = false,
 }: ProductPickerProps) {
+  const { t, i18n } = useTranslation('settings');
+  const numberLocale = NUMBER_LOCALES[i18n.language] || 'id-ID';
   const [query, setQuery] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -45,7 +52,7 @@ export default function ProductPicker({
       onChange(product.id!.toString());
       setQuery('');
     } else {
-      toast.error(`Produk dengan SKU/Barcode "${code}" tidak ditemukan`);
+      toast.error(t('productPicker.skuBarcodeNotFound', { code }));
     }
   };
 
@@ -56,11 +63,11 @@ export default function ProductPicker({
           <p className="text-sm font-semibold truncate">{selected.name}</p>
           <p className="text-xs text-muted-foreground">
             {selected.sku}
-            {selected.barcode ? ` · ${selected.barcode}` : ''} · stok: {selected.stock} {selected.unit}
+            {selected.barcode ? ` · ${selected.barcode}` : ''} · {t('productPicker.stockLabel')} {selected.stock} {selected.unit}
           </p>
           {showHpp && (
             <p className="text-xs text-muted-foreground">
-              HPP terakhir: Rp {selected.hpp.toLocaleString('id-ID')}
+              {t('productPicker.hppLabel')} Rp {selected.hpp.toLocaleString(numberLocale)}
             </p>
           )}
         </div>
@@ -84,7 +91,7 @@ export default function ProductPicker({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             autoFocus
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('productPicker.placeholder')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="h-11 pl-9"
@@ -100,7 +107,7 @@ export default function ProductPicker({
         {matches.length === 0 ? (
           <div className="text-center py-8">
             <PackageIcon className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-xs text-muted-foreground">Produk tidak ditemukan</p>
+            <p className="text-xs text-muted-foreground">{t('productPicker.notFound')}</p>
           </div>
         ) : (
           matches.map(p => (
@@ -116,7 +123,7 @@ export default function ProductPicker({
                   {p.sku}{p.barcode ? ` · ${p.barcode}` : ''}
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground shrink-0">stok: {p.stock}</span>
+              <span className="text-xs text-muted-foreground shrink-0">{t('productPicker.stockLabel')} {p.stock}</span>
             </button>
           ))
         )}

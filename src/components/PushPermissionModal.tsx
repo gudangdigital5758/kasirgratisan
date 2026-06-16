@@ -3,26 +3,22 @@ import { Bell, CloudUpload, CreditCard, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { isPushSupported, getPermissionState, requestPushPermission } from '@/lib/onesignal';
+import { useTranslation } from 'react-i18next';
 
 const ASKED_KEY = 'freekasir_push_asked_v1';
 
-/**
- * Soft-ask izin notifikasi: setelah user login Google, tampilkan modal berisi
- * manfaat. Hanya men-trigger prompt browser asli bila user menekan "Aktifkan".
- * Ditampilkan sekali (ditandai di localStorage) selama izin masih 'default'.
- */
 export default function PushPermissionModal() {
+  const { t } = useTranslation('settings');
   const { isLoggedIn } = useCloudAuth();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
     if (!isPushSupported()) return;
-    if (getPermissionState() !== 'default') return; // sudah granted/denied
-    if (localStorage.getItem(ASKED_KEY)) return; // sudah pernah ditanya
-    // Sedikit jeda agar tidak muncul bertabrakan dengan UI login.
-    const t = setTimeout(() => setOpen(true), 800);
-    return () => clearTimeout(t);
+    if (getPermissionState() !== 'default') return;
+    if (localStorage.getItem(ASKED_KEY)) return;
+    const timer = setTimeout(() => setOpen(true), 800);
+    return () => clearTimeout(timer);
   }, [isLoggedIn]);
 
   const dismiss = () => {
@@ -48,29 +44,29 @@ export default function PushPermissionModal() {
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
             <Bell className="w-7 h-7" />
           </div>
-          <h2 className="text-base font-bold">Aktifkan Notifikasi?</h2>
+          <h2 className="text-base font-bold">{t('pushPermission.title')}</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Biar kamu nggak ketinggalan info penting langsung di HP — tanpa perlu buka aplikasi.
+            {t('pushPermission.description')}
           </p>
         </div>
 
         <div className="space-y-2.5">
-          <Benefit icon={<CloudUpload className="w-4 h-4" />} text="Status backup cloud: berhasil, gagal, atau kuota hampir penuh." />
-          <Benefit icon={<CreditCard className="w-4 h-4" />} text="Konfirmasi pembayaran & pengingat sebelum langganan berakhir." />
-          <Benefit icon={<Megaphone className="w-4 h-4" />} text="Info maintenance & pengumuman penting dari FreeKasir." />
+          <Benefit icon={<CloudUpload className="w-4 h-4" />} text={t('pushPermission.benefits.cloudBackup')} />
+          <Benefit icon={<CreditCard className="w-4 h-4" />} text={t('pushPermission.benefits.payment')} />
+          <Benefit icon={<Megaphone className="w-4 h-4" />} text={t('pushPermission.benefits.announcement')} />
         </div>
 
         <div className="space-y-2 pt-1">
           <Button className="w-full h-11 font-semibold gap-2" onClick={enable}>
-            <Bell className="w-4 h-4" /> Aktifkan Notifikasi
+            <Bell className="w-4 h-4" /> {t('pushPermission.enable')}
           </Button>
           <Button variant="ghost" className="w-full h-9 text-sm text-muted-foreground" onClick={dismiss}>
-            Nanti saja
+            {t('pushPermission.later')}
           </Button>
         </div>
 
         <p className="text-[10px] text-muted-foreground text-center">
-          Kamu bisa mematikannya kapan saja dari pengaturan browser.
+          {t('pushPermission.hint')}
         </p>
       </div>
     </div>

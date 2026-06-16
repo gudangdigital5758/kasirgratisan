@@ -755,5 +755,47 @@
       "accountEnabled": "Akaun diaktifkan",
       "accountDeleted": "Akaun \"{{name}}\" dipadam"
     }
+  },
+  "backupReminder": {
+    "title": "Backup Data Anda",
+    "lastBackup": "Backup terakhir: {{time}}",
+    "neverBackedUp": "Anda belum pernah backup data",
+    "backupNow": "Backup Sekarang",
+    "shareTitle": "Backup FreeKasir",
+    "shareText": "Fail backup data FreeKasir (JSON)",
+    "shareDialogTitle": "Simpan / Kongsi Backup",
+    "successCreated": "Backup berjaya dibuat!",
+    "successDownloaded": "Backup berjaya dimuat turun",
+    "errorCreateShare": "Gagal membuat / berkongsi fail backup"
+  },
+  "pushPermission": {
+    "title": "Aktifkan Notifikasi?",
+    "description": "Supaya anda tidak terlepas maklumat penting terus di telefon — tanpa perlu buka aplikasi.",
+    "benefits": {
+      "cloudBackup": "Status backup cloud: berjaya, gagal, atau kuota hampir penuh.",
+      "payment": "Pengesahan pembayaran & peringatan sebelum langganan tamat.",
+      "announcement": "Info penyelenggaraan & pengumuman penting daripada FreeKasir."
+    },
+    "enable": "Aktifkan Notifikasi",
+    "later": "Nanti",
+    "hint": "Anda boleh mematikannya bila-bila masa dari tetapan pelayar."
+  },
+  "customerPicker": {
+    "placeholder": "Nama pelanggan",
+    "addLabel": "Tambah pelanggan \"{{name}}\"",
+    "toastAdded": "Pelanggan \"{{name}}\" ditambah",
+    "toastFailed": "Gagal menambah pelanggan"
+  },
+  "searchableSelect": {
+    "placeholder": "Pilih...",
+    "searchPlaceholder": "Cari...",
+    "notFound": "Tidak ditemui"
+  },
+  "productPicker": {
+    "placeholder": "Cari nama, SKU, atau barcode...",
+    "stockLabel": "stok:",
+    "hppLabel": "HPP terakhir:",
+    "notFound": "Produk tidak ditemui",
+    "skuBarcodeNotFound": "Produk dengan SKU/Barcode \"{{code}}\" tidak ditemui"
   }
 }

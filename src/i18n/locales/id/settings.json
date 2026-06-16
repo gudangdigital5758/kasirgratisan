@@ -1205,5 +1205,47 @@
       "accountEnabled": "Akun diaktifkan",
       "accountDeleted": "Akun \"{{name}}\" dihapus"
     }
+  },
+  "backupReminder": {
+    "title": "Backup Data Kamu",
+    "lastBackup": "Terakhir backup {{time}}",
+    "neverBackedUp": "Kamu belum pernah backup data",
+    "backupNow": "Backup Sekarang",
+    "shareTitle": "Backup FreeKasir",
+    "shareText": "File backup data FreeKasir (JSON)",
+    "shareDialogTitle": "Simpan / Bagikan Backup",
+    "successCreated": "Backup berhasil dibuat!",
+    "successDownloaded": "Backup berhasil diunduh",
+    "errorCreateShare": "Gagal membuat / membagikan file backup"
+  },
+  "pushPermission": {
+    "title": "Aktifkan Notifikasi?",
+    "description": "Biar kamu nggak ketinggalan info penting langsung di HP — tanpa perlu buka aplikasi.",
+    "benefits": {
+      "cloudBackup": "Status backup cloud: berhasil, gagal, atau kuota hampir penuh.",
+      "payment": "Konfirmasi pembayaran & pengingat sebelum langganan berakhir.",
+      "announcement": "Info maintenance & pengumuman penting dari FreeKasir."
+    },
+    "enable": "Aktifkan Notifikasi",
+    "later": "Nanti saja",
+    "hint": "Kamu bisa mematikannya kapan saja dari pengaturan browser."
+  },
+  "customerPicker": {
+    "placeholder": "Nama pelanggan",
+    "addLabel": "Tambah pelanggan \"{{name}}\"",
+    "toastAdded": "Pelanggan \"{{name}}\" ditambahkan",
+    "toastFailed": "Gagal menambah pelanggan"
+  },
+  "searchableSelect": {
+    "placeholder": "Pilih...",
+    "searchPlaceholder": "Cari...",
+    "notFound": "Tidak ditemukan"
+  },
+  "productPicker": {
+    "placeholder": "Cari nama, SKU, atau barcode...",
+    "stockLabel": "stok:",
+    "hppLabel": "HPP terakhir:",
+    "notFound": "Produk tidak ditemukan",
+    "skuBarcodeNotFound": "Produk dengan SKU/Barcode \"{{code}}\" tidak ditemukan"
   }
 }

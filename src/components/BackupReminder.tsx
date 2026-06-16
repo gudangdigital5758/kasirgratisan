@@ -4,11 +4,19 @@ import { Button } from '@/components/ui/button';
 import { db } from '@/lib/db';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, enUS, ms } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { toast } from 'sonner';
+
+const LOCALES: Record<string, Locale> = {
+  id,
+  en: enUS,
+  ms,
+};
 
 interface BackupReminderProps {
   lastBackupAt: Date | string | null;
@@ -17,8 +25,11 @@ interface BackupReminderProps {
 }
 
 export default function BackupReminder({ lastBackupAt, onDismiss, onBackup }: BackupReminderProps) {
+  const { t, i18n } = useTranslation('settings');
+  const dateLocale = LOCALES[i18n.language] ?? id;
+
   const timeAgo = lastBackupAt
-    ? formatDistanceToNow(lastBackupAt instanceof Date ? lastBackupAt : new Date(lastBackupAt), { addSuffix: true, locale: id })
+    ? formatDistanceToNow(lastBackupAt instanceof Date ? lastBackupAt : new Date(lastBackupAt), { addSuffix: true, locale: dateLocale })
     : null;
 
   return (
@@ -29,11 +40,11 @@ export default function BackupReminder({ lastBackupAt, onDismiss, onBackup }: Ba
             <Download className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Backup Data Kamu</p>
+            <p className="text-sm font-semibold">{t('backupReminder.title')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {lastBackupAt
-                ? `Terakhir backup ${timeAgo}`
-                : 'Kamu belum pernah backup data'}
+                ? t('backupReminder.lastBackup', { time: timeAgo })
+                : t('backupReminder.neverBackedUp')}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -49,7 +60,7 @@ export default function BackupReminder({ lastBackupAt, onDismiss, onBackup }: Ba
           onClick={onBackup}
         >
           <Download className="w-3.5 h-3.5 mr-1" />
-          Backup Sekarang
+          {t('backupReminder.backupNow')}
         </Button>
       </CardContent>
     </Card>

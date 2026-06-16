@@ -2,10 +2,10 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Copy, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import i18n from "@/i18n";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  /** Optional custom fallback. If not provided, the default UI is rendered. */
   fallback?: (args: { error: Error; reset: () => void }) => ReactNode;
 }
 
@@ -14,16 +14,6 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-/**
- * React Error Boundary that catches render-time errors and shows a
- * user-friendly fallback UI instead of a blank screen.
- *
- * Note: Error Boundaries do NOT catch errors in:
- *  - event handlers (use try/catch in the handler)
- *  - asynchronous code (handle promise rejections explicitly)
- *  - the boundary itself
- * For those, see the global handlers wired up in `main.tsx`.
- */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null, errorInfo: null };
 
@@ -32,8 +22,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log to console so it shows up in remote debugging (chrome://inspect, etc.)
-    // and is captured by any future remote logger.
     console.error("[ErrorBoundary] Captured error:", error, errorInfo);
     this.setState({ errorInfo });
   }
@@ -71,9 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     try {
       await navigator.clipboard.writeText(details);
     } catch {
-      // Clipboard API may be blocked (insecure context, permissions). Fallback:
-      // best-effort prompt so user can copy manually.
-      window.prompt("Salin detail error berikut:", details);
+      window.prompt(i18n.t('common:error.copyPrompt'), details);
     }
   };
 
@@ -94,15 +80,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="w-full max-w-lg space-y-4">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Terjadi kesalahan</AlertTitle>
+            <AlertTitle>{i18n.t('common:error.title')}</AlertTitle>
             <AlertDescription>
-              Aplikasi mengalami error yang tidak terduga. Coba muat ulang halaman. Jika masih
-              terjadi, salin detail error di bawah dan laporkan ke developer.
+              {i18n.t('common:error.description')}
             </AlertDescription>
           </Alert>
 
           <div className="rounded-lg border bg-background p-4">
-            <div className="mb-2 text-sm font-medium">Detail error</div>
+            <div className="mb-2 text-sm font-medium">{i18n.t('common:error.details')}</div>
             <pre className="max-h-48 overflow-auto rounded bg-muted p-3 text-xs leading-relaxed">
               {error.name}: {error.message}
               {error.stack ? `\n\n${error.stack}` : ""}
@@ -113,15 +98,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="flex flex-wrap gap-2">
             <Button onClick={this.reload} className="gap-2">
               <RefreshCw className="h-4 w-4" />
-              Muat ulang
+              {i18n.t('common:error.reload')}
             </Button>
             <Button variant="outline" onClick={this.goHome} className="gap-2">
               <Home className="h-4 w-4" />
-              Ke beranda
+              {i18n.t('common:error.goHome')}
             </Button>
             <Button variant="secondary" onClick={this.copyDetails} className="gap-2">
               <Copy className="h-4 w-4" />
-              Salin detail
+              {i18n.t('common:error.copyDetails')}
             </Button>
           </div>
         </div>

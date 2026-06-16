@@ -1206,5 +1206,47 @@
       "accountEnabled": "Account activated",
       "accountDeleted": "Account \"{{name}}\" deleted"
     }
+  },
+  "backupReminder": {
+    "title": "Backup Your Data",
+    "lastBackup": "Last backup: {{time}}",
+    "neverBackedUp": "You have not backed up data yet",
+    "backupNow": "Backup Now",
+    "shareTitle": "Backup FreeKasir",
+    "shareText": "FreeKasir backup data file (JSON)",
+    "shareDialogTitle": "Save / Share Backup",
+    "successCreated": "Backup created successfully!",
+    "successDownloaded": "Backup downloaded successfully",
+    "errorCreateShare": "Failed to create / share backup file"
+  },
+  "pushPermission": {
+    "title": "Enable Notifications?",
+    "description": "So you do not miss important updates directly on your phone — without opening the app.",
+    "benefits": {
+      "cloudBackup": "Cloud backup status: success, failure, or quota almost full.",
+      "payment": "Payment confirmation & reminders before subscription ends.",
+      "announcement": "Maintenance info & important announcements from FreeKasir."
+    },
+    "enable": "Enable Notifications",
+    "later": "Maybe Later",
+    "hint": "You can turn it off anytime from browser settings."
+  },
+  "customerPicker": {
+    "placeholder": "Customer name",
+    "addLabel": "Add customer \"{{name}}\"",
+    "toastAdded": "Customer \"{{name}}\" added",
+    "toastFailed": "Failed to add customer"
+  },
+  "searchableSelect": {
+    "placeholder": "Select...",
+    "searchPlaceholder": "Search...",
+    "notFound": "Not found"
+  },
+  "productPicker": {
+    "placeholder": "Search name, SKU, or barcode...",
+    "stockLabel": "stock:",
+    "hppLabel": "Last COGS:",
+    "notFound": "Product not found",
+    "skuBarcodeNotFound": "Product with SKU/Barcode \"{{code}}\" not found"
   }
 }

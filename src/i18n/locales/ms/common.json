@@ -68,5 +68,23 @@
     "slide": "Slaid {{number}}",
     "finish": "Selesai",
     "skip": "Langkau"
+  },
+  "error": {
+    "title": "Ralat berlaku",
+    "description": "Aplikasi mengalami ralat tidak dijangka. Cuba muat semula halaman. Jika masih berlaku, salin butiran ralat di bawah dan laporkan kepada pembangun.",
+    "details": "Butiran ralat",
+    "reload": "Muat semula",
+    "goHome": "Ke beranda",
+    "copyDetails": "Salin butiran",
+    "copyPrompt": "Salin butiran ralat berikut:"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Halaman tidak ditemui",
+    "returnHome": "Kembali ke Beranda"
+  },
+  "index": {
+    "title": "Welcome to Your Blank App",
+    "description": "Start building your amazing project here!"
   }
 }

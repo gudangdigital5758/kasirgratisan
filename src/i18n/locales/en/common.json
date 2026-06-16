@@ -68,5 +68,23 @@
     "slide": "Slide {{number}}",
     "finish": "Done",
     "skip": "Skip"
+  },
+  "error": {
+    "title": "An error occurred",
+    "description": "The application encountered an unexpected error. Try reloading the page. If it continues, copy the error details below and report to the developer.",
+    "details": "Error details",
+    "reload": "Reload",
+    "goHome": "Go to Home",
+    "copyDetails": "Copy details",
+    "copyPrompt": "Copy the following error details:"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Page not found",
+    "returnHome": "Return to Home"
+  },
+  "index": {
+    "title": "Welcome to Your Blank App",
+    "description": "Start building your amazing project here!"
   }
 }

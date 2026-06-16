@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export interface SearchableOption {
   value: string;
@@ -21,10 +22,11 @@ export default function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = 'Pilih...',
-  searchPlaceholder = 'Cari...',
+  placeholder,
+  searchPlaceholder,
   className,
 }: SearchableSelectProps) {
+  const { t } = useTranslation('settings');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +56,7 @@ export default function SearchableSelect({
         className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm"
       >
         <span className={cn('truncate', !selected && 'text-muted-foreground')}>
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : (placeholder ?? t('searchableSelect.placeholder'))}
         </span>
         <ChevronDown className="w-4 h-4 shrink-0 opacity-50" />
       </button>
@@ -65,7 +67,7 @@ export default function SearchableSelect({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder ?? t('searchableSelect.searchPlaceholder')}
               value={query}
               onChange={e => setQuery(e.target.value)}
               className="h-9 pl-8"
@@ -73,7 +75,7 @@ export default function SearchableSelect({
           </div>
           <div className="max-h-52 overflow-y-auto divide-y border-t">
             {matches.length === 0 ? (
-              <p className="text-center text-xs text-muted-foreground py-6">Tidak ditemukan</p>
+              <p className="text-center text-xs text-muted-foreground py-6">{t('searchableSelect.notFound')}</p>
             ) : (
               matches.map(o => (
                 <button

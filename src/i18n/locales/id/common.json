@@ -68,5 +68,23 @@
     "slide": "Slide {{number}}",
     "finish": "Selesai",
     "skip": "Lewati"
+  },
+  "error": {
+    "title": "Terjadi kesalahan",
+    "description": "Aplikasi mengalami error yang tidak terduga. Coba muat ulang halaman. Jika masih terjadi, salin detail error di bawah dan laporkan ke developer.",
+    "details": "Detail error",
+    "reload": "Muat ulang",
+    "goHome": "Ke beranda",
+    "copyDetails": "Salin detail",
+    "copyPrompt": "Salin detail error berikut:"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Halaman tidak ditemukan",
+    "returnHome": "Kembali ke Beranda"
+  },
+  "index": {
+    "title": "Welcome to Your Blank App",
+    "description": "Start building your amazing project here!"
   }
 }
