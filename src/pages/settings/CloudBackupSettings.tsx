@@ -248,11 +248,22 @@ export default function CloudBackupSettings() {
         const { store } = CdvPurchase;
         const product = store.get(planId);
         if (!product) {
+          const registered = store.products?.map((p: any) => p.id).join(', ') || 'none';
+          console.warn(`Product ${planId} not found in Google Play. Registered products: ${registered}`);
           toast.error(t('cloudBackup.toast.productNotFound', { defaultValue: `Product ${planId} not found in Google Play Store` }));
           setBusy(null);
           return;
         }
-        store.order(planId);
+        
+        console.log('Google Play Billing: Product details loaded:', product);
+        const offer = product.getOffer() || product.offers?.[0];
+        if (offer) {
+          console.log('Google Play Billing: Ordering offer:', offer.id);
+          store.order(offer);
+        } else {
+          console.warn('Google Play Billing: No offer found for subscription. Ordering product directly.');
+          store.order(planId);
+        }
       } else {
         const result = await checkoutPlan(planId, { redirectURL: `${window.location.origin}/settings/cloud-backup` });
         setPaymentLink(result.paymentLink);
