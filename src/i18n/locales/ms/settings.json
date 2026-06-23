@@ -3,12 +3,18 @@
   "storeFallback": "Kedai Saya",
   "notSet": "Belum ditetapkan",
   "cloudSync": {
-    "title": "Cloud Sync",
+    "title": "FreeKasir Cloud",
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH KEDAI",
       "needsSetup": "PERLU DIATUR",
       "active": "AKTIF"
+    },
+    "desc": {
+      "inactive": "Data selamat di cloud, akses dashboard.freekasir.com, dan hubungkan kedai ke market.freekasir.com!",
+      "selectStore": "Langganan aktif, tetapi peranti belum disambungkan ke kedai. Pilih kedai untuk menyelaraskan data.",
+      "needsSetup": "Kedai telah disambungkan, tetapi penyelarasan automatik belum diaktifkan. Tetapkan jadual untuk menyelaraskan data secara berkala.",
+      "active": "Penyelarasan aktif. Pantau laporan kedai secara real-time di dashboard.freekasir.com dari mana-mana peranti."
     }
   },
   "installApp": {
@@ -195,27 +201,39 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "Cloud Sync",
+      "title": "FreeKasir Cloud",
       "permissionLabel": "Urus Backup"
     },
+    "promo": {
+      "title": "Jangkau Lebih Ramai Pelanggan!",
+      "description": "Aktifkan Kedai Online supaya kedai anda boleh diakses secara terbuka dengan pelbagai kelebihan:",
+      "benefit1": "Tampil di market.freekasir.com untuk menjangkau pembeli baru",
+      "benefit2": "Pelanggan boleh melihat menu dalam talian secara real-time dari telefon",
+      "benefit3": "Pautan kedai dalam talian yang unik untuk anda sendiri",
+      "button": "Lengkapkan Butiran Kedai"
+    },
     "hero": {
-      "title": "Pantau Kedai Real-Time<br />dari Mana Saja",
-      "description": "Data kasir otomatis selaras ke cloud. Lihat laporan lengkap bila-bila masa lewat {{dashboard}} — dari HP atau laptop mana pun.",
+      "title": "Naik Taraf ke FreeKasir Cloud",
+      "description": "Pantau laporan secara real-time lewat {{dashboard}} dan promosikan kedai anda secara online di {{market}}!",
       "startFrom": "Mulai",
       "perMonth": "/bulan"
     },
     "benefits": {
-      "realtime": {
-        "title": "Laporan real-time",
-        "desc": "Omzet, untung, & stok sentiasa selaras dengan transaksi terbaru di kasir."
+      "safe": {
+        "title": "Data Selamat di Cloud",
+        "desc": "Data disimpan secara automatik & kekal utuh walaupun telefon hilang, rosak, atau ganti peranti."
       },
       "dashboard": {
-        "title": "Dashboard web",
-        "desc": "Buka di {{dashboard}} lewat pelayar — pemilik tak perlu pegang HP kasir."
+        "title": "Akses Dashboard Web",
+        "desc": "Pantau laporan kedai secara real-time dari mana-mana telefon atau laptop menerusi {{dashboard}}."
       },
-      "safe": {
-        "title": "Data selamat di cloud",
-        "desc": "Tersimpan otomatis & kekal utuh walau HP hilang, rosak, atau ganti peranti."
+      "market": {
+        "title": "Menu Online & Market",
+        "desc": "Bina katalog menu dalam talian dengan mudah supaya pelanggan boleh semak produk anda di {{market}}."
+      },
+      "growth": {
+        "title": "Kembangkan Perniagaan",
+        "desc": "Tarik lebih ramai pembeli, tingkatkan jualan, dan urus banyak kedai/cawangan sekaligus dengan mudah!"
       }
     },
     "loginPrompt": "Mulai sekarang, login dulu yuk 👇",
@@ -308,7 +326,7 @@
       "permissionLabel": "Urus Backup"
     },
     "title": "Penyelarasan Otomatis",
-    "requiresSubscription": "Aktifkan langganan Cloud Sync dulu untuk mengatur penyelarasan automatik.",
+    "requiresSubscription": "Aktifkan langganan FreeKasir Cloud dulu untuk mengatur penyelarasan automatik.",
     "scheduleLabel": "Jadual Penyelarasan Automatik",
     "interval": {
       "off": "Nonaktif",
@@ -357,7 +375,7 @@
     },
     "title": "Urus Kedai",
     "loading": "Memuat…",
-    "requiresSubscription": "Langganan Cloud Sync diperlukan untuk mengurus kedai.",
+    "requiresSubscription": "Langganan FreeKasir Cloud diperlukan untuk mengurus kedai.",
     "activeDevice": "Peranti ini disambungkan ke:",
     "disconnect": "Putuskan",
     "storeList": "Senarai Kedai",
@@ -366,7 +384,7 @@
     "addButton": "Tambah",
     "atLimit": {
       "title": "Had kedai pakej anda sudah penuh",
-      "description": "Pakej semasa hanya membenarkan {{max}} kedai. Naik taraf pakej Cloud Sync untuk menambah kedai.",
+      "description": "Pakej semasa hanya membenarkan {{max}} kedai. Naik taraf pakej FreeKasir Cloud untuk menambah kedai.",
       "upgrade": "Naik Taraf Pakej"
     },
     "noStore": "Belum ada kedai. Buat kedai pertama anda.",
@@ -855,5 +873,84 @@
     "footerLabel": "Teks Footer Resit",
     "saveSuccess": "Tetapan resit berjaya disimpan",
     "saveFailed": "Gagal menyimpan tetapan resit"
+  },
+  "cloudOnlineStore": {
+    "title": "Kedai Online & Market",
+    "linkedStoreRequired": "Peranti ini belum disambungkan ke kedai cloud. Sila sambungkannya terlebih dahulu di halaman tetapan FreeKasir Cloud.",
+    "identifier": {
+      "label": "URL Kedai (Identifier)",
+      "placeholder": "nama-kedai-anda",
+      "checkButton": "Semak Ketersediaan",
+      "available": "Tahniah! URL kedai tersedia.",
+      "notAvailable": "Maaf, URL kedai ini telah digunakan.",
+      "invalid": "Format URL tidak sah (gunakan huruf, nombor, dan sempang sahaja).",
+      "saveButton": "Simpan URL Kedai",
+      "saved": "URL Kedai berjaya disimpan.",
+      "slugInfo": "Kedai anda boleh diakses di: "
+    },
+    "visibility": {
+      "title": "Pamerkan Kedai di Market",
+      "description": "Aktifkan untuk membolehkan katalog produk kedai anda dilihat secara umum di market.freekasir.com.",
+      "requiresIdentifier": "URL Kedai mesti disimpan terlebih dahulu sebelum membolehkan kedai diakses secara umum.",
+      "unsavedIdentifier": "Terdapat perubahan URL Kedai yang belum disimpan. Sila simpan URL Kedai terlebih dahulu.",
+      "unsavedDetails": "Terdapat perubahan maklumat kedai yang belum disimpan. Sila simpan maklumat kedai terlebih dahulu.",
+      "incompleteDetails": "Semua maklumat kedai mesti diisi sebelum membolehkan kedai diakses secara umum. Maklumat berikut masih kosong: {{fields}}",
+      "fields": {
+        "name": "Nama Kedai",
+        "phone": "Nombor Telefon Kedai",
+        "address": "Alamat Lengkap",
+        "province": "Negeri (Province)",
+        "city": "Daerah / Bandar (City)",
+        "district": "Kawasan / Mukim (District)",
+        "coordinates": "Koordinat Lokasi (Peta)"
+      }
+    },
+    "details": {
+      "title": "Maklumat Kedai Terperinci",
+      "phone": "Nombor Telefon Kedai",
+      "address1": "Alamat Lengkap",
+      "address2": "Unit Kedai / Tingkat / No. Rumah (Pilihan)",
+      "province": "Negeri (Province)",
+      "city": "Daerah / Bandar (City)",
+      "district": "Kawasan / Mukim (District)",
+      "timezone": "Zon Waktu",
+      "saveButton": "Simpan Maklumat Kedai",
+      "saved": "Maklumat kedai berjaya disimpan."
+    },
+    "location": {
+      "title": "Koordinat Peta (Map Picker)",
+      "gpsButton": "Gunakan GPS Semasa",
+      "gpsLocating": "Mencari lokasi...",
+      "dragPin": "Seret pin pada peta untuk melaras lokasi kedai anda yang tepat."
+    },
+    "operationalHours": {
+      "title": "Waktu Operasi",
+      "closed": "Tutup",
+      "open": "Buka",
+      "addTimeSlot": "Tambah Slot Waktu",
+      "days": {
+        "monday": "Isnin",
+        "tuesday": "Selasa",
+        "wednesday": "Rabu",
+        "thursday": "Khamis",
+        "friday": "Jumaat",
+        "saturday": "Sabtu",
+        "sunday": "Ahad"
+      }
+    },
+    "logo": {
+      "title": "Logo Kedai",
+      "upload": "Muat Naik Logo",
+      "change": "Tukar Logo",
+      "delete": "Padam Logo",
+      "deleteConfirm": "Adakah anda pasti mahu memadam logo kedai ini?",
+      "requirements": "Maks 2 MB. Format: JPG, PNG, WebP",
+      "uploadSuccess": "Logo kedai berjaya dikemas kini.",
+      "uploadFailed": "Gagal memuat naik logo kedai.",
+      "deleteSuccess": "Logo kedai berjaya dipadam.",
+      "deleteFailed": "Gagal memadam logo kedai.",
+      "tooLarge": "Saiz fail melebihi had 2 MB.",
+      "invalidType": "Jenis fail tidak sah. Sila gunakan imej JPG, PNG, atau WebP."
+    }
   }
 }

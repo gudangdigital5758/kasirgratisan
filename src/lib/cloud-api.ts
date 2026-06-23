@@ -69,6 +69,23 @@ export interface CloudStore {
   name: string;
   createdAt: string;
   updatedAt: string;
+  isPublic?: boolean;
+  identifier?: string | null;
+  address1?: string | null;
+  address2?: string | null;
+  provinceId?: number | null;
+  provinceName?: string | null;
+  cityId?: number | null;
+  cityName?: string | null;
+  districtId?: number | null;
+  districtName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string | null;
+  timezone?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  operationalHours?: any;
+  logoUrl?: string | null;
   _count?: {
     products: number;
     storeTransactions: number;
@@ -319,6 +336,115 @@ export async function deleteStore(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) await parseError(res);
+}
+
+export interface CloudStoreUpdateInput {
+  name: string;
+  address1?: string | null;
+  address2?: string | null;
+  provinceId?: number | null;
+  provinceName?: string | null;
+  cityId?: number | null;
+  cityName?: string | null;
+  districtId?: number | null;
+  districtName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string | null;
+  timezone?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  operationalHours?: any;
+}
+
+export interface DestinationItem {
+  id: number;
+  name: string;
+}
+
+export async function checkIdentifierAvailability(q: string): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}/api/stores/identifier/check?q=${encodeURIComponent(q)}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return !!data.available;
+}
+
+export async function updateStoreIdentifier(id: string, identifier: string | null): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}/identifier`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier }),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
+}
+
+export async function updateStoreVisibility(id: string, isPublic: boolean): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}/visibility`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPublic }),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
+}
+
+export async function updateStoreDetails(id: string, data: CloudStoreUpdateInput): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await parseError(res);
+  const dataJson = await res.json();
+  return dataJson.store;
+}
+
+export async function fetchProvinces(): Promise<DestinationItem[]> {
+  const res = await fetch(`${BASE_URL}/api/destinations/provinces`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  const json = await res.json();
+  return json.data ?? [];
+}
+
+export async function fetchCities(provinceId: number | string): Promise<DestinationItem[]> {
+  const res = await fetch(`${BASE_URL}/api/destinations/cities/${provinceId}`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  const json = await res.json();
+  return json.data ?? [];
+}
+
+export async function fetchDistricts(cityId: number | string): Promise<DestinationItem[]> {
+  const res = await fetch(`${BASE_URL}/api/destinations/districts/${cityId}`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  const json = await res.json();
+  return json.data ?? [];
+}
+
+export async function uploadStoreLogo(id: string, file: File): Promise<CloudStore> {
+  const form = new FormData();
+  form.append('logo', file);
+  const res = await fetch(`${BASE_URL}/api/stores/${id}/logo`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
+}
+
+export async function deleteStoreLogo(id: string): Promise<CloudStore> {
+  const res = await fetch(`${BASE_URL}/api/stores/${id}/logo`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) await parseError(res);
+  const data = await res.json();
+  return data.store;
 }
 
 export { CloudApiError };

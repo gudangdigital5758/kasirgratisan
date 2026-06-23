@@ -19,7 +19,10 @@ import {
   ShieldCheck,
   ExternalLink,
   AlertTriangle,
+  Sparkles,
+  Globe,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,7 +42,7 @@ import { App } from '@capacitor/app';
 import { isNativePlatform } from '@/lib/printer';
 import { nativeGoogleSignIn } from '@/lib/google-auth';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
-import { fetchPlans, checkoutPlan, verifyPayment, verifyGooglePlayPurchase, fetchStores, uploadBackup, type Plan } from '@/lib/cloud-api';
+import { fetchPlans, checkoutPlan, verifyPayment, verifyGooglePlayPurchase, fetchStores, uploadBackup, type Plan, type CloudStore } from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { useTranslation, Trans } from 'react-i18next';
 
@@ -66,9 +69,16 @@ export default function CloudBackupSettings() {
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [backupSizeBytes, setBackupSizeBytes] = useState<number | null>(null);
-  const [storeCount, setStoreCount] = useState<number | null>(null);
+  const [stores, setStores] = useState<CloudStore[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+  const [hasLoadedStores, setHasLoadedStores] = useState(false);
   const [showStoragePlans, setShowStoragePlans] = useState(false);
   const [showSyncPlans, setShowSyncPlans] = useState(false);
+
+  const storeCount = hasLoadedStores ? stores.length : null;
+  const activeStoreId = storeSettings?.cloudStoreId ?? null;
+  const activeStore = stores.find((s) => s.id === activeStoreId);
+  const isStorePublic = activeStore?.isPublic ?? false;
 
   const byPrice = (a: Plan, b: Plan) => a.price - b.price;
   const storagePlans = plans.filter((p) => p.category === 'STORAGE').sort(byPrice);
@@ -83,13 +93,24 @@ export default function CloudBackupSettings() {
     }
   }, []);
 
-  const loadStoreCount = useCallback(async () => {
+  const loadStores = useCallback(async () => {
+    setLoadingStores(true);
     try {
-      setStoreCount((await fetchStores()).length);
+      setStores(await fetchStores());
+      setHasLoadedStores(true);
     } catch {
-      setStoreCount(null);
+      setStores([]);
+      setHasLoadedStores(false);
+    } finally {
+      setLoadingStores(false);
     }
   }, []);
+
+  const handleBindStore = async (storeId: string) => {
+    if (!storeSettings?.id) return;
+    await db.storeSettings.update(storeSettings.id, { cloudStoreId: storeId || null });
+    toast.success(t('cloudStore.toast.bind'));
+  };
 
   useEffect(() => {
     loadPlans();
@@ -104,8 +125,8 @@ export default function CloudBackupSettings() {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (isLoggedIn && isSyncSubscribed) loadStoreCount();
-  }, [isLoggedIn, isSyncSubscribed, loadStoreCount]);
+    if (isLoggedIn && isSyncSubscribed) loadStores();
+  }, [isLoggedIn, isSyncSubscribed, loadStores]);
 
   const checkPayment = useCallback(
     async (silent: boolean) => {
@@ -361,9 +382,9 @@ export default function CloudBackupSettings() {
             <CardContent className="p-5 space-y-4">
               <ul className="space-y-3">
                 <BenefitItem
-                  icon={<BarChart3 className="w-4 h-4" />}
-                  title={t('cloudBackup.benefits.realtime.title')}
-                  desc={t('cloudBackup.benefits.realtime.desc')}
+                  icon={<ShieldCheck className="w-4 h-4" />}
+                  title={t('cloudBackup.benefits.safe.title')}
+                  desc={t('cloudBackup.benefits.safe.desc')}
                 />
                 <BenefitItem
                   icon={<MonitorSmartphone className="w-4 h-4" />}
@@ -371,9 +392,14 @@ export default function CloudBackupSettings() {
                   desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.freekasir.com' })}
                 />
                 <BenefitItem
-                  icon={<ShieldCheck className="w-4 h-4" />}
-                  title={t('cloudBackup.benefits.safe.title')}
-                  desc={t('cloudBackup.benefits.safe.desc')}
+                  icon={<Store className="w-4 h-4" />}
+                  title={t('cloudBackup.benefits.market.title')}
+                  desc={t('cloudBackup.benefits.market.desc', { market: 'market.freekasir.com' })}
+                />
+                <BenefitItem
+                  icon={<Sparkles className="w-4 h-4" />}
+                  title={t('cloudBackup.benefits.growth.title')}
+                  desc={t('cloudBackup.benefits.growth.desc')}
                 />
               </ul>
 
@@ -432,8 +458,59 @@ export default function CloudBackupSettings() {
 
           {isSyncSubscribed && (
             <Card className="border-0 shadow-sm">
-              <CardContent className="p-4 space-y-2">
-                <Button className="w-full h-11 gap-2 font-semibold" disabled={busy === 'sync'} onClick={handleSyncNow}>
+              <CardContent className="p-4 space-y-4">
+                {/* Store Selector Dropdown */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      {t('cloudStore.title')}
+                    </label>
+                    {storeCount !== null && storeCount > 0 && (
+                      <Link
+                        to="/settings/cloud-backup/stores"
+                        className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                      >
+                        {t('cloudBackup.menu.manageStore.title')} <ChevronRight className="w-3 h-3" />
+                      </Link>
+                    )}
+                  </div>
+                  {loadingStores ? (
+                    <div className="h-10 flex items-center justify-center border rounded-xl bg-muted/20">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : storeCount === 0 ? (
+                    <div className="flex flex-col gap-2 p-3 border border-dashed rounded-xl text-center bg-muted/5">
+                      <p className="text-xs text-muted-foreground">{t('cloudBackup.noStore.title')}</p>
+                      <Link to="/settings/cloud-backup/stores">
+                        <Button size="sm" variant="outline" className="h-8 text-xs w-full gap-1">
+                          <Store className="w-3.5 h-3.5" /> {t('cloudBackup.noStore.createStore')}
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <Select
+                      value={storeSettings?.cloudStoreId ?? ''}
+                      onValueChange={handleBindStore}
+                    >
+                      <SelectTrigger className="w-full h-10 rounded-xl bg-background border border-input shadow-none">
+                        <SelectValue placeholder={t('cloudBackup.deviceNotLinked.title')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stores.map((store) => (
+                          <SelectItem key={store.id} value={store.id}>
+                            {store.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <Button
+                  className="w-full h-11 gap-2 font-semibold"
+                  disabled={busy === 'sync' || !storeSettings?.cloudStoreId}
+                  onClick={handleSyncNow}
+                >
                   {busy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   {t('cloudBackup.syncNow')}
                 </Button>
@@ -442,6 +519,46 @@ export default function CloudBackupSettings() {
                     ? t('cloudBackup.lastSync', { time: new Date(storeSettings.lastCloudBackupAt).toLocaleString(numberLocale) })
                     : t('cloudBackup.neverSynced')}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {isSyncSubscribed && activeStoreId && !isStorePublic && (
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/10 to-transparent ring-1 ring-primary/20">
+              <CardContent className="p-4 space-y-3.5">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground">
+                      {t('cloudBackup.promo.title')}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+                      {t('cloudBackup.promo.description')}
+                    </p>
+                    <ul className="mt-2.5 space-y-1.5">
+                      <li className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+                        <span>{t('cloudBackup.promo.benefit1')}</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+                        <span>{t('cloudBackup.promo.benefit2')}</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+                        <span>{t('cloudBackup.promo.benefit3')}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <Link to="/settings/cloud-backup/online-store" className="block">
+                  <Button size="sm" className="w-full h-9 text-xs gap-1.5 font-semibold">
+                    <Store className="w-3.5 h-3.5" />
+                    {t('cloudBackup.promo.button')}
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           )}
@@ -461,9 +578,9 @@ export default function CloudBackupSettings() {
                     </p>
                     <ul className="space-y-2.5">
                       <BenefitItem
-                        icon={<BarChart3 className="w-4 h-4" />}
-                        title={t('cloudBackup.benefits.realtime.title')}
-                        desc={t('cloudBackup.benefits.realtime.desc')}
+                        icon={<ShieldCheck className="w-4 h-4" />}
+                        title={t('cloudBackup.benefits.safe.title')}
+                        desc={t('cloudBackup.benefits.safe.desc')}
                       />
                       <BenefitItem
                         icon={<MonitorSmartphone className="w-4 h-4" />}
@@ -471,9 +588,14 @@ export default function CloudBackupSettings() {
                         desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.freekasir.com' })}
                       />
                       <BenefitItem
-                        icon={<ShieldCheck className="w-4 h-4" />}
-                        title={t('cloudBackup.benefits.safe.title')}
-                        desc={t('cloudBackup.benefits.safe.desc')}
+                        icon={<Store className="w-4 h-4" />}
+                        title={t('cloudBackup.benefits.market.title')}
+                        desc={t('cloudBackup.benefits.market.desc', { market: 'market.freekasir.com' })}
+                      />
+                      <BenefitItem
+                        icon={<Sparkles className="w-4 h-4" />}
+                        title={t('cloudBackup.benefits.growth.title')}
+                        desc={t('cloudBackup.benefits.growth.desc')}
                       />
                     </ul>
                     <a
@@ -503,45 +625,7 @@ export default function CloudBackupSettings() {
                 storageUsage={null}
               />
 
-              {isSyncSubscribed && storeCount === 0 && (
-                <Card className="border-0 shadow-sm bg-destructive/10 ring-1 ring-destructive/30">
-                  <CardContent className="p-3 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-destructive/15 text-destructive flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-destructive">{t('cloudBackup.noStore.title')}</p>
-                      <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                        <Trans
-                          i18nKey="cloudBackup.noStore.description"
-                          ns="settings"
-                          components={[<span className="font-medium" />]}
-                        />
-                      </p>
-                      <Link to="/settings/cloud-backup/stores" className="inline-block mt-2">
-                        <Button size="sm" variant="destructive" className="h-8 text-xs gap-1">
-                          <Store className="w-3.5 h-3.5" /> {t('cloudBackup.noStore.createStore')}
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
-              {isSyncSubscribed && storeCount !== 0 && storeCount !== null && !storeSettings?.cloudStoreId && (
-                <Card className="border-0 shadow-sm border-l-4 border-l-warning">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <Store className="w-4 h-4 text-warning shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium">{t('cloudBackup.deviceNotLinked.title')}</p>
-                      <p className="text-[10px] text-muted-foreground">{t('cloudBackup.deviceNotLinked.description')}</p>
-                    </div>
-                    <Link to="/settings/cloud-backup/stores">
-                      <Button size="sm" variant="outline" className="h-7 text-xs">{t('cloudBackup.deviceNotLinked.select')}</Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
             </>
           )}
 
@@ -554,12 +638,14 @@ export default function CloudBackupSettings() {
                   title={t('cloudBackup.menu.dashboard.title')}
                   subtitle={t('cloudBackup.menu.dashboard.subtitle', { dashboard: 'dashboard.freekasir.com' })}
                 />
+
                 <MenuCard
-                  to="/settings/cloud-backup/stores"
-                  icon={<Store className="w-4 h-4" />}
-                  title={t('cloudBackup.menu.manageStore.title')}
-                  subtitle={t('cloudBackup.menu.manageStore.subtitle')}
+                  to="/settings/cloud-backup/online-store"
+                  icon={<Globe className="w-4 h-4" />}
+                  title={t('cloudOnlineStore.title')}
+                  subtitle="Atur alamat, peta koordinat, dan jam operasional tokomu"
                 />
+
                 <MenuCard
                   to="/settings/cloud-backup/auto"
                   icon={<Clock className="w-4 h-4" />}

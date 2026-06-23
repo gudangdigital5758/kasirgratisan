@@ -43,6 +43,7 @@ import CloudBackupSettings from "./pages/settings/CloudBackupSettings";
 import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
 import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
 import CloudStoreSettings from "./pages/settings/CloudStoreSettings";
+import CloudOnlineStoreSettings from "./pages/settings/CloudOnlineStoreSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -283,6 +284,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <CloudStoreSettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/online-store"
+                    element={
+                      <ErrorBoundary>
+                        <CloudOnlineStoreSettings />
                       </ErrorBoundary>
                     }
                   />

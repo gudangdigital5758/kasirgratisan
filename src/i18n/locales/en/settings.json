@@ -3,7 +3,7 @@
   "storeFallback": "My Store",
   "notSet": "Not set",
   "cloudSync": {
-    "title": "Cloud Sync",
+    "title": "FreeKasir Cloud",
     "status": {
       "inactive": "INACTIVE",
       "selectStore": "SELECT STORE",
@@ -11,7 +11,7 @@
       "active": "ACTIVE"
     },
     "desc": {
-      "inactive": "Activate Cloud Sync to monitor store reports in real-time on dashboard.freekasir.com — access from any device, data is safe even if the device is lost or replaced.",
+      "inactive": "Secure cloud data, access dashboard.freekasir.com, and list your store on market.freekasir.com!",
       "selectStore": "Subscription is active, but the device hasn't been linked to a store. Select a store to sync data.",
       "needsSetup": "Store is linked, but automatic sync isn't enabled yet. Set up a schedule so data syncs regularly.",
       "active": "Sync is active. Monitor store reports in real-time on dashboard.freekasir.com from any device."
@@ -230,27 +230,39 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "Cloud Sync",
+      "title": "FreeKasir Cloud",
       "permissionLabel": "Manage Backup"
     },
+    "promo": {
+      "title": "Reach More Customers!",
+      "description": "Activate your Online Store to make your store publicly accessible with various benefits:",
+      "benefit1": "Showcase on market.freekasir.com to reach new buyers",
+      "benefit2": "Customers can view your online menu in real-time from mobile",
+      "benefit3": "Your own unique online store link/identifier",
+      "button": "Fill Store Details"
+    },
     "hero": {
-      "title": "Monitor Store Real-Time<br />from Anywhere",
-      "description": "Cashier data syncs automatically to the cloud. View complete reports anytime at {{dashboard}} — from any phone or laptop.",
+      "title": "Upgrade to FreeKasir Cloud",
+      "description": "Monitor reports in real-time at {{dashboard}} and promote your store online at {{market}}!",
       "startFrom": "From",
       "perMonth": "/month"
     },
     "benefits": {
-      "realtime": {
-        "title": "Real-time reports",
-        "desc": "Revenue, profit, & stock are always synced with the latest cashier transactions."
+      "safe": {
+        "title": "Data Safe in Cloud",
+        "desc": "Data is automatically stored & remains intact even if your phone is lost, damaged, or replaced."
       },
       "dashboard": {
-        "title": "Web dashboard",
-        "desc": "Open {{dashboard}} in a browser — owners don't need to hold the cashier phone."
+        "title": "Access Web Dashboard",
+        "desc": "Monitor detailed store reports in real-time from any phone or laptop at {{dashboard}}."
       },
-      "safe": {
-        "title": "Data safe in the cloud",
-        "desc": "Automatically stored & remains intact even if the phone is lost, damaged, or replaced."
+      "market": {
+        "title": "Online Menu & Market",
+        "desc": "Create an online menu catalog easily so customers can view your products at {{market}}."
+      },
+      "growth": {
+        "title": "Grow Your Business",
+        "desc": "Attract more buyers, increase sales, and easily manage multiple stores/branches!"
       }
     },
     "loginPrompt": "Get started, login first 👇",
@@ -343,7 +355,7 @@
       "permissionLabel": "Manage Backup"
     },
     "title": "Automatic Sync",
-    "requiresSubscription": "Enable Cloud Sync subscription first to set up automatic sync.",
+    "requiresSubscription": "Enable FreeKasir Cloud subscription first to set up automatic sync.",
     "scheduleLabel": "Automatic Sync Schedule",
     "interval": {
       "off": "Off",
@@ -392,7 +404,7 @@
     },
     "title": "Manage Stores",
     "loading": "Loading…",
-    "requiresSubscription": "Cloud Sync subscription is required to manage stores.",
+    "requiresSubscription": "FreeKasir Cloud subscription is required to manage stores.",
     "activeDevice": "This device is connected to:",
     "disconnect": "Disconnect",
     "storeList": "Store List",
@@ -401,7 +413,7 @@
     "addButton": "Add",
     "atLimit": {
       "title": "Your plan's store limit is full",
-      "description": "Current plan only allows {{max}} stores. Upgrade Cloud Sync plan to add more.",
+      "description": "Current plan only allows {{max}} stores. Upgrade FreeKasir Cloud plan to add more.",
       "upgrade": "Upgrade Plan"
     },
     "noStore": "No stores yet. Create your first store.",
@@ -1308,5 +1320,84 @@
     "footerLabel": "Receipt Footer Text",
     "saveSuccess": "Receipt settings saved successfully",
     "saveFailed": "Failed to save receipt settings"
+  },
+  "cloudOnlineStore": {
+    "title": "Online Store & Market",
+    "linkedStoreRequired": "This device is not linked to a cloud store. Please link it first on the FreeKasir Cloud settings page.",
+    "identifier": {
+      "label": "Store URL (Identifier)",
+      "placeholder": "your-store-name",
+      "checkButton": "Check Availability",
+      "available": "Congratulations! The store URL is available.",
+      "notAvailable": "Sorry, this store URL is already taken.",
+      "invalid": "Invalid URL format (use only letters, numbers, and hyphens).",
+      "saveButton": "Save Store URL",
+      "saved": "Store URL saved successfully.",
+      "slugInfo": "Your store will be accessible at: "
+    },
+    "visibility": {
+      "title": "Show Store in Market",
+      "description": "Enable to make your store product catalog publicly viewable at market.freekasir.com.",
+      "requiresIdentifier": "Store URL must be saved before making the store public.",
+      "unsavedIdentifier": "There are unsaved Store URL changes. Please save the Store URL first.",
+      "unsavedDetails": "There are unsaved store detail changes. Please save the store details first.",
+      "incompleteDetails": "All store data must be filled before making the store public. The following details are missing: {{fields}}",
+      "fields": {
+        "name": "Store Name",
+        "phone": "Store Phone Number",
+        "address": "Street Address",
+        "province": "Province",
+        "city": "City / Regency",
+        "district": "District",
+        "coordinates": "Location Coordinates (Map)"
+      }
+    },
+    "details": {
+      "title": "Store Detailed Info",
+      "phone": "Store Phone Number",
+      "address1": "Street Address",
+      "address2": "Shop Unit / Floor / House No. (Optional)",
+      "province": "Province",
+      "city": "City / Regency",
+      "district": "District",
+      "timezone": "Time Zone",
+      "saveButton": "Save Store Details",
+      "saved": "Store details saved successfully."
+    },
+    "location": {
+      "title": "Map Coordinates (Map Picker)",
+      "gpsButton": "Use Current GPS",
+      "gpsLocating": "Locating...",
+      "dragPin": "Drag the pin on the map to adjust your store's precise location."
+    },
+    "operationalHours": {
+      "title": "Operational Hours",
+      "closed": "Closed",
+      "open": "Open",
+      "addTimeSlot": "Add Time Slot",
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
+    },
+    "logo": {
+      "title": "Store Logo",
+      "upload": "Upload Logo",
+      "change": "Change Logo",
+      "delete": "Remove Logo",
+      "deleteConfirm": "Are you sure you want to delete this store logo?",
+      "requirements": "Max 2 MB. Format: JPG, PNG, WebP",
+      "uploadSuccess": "Store logo updated successfully.",
+      "uploadFailed": "Failed to upload store logo.",
+      "deleteSuccess": "Store logo deleted successfully.",
+      "deleteFailed": "Failed to delete store logo.",
+      "tooLarge": "File size exceeds the 2 MB limit.",
+      "invalidType": "Invalid file type. Please use JPG, PNG, or WebP images."
+    }
   }
 }

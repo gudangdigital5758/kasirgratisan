@@ -3,7 +3,7 @@
   "storeFallback": "Toko Saya",
   "notSet": "Belum diatur",
   "cloudSync": {
-    "title": "Cloud Sync",
+    "title": "FreeKasir Cloud",
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH TOKO",
@@ -11,7 +11,7 @@
       "active": "AKTIF"
     },
     "desc": {
-      "inactive": "Aktifkan Cloud Sync untuk memantau laporan toko secara real-time di dashboard.freekasir.com — buka dari HP atau laptop mana saja, data aman walau perangkat hilang atau ganti.",
+      "inactive": "Data aman di cloud, akses dashboard.freekasir.com, dan hubungkan tokomu ke market.freekasir.com!",
       "selectStore": "Langganan aktif, tapi perangkat belum terhubung ke toko. Pilih toko agar data bisa disinkronkan.",
       "needsSetup": "Toko sudah terhubung, tapi sinkronisasi otomatis belum dinyalakan. Atur jadwalnya agar data tersinkron rutin.",
       "active": "Sinkronisasi aktif. Pantau laporan toko real-time di dashboard.freekasir.com dari perangkat mana saja."
@@ -230,27 +230,39 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "Cloud Sync",
+      "title": "FreeKasir Cloud",
       "permissionLabel": "Kelola Backup"
     },
+    "promo": {
+      "title": "Jangkau Lebih Banyak Pelanggan!",
+      "description": "Aktifkan Toko Online agar tokomu dapat diakses secara publik dengan berbagai keuntungan:",
+      "benefit1": "Tampil di market.freekasir.com untuk menjangkau pembeli baru",
+      "benefit2": "Pelanggan bisa lihat menu online secara real-time dari HP",
+      "benefit3": "Link toko online unik milikmu sendiri",
+      "button": "Lengkapi Detail Toko"
+    },
     "hero": {
-      "title": "Pantau Toko Real-Time<br />dari Mana Saja",
-      "description": "Data kasir otomatis sinkron ke cloud. Lihat laporan lengkap kapan saja lewat {{dashboard}} — dari HP atau laptop mana pun.",
+      "title": "Upgrade ke FreeKasir Cloud",
+      "description": "Pantau laporan secara real-time lewat {{dashboard}} dan promosikan tokomu secara online di {{market}}!",
       "startFrom": "Mulai",
       "perMonth": "/bulan"
     },
     "benefits": {
-      "realtime": {
-        "title": "Laporan real-time",
-        "desc": "Omzet, laba, & stok selalu sinkron dengan transaksi terbaru di kasir."
-      },
-      "dashboard": {
-        "title": "Dashboard web",
-        "desc": "Buka di {{dashboard}} lewat browser — owner tak perlu pegang HP kasir."
-      },
       "safe": {
         "title": "Data aman di cloud",
-        "desc": "Tersimpan otomatis & tetap utuh walau HP hilang, rusak, atau ganti perangkat."
+        "desc": "Data otomatis tersimpan & tetap utuh walau HP hilang, rusak, atau ganti perangkat."
+      },
+      "dashboard": {
+        "title": "Akses Dashboard Web",
+        "desc": "Pantau laporan detail toko secara real-time dari HP atau laptop mana saja lewat {{dashboard}}."
+      },
+      "market": {
+        "title": "Menu Online & Market",
+        "desc": "Buat katalog menu online dengan mudah agar pelanggan bisa langsung cek produkmu di {{market}}."
+      },
+      "growth": {
+        "title": "Kembangkan Bisnismu",
+        "desc": "Tarik lebih banyak pembeli, tingkatkan penjualan, dan kelola banyak toko/cabang sekaligus!"
       }
     },
     "loginPrompt": "Mulai sekarang, login dulu yuk 👇",
@@ -343,7 +355,7 @@
       "permissionLabel": "Kelola Backup"
     },
     "title": "Sinkronisasi Otomatis",
-    "requiresSubscription": "Aktifkan langganan Cloud Sync dulu untuk mengatur sinkronisasi otomatis.",
+    "requiresSubscription": "Aktifkan langganan FreeKasir Cloud dulu untuk mengatur sinkronisasi otomatis.",
     "scheduleLabel": "Jadwal Sinkronisasi Otomatis",
     "interval": {
       "off": "Nonaktif",
@@ -392,7 +404,7 @@
     },
     "title": "Kelola Toko",
     "loading": "Memuat…",
-    "requiresSubscription": "Langganan Cloud Sync diperlukan untuk mengelola toko.",
+    "requiresSubscription": "Langganan FreeKasir Cloud diperlukan untuk mengelola toko.",
     "activeDevice": "Device ini terhubung ke:",
     "disconnect": "Putuskan",
     "storeList": "Daftar Toko",
@@ -401,7 +413,7 @@
     "addButton": "Tambah",
     "atLimit": {
       "title": "Batas toko paketmu sudah penuh",
-      "description": "Paket saat ini hanya mengizinkan {{max}} toko. Upgrade paket Cloud Sync untuk menambah toko.",
+      "description": "Paket saat ini hanya mengizinkan {{max}} toko. Upgrade paket FreeKasir Cloud untuk menambah toko.",
       "upgrade": "Upgrade Paket"
     },
     "noStore": "Belum ada toko. Buat toko pertamamu.",
@@ -1307,5 +1319,84 @@
     "footerLabel": "Teks Footer Struk",
     "saveSuccess": "Pengaturan struk berhasil disimpan",
     "saveFailed": "Gagal menyimpan pengaturan struk"
+  },
+  "cloudOnlineStore": {
+    "title": "Toko Online & Market",
+    "linkedStoreRequired": "Device ini belum terhubung ke toko cloud. Hubungkan dulu di halaman utama FreeKasir Cloud.",
+    "identifier": {
+      "label": "URL Toko (Identifier)",
+      "placeholder": "nama-tokomu",
+      "checkButton": "Cek Ketersediaan",
+      "available": "Selamat! URL toko tersedia.",
+      "notAvailable": "Maaf, URL toko sudah digunakan.",
+      "invalid": "Format URL tidak valid (gunakan huruf, angka, dan strip saja).",
+      "saveButton": "Simpan URL Toko",
+      "saved": "URL Toko berhasil disimpan.",
+      "slugInfo": "Toko Anda akan dapat diakses di: "
+    },
+    "visibility": {
+      "title": "Tampilkan Toko di Market",
+      "description": "Aktifkan agar katalog produk toko Anda dapat dilihat secara publik di market.freekasir.com.",
+      "requiresIdentifier": "URL Toko harus disimpan terlebih dahulu sebelum mengaktifkan toko di market.",
+      "unsavedIdentifier": "Ada perubahan URL Toko yang belum disimpan. Silakan simpan URL Toko terlebih dahulu.",
+      "unsavedDetails": "Ada perubahan detail informasi toko yang belum disimpan. Silakan simpan detail toko terlebih dahulu.",
+      "incompleteDetails": "Semua data toko harus diisi sebelum mengaktifkan toko di market. Data berikut masih kosong: {{fields}}",
+      "fields": {
+        "name": "Nama Toko",
+        "phone": "Nomor Telepon Toko",
+        "address": "Alamat Lengkap",
+        "province": "Provinsi",
+        "city": "Kota/Kabupaten",
+        "district": "Kecamatan",
+        "coordinates": "Koordinat Lokasi (Peta)"
+      }
+    },
+    "details": {
+      "title": "Detail Informasi Toko",
+      "phone": "Nomor Telepon Toko",
+      "address1": "Alamat Lengkap",
+      "address2": "Detail Ruko / Lantai / No. Rumah (Opsional)",
+      "province": "Provinsi",
+      "city": "Kota / Kabupaten",
+      "district": "Kecamatan",
+      "timezone": "Zona Waktu",
+      "saveButton": "Simpan Detail Toko",
+      "saved": "Detail toko berhasil disimpan."
+    },
+    "location": {
+      "title": "Koordinat Peta (Map Picker)",
+      "gpsButton": "Gunakan GPS Saat Ini",
+      "gpsLocating": "Mencari lokasi...",
+      "dragPin": "Geser pin pada peta untuk menyesuaikan letak presisi tokomu."
+    },
+    "operationalHours": {
+      "title": "Jam Operasional",
+      "closed": "Tutup",
+      "open": "Buka",
+      "addTimeSlot": "Tambah Jam Buka",
+      "days": {
+        "monday": "Senin",
+        "tuesday": "Selasa",
+        "wednesday": "Rabu",
+        "thursday": "Kamis",
+        "friday": "Jumat",
+        "saturday": "Sabtu",
+        "sunday": "Minggu"
+      }
+    },
+    "logo": {
+      "title": "Logo Toko",
+      "upload": "Unggah Logo",
+      "change": "Ganti Logo",
+      "delete": "Hapus Logo",
+      "deleteConfirm": "Apakah Anda yakin ingin menghapus logo toko ini?",
+      "requirements": "Maks. 2 MB. Format: JPG, PNG, WebP",
+      "uploadSuccess": "Logo toko berhasil diperbarui.",
+      "uploadFailed": "Gagal mengunggah logo toko.",
+      "deleteSuccess": "Logo toko berhasil dihapus.",
+      "deleteFailed": "Gagal menghapus logo toko.",
+      "tooLarge": "Ukuran berkas melebihi batas 2 MB.",
+      "invalidType": "Jenis berkas tidak didukung. Harap gunakan format JPG, PNG, atau WebP."
+    }
   }
 }
