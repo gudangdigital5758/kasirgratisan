@@ -3,15 +3,16 @@ import { format } from 'date-fns';
 import { id, enUS, ms } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 import html2canvas from 'html2canvas';
-import { Download, Share2, Printer } from 'lucide-react';
+import { Download, Share2, Printer, Utensils } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import type { Transaction, StoreSettings, TransactionItemRecord } from '@/lib/db';
-import { isNativePlatform, printNativeBluetooth, getESCPOSData } from '@/lib/printer';
+import { isNativePlatform, printNativeBluetooth, getESCPOSData, printKitchenTicketBluetooth, getKitchenTicketESCPOSData } from '@/lib/printer';
 import { Capacitor } from '@capacitor/core';
 import { downloadOrShareFile } from '@/lib/file-utils';
+import { useCloudAuth } from '@/hooks/use-cloud-auth';
 
 const LOCALES: Record<string, Locale> = { id, en: enUS, ms };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -28,6 +29,8 @@ interface ReceiptProps {
 
 export default function Receipt({ open, onClose, transaction, items, storeSettings, paymentMethodName, cashierName }: ReceiptProps) {
   const { t, i18n } = useTranslation('settings');
+  const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
+  const isCloudActive = cloudLoggedIn && cloudSubscribed && !!storeSettings?.cloudStoreId;
   const receiptRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -125,7 +128,15 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
   };
 
   const handleBluetoothPrint = async () => {
-    const printData = { transaction, items, storeSettings, paymentMethodName, cashierName };
+    const printData = { 
+      transaction, 
+      items, 
+      storeSettings, 
+      paymentMethodName, 
+      cashierName,
+      language: i18n.language,
+      isCloudActive
+    };
 
     if (isNativePlatform()) {
       await printNativeBluetooth(printData, toast);
@@ -149,6 +160,46 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
       const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
       const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
       const data = new TextEncoder().encode(getESCPOSData(printData));
+      
+      for (let i = 0; i < data.length; i += 100) {
+        const chunk = data.slice(i, i + 100);
+        await characteristic.writeValue(chunk);
+      }
+
+      toast.success(t('receipt.toast.printSuccess'));
+      await server.disconnect();
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'NotFoundError') {
+        toast.error(t('receipt.toast.printFailed'));
+      }
+    }
+  };
+
+  const handlePrintKitchenTicket = async () => {
+    const printData = { transaction, items, cashierName };
+
+    if (isNativePlatform()) {
+      await printKitchenTicketBluetooth(printData, toast);
+      return;
+    }
+
+    if (!('bluetooth' in navigator)) {
+      toast.error(t('receipt.toast.bluetoothUnavailable'));
+      return;
+    }
+
+    try {
+      toast.info(t('receipt.toast.searchingPrinter'));
+      // @ts-expect-error Web Bluetooth API is not fully typed in TypeScript
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
+      });
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+      const data = new TextEncoder().encode(getKitchenTicketESCPOSData(printData));
       
       for (let i = 0; i < data.length; i += 100) {
         const chunk = data.slice(i, i + 100);
@@ -275,21 +326,33 @@ export default function Receipt({ open, onClose, transaction, items, storeSettin
           <p className="text-center text-[10px] text-gray-500">
             {storeSettings?.receiptFooter || t('receipt.footerFallback')}
           </p>
+
+          {/* Watermark */}
+          {!(storeSettings?.hideWatermark && isCloudActive) && (
+            <div className="text-center text-[9px] text-gray-400 mt-2 pt-1 border-t border-dotted border-gray-200 space-y-0.5">
+              <p>{t('receipt.watermarkLine1')}</p>
+              <p className="font-semibold">{t('receipt.watermarkLine2')}</p>
+            </div>
+          )}
         </div>
 
         {/* Action buttons */}
-        <div className="grid grid-cols-3 gap-2 mt-3">
-          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={handleDownload} disabled={generating}>
-            <Download className="w-5 h-5" />
-            <span className="text-[10px]">{t('receipt.download')}</span>
+        <div className="grid grid-cols-4 gap-1 mt-3">
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3 px-1" onClick={handleDownload} disabled={generating}>
+            <Download className="w-4 h-4" />
+            <span className="text-[9px]">{t('receipt.download')}</span>
           </Button>
-          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={handleShare} disabled={generating}>
-            <Share2 className="w-5 h-5" />
-            <span className="text-[10px]">{t('receipt.share')}</span>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3 px-1" onClick={handleShare} disabled={generating}>
+            <Share2 className="w-4 h-4" />
+            <span className="text-[9px]">{t('receipt.share')}</span>
           </Button>
-          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={handleBluetoothPrint} disabled={generating}>
-            <Printer className="w-5 h-5" />
-            <span className="text-[10px]">{t('receipt.print')}</span>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3 px-1" onClick={handleBluetoothPrint} disabled={generating}>
+            <Printer className="w-4 h-4" />
+            <span className="text-[9px]">{t('receipt.print')}</span>
+          </Button>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3 px-1" onClick={handlePrintKitchenTicket} disabled={generating}>
+            <Utensils className="w-4 h-4 text-orange-600" />
+            <span className="text-[9px]">{t('receipt.printKitchen')}</span>
           </Button>
         </div>
 

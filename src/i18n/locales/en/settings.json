@@ -165,6 +165,10 @@
       "description": "Choose grid (cards) or rows (list) layout for product list",
       "grid": "Grid (Large Cards)",
       "rows": "Rows (Simple List)"
+    },
+    "reportIssue": {
+      "title": "Report Issue",
+      "description": "Report application errors or technical issues to the developer"
     }
   },
   "bluetoothPrinter": {
@@ -1161,6 +1165,9 @@
     "download": "Download",
     "share": "Share",
     "print": "Print",
+    "printKitchen": "Print Kitchen",
+    "watermarkLine1": "Printed From",
+    "watermarkLine2": "FreeKasir.com App",
     "done": "Done",
     "toast": {
       "captureError": "Failed to create receipt image",
@@ -1326,6 +1333,9 @@
     "printLogoLabel": "Print Store Logo",
     "printLogoDescription": "Print the store logo at the very top of the physical receipt. Ensure your thermal printer supports image/bitmap printing.",
     "footerLabel": "Receipt Footer Text",
+    "hideWatermarkLabel": "Hide Application Watermark",
+    "hideWatermarkDescActive": "Hide the \"Printed From FreeKasir.com App\" watermark at the bottom of the receipt.",
+    "hideWatermarkDescRequired": "Watermark can only be disabled if FreeKasir Cloud is active.",
     "saveSuccess": "Receipt settings saved successfully",
     "saveFailed": "Failed to save receipt settings"
   },
@@ -1411,5 +1421,22 @@
   "kitchenTicket": {
     "title": "Kitchen Ticket",
     "done": "Done"
+  },
+  "issueReport": {
+    "title": "Report Issue",
+    "descriptionLabel": "Issue / Error Description",
+    "placeholder": "Describe the error or issue you are experiencing in as much detail as possible...",
+    "disclaimer": "By submitting a report, your device's technical information (such as browser version, screen resolution, and OS) will also be sent to make it easier to fix.",
+    "submit": "Submit Report",
+    "confirmTitle": "Submit Issue Report?",
+    "confirmDescription": "We will send the issue details along with your device's technical information to the developer team.\n\nDo you agree and wish to proceed?",
+    "cancel": "Cancel",
+    "agreeAndSend": "Agree & Send",
+    "sending": "Sending...",
+    "success": "Issue report submitted successfully. Thank you!",
+    "failed": "Failed to submit report. Please try again.",
+    "networkError": "A network error occurred while submitting the report.",
+    "emptyError": "Please fill in the issue description first.",
+    "devCrash": "[Dev] Simulate App Crash"
   }
 }

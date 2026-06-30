@@ -165,6 +165,10 @@
       "description": "Pilih mode grid (kartu) atau baris (list) untuk daftar produk",
       "grid": "Grid (Kartu Besar)",
       "rows": "Baris (Simpel)"
+    },
+    "reportIssue": {
+      "title": "Laporkan Kendala",
+      "description": "Laporkan error atau kendala teknis aplikasi ke developer"
     }
   },
   "bluetoothPrinter": {
@@ -1160,6 +1164,9 @@
     "download": "Unduh",
     "share": "Bagikan",
     "print": "Cetak",
+    "printKitchen": "Cetak Dapur",
+    "watermarkLine1": "Dicetak Dari Aplikasi",
+    "watermarkLine2": "FreeKasir.com",
     "done": "Selesai",
     "toast": {
       "captureError": "Gagal membuat gambar struk",
@@ -1325,6 +1332,9 @@
     "printLogoLabel": "Cetak Logo Toko",
     "printLogoDescription": "Cetak logo toko di bagian paling atas struk belanja fisik. Pastikan printer thermal Anda mendukung pencetakan gambar/bitmap.",
     "footerLabel": "Teks Footer Struk",
+    "hideWatermarkLabel": "Sembunyikan Watermark Aplikasi",
+    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Dari Aplikasi FreeKasir.com\" di bagian bawah struk.",
+    "hideWatermarkDescRequired": "Watermark hanya dapat dinonaktifkan jika FreeKasir Cloud aktif.",
     "saveSuccess": "Pengaturan struk berhasil disimpan",
     "saveFailed": "Gagal menyimpan pengaturan struk"
   },
@@ -1410,5 +1420,22 @@
   "kitchenTicket": {
     "title": "Kitchen Ticket",
     "done": "Selesai"
+  },
+  "issueReport": {
+    "title": "Laporkan Kendala",
+    "descriptionLabel": "Deskripsi Masalah / Error",
+    "placeholder": "Tuliskan sedetail mungkin tentang error atau kendala yang Anda alami...",
+    "disclaimer": "Dengan mengirim laporan, informasi teknis perangkat Anda (seperti versi browser, resolusi layar, dan OS) akan ikut dikirimkan untuk mempermudah perbaikan.",
+    "submit": "Kirim Laporan",
+    "confirmTitle": "Kirim Laporan Masalah?",
+    "confirmDescription": "Kami akan mengirimkan detail masalah beserta informasi teknis perangkat Anda ke tim developer.\n\nApakah Anda setuju dan ingin melanjutkan?",
+    "cancel": "Batal",
+    "agreeAndSend": "Setuju & Kirim",
+    "sending": "Mengirim...",
+    "success": "Laporan kendala berhasil dikirim. Terima kasih!",
+    "failed": "Gagal mengirim laporan. Silakan coba lagi.",
+    "networkError": "Terjadi kesalahan jaringan saat mengirim laporan.",
+    "emptyError": "Silakan isi deskripsi kendala terlebih dahulu.",
+    "devCrash": "[Dev] Simulasi Crash Aplikasi"
   }
 }

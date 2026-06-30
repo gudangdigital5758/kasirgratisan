@@ -157,7 +157,16 @@
     "reload": "Muat ulang",
     "goHome": "Ke beranda",
     "copyDetails": "Salin detail",
-    "copyPrompt": "Salin detail error berikut:"
+    "copyPrompt": "Salin detail error berikut:",
+    "reportIssue": "Laporkan Kendala",
+    "reportTitle": "Kirim Laporan Masalah?",
+    "reportDescription": "Untuk membantu perbaikan, kami akan mengirimkan log detail error beserta informasi perangkat Anda (seperti tipe browser, ukuran layar, dan versi OS).\n\nDengan melanjutkan, Anda setuju untuk mengirimkan informasi perangkat tersebut ke tim developer.",
+    "cancel": "Batal",
+    "agreeAndSend": "Setuju & Kirim",
+    "sending": "Mengirim...",
+    "sendSuccess": "Laporan berhasil dikirim. Terima kasih!",
+    "sendFailed": "Gagal mengirim laporan. Silakan coba lagi.",
+    "networkError": "Terjadi kesalahan jaringan saat mengirim laporan."
   },
   "notFound": {
     "title": "404",

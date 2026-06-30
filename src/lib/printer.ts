@@ -26,6 +26,8 @@ interface PrintData {
   storeSettings: StoreSettings | undefined;
   paymentMethodName: string;
   cashierName?: string;
+  language?: string;
+  isCloudActive?: boolean;
 }
 
 const DEFAULT_PRINTER_KEY = 'kg_default_bluetooth_printer';
@@ -81,6 +83,8 @@ export const getESCPOSData = ({
   storeSettings,
   paymentMethodName,
   cashierName,
+  language,
+  isCloudActive,
 }: PrintData): string => {
   const lines: string[] = [];
   
@@ -99,27 +103,49 @@ export const getESCPOSData = ({
   
   lines.push('\x1B\x61\x00'); // Left align
   const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+  const formatRow = (left: string, right: string) => {
+    const spaceCount = 32 - left.length - right.length;
+    return `${left}${' '.repeat(Math.max(1, spaceCount))}${right}\n`;
+  };
+
   for (const item of items) {
     lines.push(`${item.productName}\n`);
     if (item.notes) lines.push(`  ${item.notes}\n`);
-    lines.push(`  ${item.quantity} x ${rp(item.price)}  ${rp(item.subtotal)}\n`);
+    lines.push(formatRow(`  ${item.quantity} x ${rp(item.price)}`, rp(item.subtotal)));
   }
   
   lines.push('--------------------------------\n');
-  lines.push(`Subtotal:  ${rp(transaction.subtotal)}\n`);
+  lines.push(formatRow('Subtotal:', rp(transaction.subtotal)));
   if (transaction.discountAmount > 0) {
-    lines.push(`Diskon:   -${rp(transaction.discountAmount)}\n`);
+    lines.push(formatRow('Diskon:', `-${rp(transaction.discountAmount)}`));
   }
-  lines.push(`TOTAL:     ${rp(transaction.total)}\n`);
-  lines.push(`Bayar:     ${rp(transaction.paymentAmount)}\n`);
+  lines.push(formatRow('TOTAL:', rp(transaction.total)));
+  lines.push(formatRow('Bayar:', rp(transaction.paymentAmount)));
   if (transaction.debtAmount && transaction.debtAmount > 0) {
-    lines.push(`Hutang:    ${rp(transaction.debtAmount)}\n`);
+    lines.push(formatRow('Hutang:', rp(transaction.debtAmount)));
   } else {
-    lines.push(`Kembali:   ${rp(transaction.change)}\n`);
+    lines.push(formatRow('Kembali:', rp(transaction.change)));
   }
   lines.push('--------------------------------\n');
   lines.push('\x1B\x61\x01'); // Center
-  lines.push(`${storeSettings?.receiptFooter || 'Terima kasih!'}\n\n\n`);
+  lines.push(`${storeSettings?.receiptFooter || 'Terima kasih!'}\n`);
+  
+  const cloudActive = isCloudActive !== undefined ? isCloudActive : !!storeSettings?.cloudStoreId;
+  const hideWatermark = !!storeSettings?.hideWatermark && cloudActive;
+  if (!hideWatermark) {
+    const lang = language || 'id';
+    let line1 = 'Dicetak Dari Aplikasi';
+    let line2 = 'FreeKasir.com';
+    if (lang === 'en') {
+      line1 = 'Printed From';
+      line2 = 'FreeKasir.com App';
+    } else if (lang === 'ms') {
+      line1 = 'Dicetak Daripada Aplikasi';
+      line2 = 'FreeKasir.com';
+    }
+    lines.push(`\n${line1}\n${line2}\n`);
+  }
+  lines.push('\n\n\n');
 
   return lines.join('');
 };
@@ -139,6 +165,8 @@ export interface DailyReportPrintData {
   includeExpenses?: boolean;
   expensesAmount?: number;
   netProfit?: number;
+  language?: string;
+  isCloudActive?: boolean;
 }
 
 export const getDailyReportESCPOSData = ({
@@ -156,6 +184,8 @@ export const getDailyReportESCPOSData = ({
   includeExpenses,
   expensesAmount = 0,
   netProfit = 0,
+  language,
+  isCloudActive,
 }: DailyReportPrintData): string => {
   const lines: string[] = [];
   const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
@@ -234,6 +264,23 @@ export const getDailyReportESCPOSData = ({
   lines.push('\x1B\x61\x01'); // Center
   lines.push('         END OF REPORT          \n');
   if (cashierName) lines.push(`Dicetak oleh: ${cashierName}\n`);
+  
+  const cloudActive = isCloudActive !== undefined ? isCloudActive : !!storeSettings?.cloudStoreId;
+  const hideWatermark = !!storeSettings?.hideWatermark && cloudActive;
+  if (!hideWatermark) {
+    const lang = language || 'id';
+    let line1 = 'Dicetak Dari Aplikasi';
+    let line2 = 'FreeKasir.com';
+    if (lang === 'en') {
+      line1 = 'Printed From';
+      line2 = 'FreeKasir.com App';
+    } else if (lang === 'ms') {
+      line1 = 'Dicetak Daripada Aplikasi';
+      line2 = 'FreeKasir.com';
+    }
+    lines.push(`\n${line1}\n${line2}\n`);
+  }
+  
   lines.push('================================\n\n\n\n');
 
   return lines.join('');

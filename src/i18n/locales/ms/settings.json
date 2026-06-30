@@ -136,6 +136,10 @@
       "description": "Pilih tata letak grid (kad) atau baris (senarai) untuk senarai produk",
       "grid": "Grid (Kad Besar)",
       "rows": "Baris (Senarai Ringkas)"
+    },
+    "reportIssue": {
+      "title": "Laporkan Kendala",
+      "description": "Laporkan ralat atau kendala teknikal aplikasi kepada pembangun"
     }
   },
   "bluetoothPrinter": {
@@ -713,6 +717,9 @@
     "download": "Muat Turun",
     "share": "Kongsi",
     "print": "Cetak",
+    "printKitchen": "Cetak Dapur",
+    "watermarkLine1": "Dicetak Daripada Aplikasi",
+    "watermarkLine2": "FreeKasir.com",
     "done": "Selesai",
     "toast": {
       "captureError": "Gagal membuat gambar resit",
@@ -878,6 +885,9 @@
     "printLogoLabel": "Cetak Logo Kedai",
     "printLogoDescription": "Cetak logo kedai di bahagian paling atas resit fizikal. Pastikan pencetak thermal anda menyokong pencetakan imej/bitmap.",
     "footerLabel": "Teks Footer Resit",
+    "hideWatermarkLabel": "Sembunyikan Watermark Aplikasi",
+    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Daripada Aplikasi FreeKasir.com\" di bahagian bawah resit.",
+    "hideWatermarkDescRequired": "Watermark hanya boleh dinyahaktifkan jika FreeKasir Cloud aktif.",
     "saveSuccess": "Tetapan resit berjaya disimpan",
     "saveFailed": "Gagal menyimpan tetapan resit"
   },
@@ -963,5 +973,22 @@
   "kitchenTicket": {
     "title": "Tiket Dapur",
     "done": "Selesai"
+  },
+  "issueReport": {
+    "title": "Laporkan Kendala",
+    "descriptionLabel": "Keterangan Ralat / Masalah",
+    "placeholder": "Tuliskan seterperinci mungkin tentang ralat atau kendala yang anda alami...",
+    "disclaimer": "Dengan menghantar laporan, maklumat teknikal peranti anda (seperti versi pelayar, resolusi skrin, dan OS) akan turut dihantar untuk memudahkan pembetulan.",
+    "submit": "Hantar Laporan",
+    "confirmTitle": "Hantar Laporan Masalah?",
+    "confirmDescription": "Kami akan menghantar butiran masalah berserta maklumat teknikal peranti anda kepada pasukan pembangun.\n\nAdakah anda bersetuju dan ingin meneruskan?",
+    "cancel": "Batal",
+    "agreeAndSend": "Setuju & Hantar",
+    "sending": "Menghantar...",
+    "success": "Laporan ralat berjaya dihantar. Terima kasih!",
+    "failed": "Gagal menghantar laporan. Sila cuba lagi.",
+    "networkError": "Ralat rangkaian berlaku semasa menghantar laporan.",
+    "emptyError": "Sila isi keterangan kendala terlebih dahulu.",
+    "devCrash": "[Dev] Simulasi Crash Aplikasi"
   }
 }

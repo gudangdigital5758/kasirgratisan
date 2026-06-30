@@ -157,7 +157,16 @@
     "reload": "Muat semula",
     "goHome": "Ke beranda",
     "copyDetails": "Salin butiran",
-    "copyPrompt": "Salin butiran ralat berikut:"
+    "copyPrompt": "Salin butiran ralat berikut:",
+    "reportIssue": "Laporkan Ralat",
+    "reportTitle": "Hantar Laporan Masalah?",
+    "reportDescription": "Untuk membantu pembetulan, kami akan menghantar log perincian ralat berserta maklumat peranti anda (seperti jenis pelayar, saiz skrin, dan versi OS).\n\nDengan meneruskan, anda bersetuju untuk menghantar maklumat peranti tersebut kepada pasukan pembangun.",
+    "cancel": "Batal",
+    "agreeAndSend": "Setuju & Hantar",
+    "sending": "Menghantar...",
+    "sendSuccess": "Laporan ralat berjaya dihantar. Terima kasih!",
+    "sendFailed": "Gagal menghantar laporan. Sila cuba lagi.",
+    "networkError": "Ralat rangkaian berlaku semasa menghantar laporan."
   },
   "notFound": {
     "title": "404",

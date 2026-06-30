@@ -157,7 +157,16 @@
     "reload": "Reload",
     "goHome": "Go to Home",
     "copyDetails": "Copy details",
-    "copyPrompt": "Copy the following error details:"
+    "copyPrompt": "Copy the following error details:",
+    "reportIssue": "Report Issue",
+    "reportTitle": "Submit Issue Report?",
+    "reportDescription": "To help with improvements, we will send detailed error logs along with your device information (such as browser type, screen size, and OS version).\n\nBy proceeding, you agree to send this device information to the developer team.",
+    "cancel": "Cancel",
+    "agreeAndSend": "Agree & Send",
+    "sending": "Sending...",
+    "sendSuccess": "Report submitted successfully. Thank you!",
+    "sendFailed": "Failed to submit report. Please try again.",
+    "networkError": "A network error occurred while submitting the report."
   },
   "notFound": {
     "title": "404",
