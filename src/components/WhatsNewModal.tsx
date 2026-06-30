@@ -63,7 +63,11 @@ export default function WhatsNewModal({
       await markFeaturesSeen(features.map((f) => f.id));
     }
     onOpenChange(false);
-    navigate(current.cta.to);
+    if (current.cta.to.startsWith('http://') || current.cta.to.startsWith('https://')) {
+      window.open(current.cta.to, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(current.cta.to);
+    }
   };
 
   const next = () => {

@@ -70,6 +70,16 @@
     "skip": "Lewati"
   },
   "whatsNewFeatures": {
+    "2026-06-join-whatsapp": {
+      "title": "Gabung WhatsApp Channel Resmi",
+      "description": "Bergabunglah dengan WhatsApp Channel resmi FreeKasir untuk mendapatkan informasi tips bisnis terbaru, panduan penggunaan, serta pengumuman update fitur langsung di WhatsApp-mu!",
+      "ctaLabel": "Gabung Sekarang"
+    },
+    "2026-06-kitchen-ticket": {
+      "title": "Cetak Kitchen Ticket",
+      "description": "Kini kamu bisa mencetak Kitchen Ticket (pesanan tanpa nominal/harga) langsung saat menyimpan bill atau dari daftar Open Bill. Dilengkapi dengan kotak kosong di sebelah kanan setiap item untuk checklist manual oleh bagian dapur.",
+      "ctaLabel": "Buka Kasir"
+    },
     "2026-06-cashier-layout": {
       "title": "Tampilan Kasir Grid / Baris",
       "description": "Kini kamu bisa memilih tampilan produk di halaman Kasir antara mode Grid (kartu besar) atau mode Baris (daftar list ringkas). Pilihan ini memudahkan navigasi apabila produk tokomu banyak dan memerlukan tampilan yang lebih simpel. Atur melalui Pengaturan → Tampilan Kasir.",

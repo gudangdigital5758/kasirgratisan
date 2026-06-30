@@ -24,6 +24,20 @@ export interface WhatsNewFeature {
 
 export const FEATURES: WhatsNewFeature[] = [
   {
+    id: '2026-06-join-whatsapp',
+    icon: UsersIcon,
+    iconColor: 'text-primary bg-primary/10',
+    publishedAt: '2026-06-30',
+    cta: { to: 'https://s.id/wafreekasir' },
+  },
+  {
+    id: '2026-06-kitchen-ticket',
+    icon: Printer,
+    iconColor: 'text-primary bg-primary/10',
+    publishedAt: '2026-06-30',
+    cta: { to: '/cashier' },
+  },
+  {
     id: '2026-06-cashier-layout',
     icon: LayoutGrid,
     iconColor: 'text-primary bg-primary/10',
