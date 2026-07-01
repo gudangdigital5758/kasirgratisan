@@ -21,8 +21,7 @@ dependencies {
     implementation project(':capawesome-capacitor-app-update')
     implementation project(':capgo-capacitor-social-login')
     implementation project(':onesignal-capacitor-plugin')
-    implementation "com.android.billingclient:billing:9.0.0"
-    implementation "androidx.core:core:1.9.0"
+    implementation "com.android.billingclient:billing:8.3.0"
 }
 
 

@@ -117,8 +117,6 @@ export default function IssueReport() {
         </CardContent>
       </Card>
 
-      <CrashSimulator />
-
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent className="max-w-[90vw] rounded-xl bg-background border text-foreground">
@@ -142,26 +140,6 @@ export default function IssueReport() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function CrashSimulator() {
-  const { t } = useTranslation('settings');
-  const [shouldCrash, setShouldCrash] = useState(false);
-  if (shouldCrash) {
-    throw new Error('Simulasi Error: Aplikasi sengaja di-crash untuk pengujian Error Boundary.');
-  }
-  return (
-    <div className="text-center">
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        onClick={() => setShouldCrash(true)} 
-        className="text-muted-foreground/30 hover:text-destructive text-[10px] hover:bg-transparent"
-      >
-        {t('issueReport.devCrash')}
-      </Button>
     </div>
   );
 }

@@ -1442,7 +1442,6 @@
     "success": "Laporan kendala berhasil dikirim. Terima kasih!",
     "failed": "Gagal mengirim laporan. Silakan coba lagi.",
     "networkError": "Terjadi kesalahan jaringan saat mengirim laporan.",
-    "emptyError": "Silakan isi deskripsi kendala terlebih dahulu.",
-    "devCrash": "[Dev] Simulasi Crash Aplikasi"
+    "emptyError": "Silakan isi deskripsi kendala terlebih dahulu."
   }
 }

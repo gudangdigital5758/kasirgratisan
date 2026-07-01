@@ -1443,7 +1443,6 @@
     "success": "Issue report submitted successfully. Thank you!",
     "failed": "Failed to submit report. Please try again.",
     "networkError": "A network error occurred while submitting the report.",
-    "emptyError": "Please fill in the issue description first.",
-    "devCrash": "[Dev] Simulate App Crash"
+    "emptyError": "Please fill in the issue description first."
   }
 }

@@ -995,7 +995,6 @@
     "success": "Laporan ralat berjaya dihantar. Terima kasih!",
     "failed": "Gagal menghantar laporan. Sila cuba lagi.",
     "networkError": "Ralat rangkaian berlaku semasa menghantar laporan.",
-    "emptyError": "Sila isi keterangan kendala terlebih dahulu.",
-    "devCrash": "[Dev] Simulasi Crash Aplikasi"
+    "emptyError": "Sila isi keterangan kendala terlebih dahulu."
   }
 }
