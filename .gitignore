@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Agent continuity (local only — may contain paths/session ids)
+PROJECT_STATE.md
+
 # Editor directories and files
 .vscode/
 .idea

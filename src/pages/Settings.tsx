@@ -333,44 +333,7 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
 
-      {/* Play Store Alert */}
-      {!isNative && (
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative overflow-hidden">
-          <CardContent className="p-4 flex flex-col gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
-                <Smartphone className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-white">{t('playStoreAlert.title')}</h3>
-                <p className="text-[11px] text-white/90 leading-relaxed mt-0.5">{t('playStoreAlert.description')}</p>
-                <p className="text-[10px] text-white/70 leading-relaxed mt-1.5 bg-black/10 rounded p-2 border border-white/5">
-                  {t('playStoreAlert.migrationInstructions')}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 justify-end mt-1">
-              {can('manage_backup') && (
-                <Link to="/settings/backup">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-white hover:bg-white/10 hover:text-white border border-white/20">
-                    <Download className="w-3.5 h-3.5 mr-1" />
-                    {t('playStoreAlert.backupButton')}
-                  </Button>
-                </Link>
-              )}
-              <a
-                href="https://play.google.com/store/apps/details?id=com.freekasir.app"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button size="sm" className="h-8 text-xs bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm">
-                  {t('playStoreAlert.downloadButton')}
-                </Button>
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Play Store alert ditunda — BRAND.playStoreEnabled === false (fokus PWA). */}
 
       {/* Cloud Sync — featured, status-aware */}
       {can('manage_backup') && (
@@ -757,7 +720,7 @@ export default function Pengaturan() {
           </Card>
         </Link>
 
-        <a href="https://t.me/freekasir" target="_blank" rel="noopener noreferrer" className="block">
+        <a href="https://t.me/profitku" target="_blank" rel="noopener noreferrer" className="block">
           <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
             <CardContent className="p-3 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -881,7 +844,7 @@ export default function Pengaturan() {
                )}
              </button>
              <a
-               href="https://kasirgratisan.fider.io"
+               href="https://t.me/profitku"
                target="_blank"
                rel="noopener noreferrer"
                className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors"
@@ -889,7 +852,7 @@ export default function Pengaturan() {
                {t('about.requestFeature')}
              </a>
              <a
-               href="https://traktir.jipraks.com"
+               href="mailto:support@profitku.my.id"
                target="_blank"
                rel="noopener noreferrer"
                className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-warning/30 bg-warning/5 text-xs font-semibold text-warning hover:bg-warning/10 transition-colors"
@@ -897,7 +860,7 @@ export default function Pengaturan() {
                {t('about.donate')}
              </a>
              <a
-               href="https://t.me/kasirgratisan"
+               href="https://t.me/profitku"
                target="_blank"
                rel="noopener noreferrer"
                className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-sky-500/30 bg-sky-500/5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"

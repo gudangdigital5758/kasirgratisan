@@ -134,7 +134,7 @@ describe('getESCPOSData formatting', () => {
     });
 
     expect(output).toContain('Dicetak Dari Aplikasi');
-    expect(output).toContain('FreeKasir.com');
+    expect(output).toContain('Profitku.my.id');
   });
 
   it('should hide the watermark when cloudStoreId is set and hideWatermark is true', () => {
@@ -158,7 +158,7 @@ describe('getESCPOSData formatting', () => {
     });
 
     expect(output).not.toContain('Dicetak Dari Aplikasi');
-    expect(output).not.toContain('FreeKasir.com');
+    expect(output).not.toContain('Profitku.my.id');
   });
 
   it('should still print the watermark if hideWatermark is true but cloudStoreId is not set', () => {
@@ -182,6 +182,6 @@ describe('getESCPOSData formatting', () => {
     });
 
     expect(output).toContain('Dicetak Dari Aplikasi');
-    expect(output).toContain('FreeKasir.com');
+    expect(output).toContain('Profitku.my.id');
   });
 });

@@ -6,7 +6,7 @@ import { isPushSupported, getPermissionState, requestPushPermission, checkPushPe
 import { isNativePlatform } from '@/lib/printer';
 import { useTranslation } from 'react-i18next';
 
-const ASKED_KEY = 'freekasir_push_asked_v1';
+const ASKED_KEY = 'profitku_push_asked_v1';
 
 export default function PushPermissionModal() {
   const { t } = useTranslation('settings');

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "FreeKasir",
+    "name": "Profitku",
     "tagline": "Free POS — Manage Your Sales with Ease 🇮🇩"
   },
   "nav": {
@@ -64,7 +64,7 @@
     "storageUsed": "Storage Used"
   },
   "whatsNew": {
-    "title": "What's New in FreeKasir",
+    "title": "What's New in Profitku",
     "slide": "Slide {{number}}",
     "finish": "Done",
     "skip": "Skip"
@@ -72,12 +72,12 @@
   "whatsNewFeatures": {
     "2026-07-telegram-support": {
       "title": "Telegram Support",
-      "description": "You can now contact the FreeKasir support team directly via Telegram for quick assistance, feedback, or reporting issues.",
+      "description": "You can now contact the Profitku support team directly via Telegram for quick assistance, feedback, or reporting issues.",
       "ctaLabel": "Contact Now"
     },
     "2026-06-join-whatsapp": {
       "title": "Join Official WhatsApp Channel",
-      "description": "Join the official FreeKasir WhatsApp Channel to get the latest business tips, user guides, and new feature announcements directly in your WhatsApp!",
+      "description": "Join the official Profitku WhatsApp Channel to get the latest business tips, user guides, and new feature announcements directly in your WhatsApp!",
       "ctaLabel": "Join Now"
     },
     "2026-06-kitchen-ticket": {
@@ -120,9 +120,14 @@
       "description": "Your store data can now be automatically backed up to a secure cloud — keeping it safe even if your phone is lost, broken, or upgraded. Sign in with Google, choose a subscription, and set an auto-backup schedule. You can also restore data directly from the cloud anytime.",
       "ctaLabel": "Enable Cloud Backup"
     },
-    "2026-06-rebrand-freekasir": {
-      "title": "New Look: FreeKasir",
-      "description": "This application is now named FreeKasir with a fresh new look and colors. Your functions and data remain unchanged. Prefer other colors? You can still choose your favorite theme in Settings → Theme Color.",
+    "2026-07-profitku-rebrand": {
+      "title": "Welcome to Profitku",
+      "description": "This app is now Profitku (profitku.my.id). Offline POS stays free. Optional Profitku Cloud covers backup, sync, and monthly plans — your on-device data is kept.",
+      "ctaLabel": "Open Profitku Cloud"
+    },
+    "2026-06-rebrand-Profitku": {
+      "title": "New Look: Profitku",
+      "description": "This application is now named Profitku with a fresh new look and colors. Your functions and data remain unchanged. Prefer other colors? You can still choose your favorite theme in Settings → Theme Color.",
       "ctaLabel": "Change Theme Color"
     },
     "2026-06-stock-search-scan": {

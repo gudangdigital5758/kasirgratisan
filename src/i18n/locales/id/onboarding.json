@@ -1,7 +1,7 @@
 {
   "slides": {
     "welcome": {
-      "title": "Selamat Datang di FreeKasir",
+      "title": "Selamat Datang di Profitku",
       "description": "Aplikasi kasir (POS) gratis. Kelola penjualan, stok, dan laporan keuangan tokomu — semua dalam satu aplikasi, langsung dari HP, tanpa ribet."
     },
     "cashier": {
@@ -24,8 +24,8 @@
   "install": {
     "installed": "Sudah Terinstall!",
     "title": "Install sebagai Aplikasi",
-    "installedDesc": "FreeKasir sudah terinstall. Kamu bisa buka langsung dari home screen!",
-    "desc": "Install FreeKasir di HP kamu supaya bisa diakses langsung dari home screen, tanpa buka browser.",
+    "installedDesc": "Profitku sudah terinstall. Kamu bisa buka langsung dari home screen!",
+    "desc": "Install Profitku di HP kamu supaya bisa diakses langsung dari home screen, tanpa buka browser.",
     "button": "Install sebagai Aplikasi",
     "continueBrowser": "Lanjut di Browser",
     "chromeHint": "Untuk install, buka di browser Chrome lalu ketuk menu (⋮) → \"Add to Home screen\" atau \"Install app\".",

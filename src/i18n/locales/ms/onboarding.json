@@ -1,7 +1,7 @@
 {
   "slides": {
     "welcome": {
-      "title": "Selamat Datang ke FreeKasir",
+      "title": "Selamat Datang ke Profitku",
       "description": "Aplikasi kasir (POS) percuma. Urus jualan, stok, dan laporan kewangan kedai anda — semua dalam satu aplikasi, terus dari telefon, tanpa susah."
     },
     "cashier": {
@@ -24,8 +24,8 @@
   "install": {
     "installed": "Sudah Dipasang!",
     "title": "Pasang sebagai Aplikasi",
-    "installedDesc": "FreeKasir sudah dipasang. Anda boleh buka terus dari skrin utama!",
-    "desc": "Pasang FreeKasir di telefon anda supaya boleh diakses terus dari skrin utama, tanpa buka pelayar.",
+    "installedDesc": "Profitku sudah dipasang. Anda boleh buka terus dari skrin utama!",
+    "desc": "Pasang Profitku di telefon anda supaya boleh diakses terus dari skrin utama, tanpa buka pelayar.",
     "button": "Pasang sebagai Aplikasi",
     "continueBrowser": "Teruskan di Pelayar",
     "chromeHint": "Untuk pasang, buka dalam pelayar Chrome, kemudian ketuk menu (⋮) → \"Add to Home screen\" atau \"Install app\".",

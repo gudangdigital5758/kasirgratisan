@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "FreeKasir",
+    "name": "Profitku",
     "tagline": "POS Gratis — Kelola Jualan Jadi Mudah 🇮🇩"
   },
   "nav": {
@@ -64,7 +64,7 @@
     "storageUsed": "Penyimpanan Terpakai"
   },
   "whatsNew": {
-    "title": "Yang Baru di FreeKasir",
+    "title": "Yang Baru di Profitku",
     "slide": "Slide {{number}}",
     "finish": "Selesai",
     "skip": "Lewati"
@@ -72,12 +72,12 @@
   "whatsNewFeatures": {
     "2026-07-telegram-support": {
       "title": "Support Telegram",
-      "description": "Kini Anda dapat menghubungi tim support FreeKasir langsung via Telegram untuk bantuan cepat, saran, atau laporan kendala.",
+      "description": "Kini Anda dapat menghubungi tim support Profitku langsung via Telegram untuk bantuan cepat, saran, atau laporan kendala.",
       "ctaLabel": "Hubungi Sekarang"
     },
     "2026-06-join-whatsapp": {
       "title": "Gabung WhatsApp Channel Resmi",
-      "description": "Bergabunglah dengan WhatsApp Channel resmi FreeKasir untuk mendapatkan informasi tips bisnis terbaru, panduan penggunaan, serta pengumuman update fitur langsung di WhatsApp-mu!",
+      "description": "Bergabunglah dengan WhatsApp Channel resmi Profitku untuk mendapatkan informasi tips bisnis terbaru, panduan penggunaan, serta pengumuman update fitur langsung di WhatsApp-mu!",
       "ctaLabel": "Gabung Sekarang"
     },
     "2026-06-kitchen-ticket": {
@@ -120,9 +120,14 @@
       "description": "Data toko kini bisa dibackup otomatis ke cloud yang aman — tetap aman walau HP hilang, rusak, atau ganti perangkat. Login dengan akun Google, pilih paket langganan, lalu atur jadwal backup otomatis. Kamu juga bisa restore data langsung dari cloud kapan saja.",
       "ctaLabel": "Aktifkan Cloud Backup"
     },
-    "2026-06-rebrand-freekasir": {
-      "title": "Wajah Baru: FreeKasir",
-      "description": "Aplikasi ini kini bernama FreeKasir dengan tampilan dan warna baru yang lebih segar. Fungsi & data kamu tetap sama, tidak ada yang berubah. Suka warna lain? Kamu tetap bisa pilih tema favoritmu di Pengaturan → Warna Tema.",
+    "2026-07-profitku-rebrand": {
+      "title": "Selamat datang di Profitku",
+      "description": "Aplikasi ini kini bernama Profitku (profitku.my.id). Kasir offline tetap gratis. Profitku Cloud opsional untuk backup, sync, dan langganan bulanan — data di HP kamu tidak hilang.",
+      "ctaLabel": "Lihat Profitku Cloud"
+    },
+    "2026-06-rebrand-Profitku": {
+      "title": "Wajah Baru: Profitku",
+      "description": "Aplikasi ini kini bernama Profitku dengan tampilan dan warna baru yang lebih segar. Fungsi & data kamu tetap sama, tidak ada yang berubah. Suka warna lain? Kamu tetap bisa pilih tema favoritmu di Pengaturan → Warna Tema.",
       "ctaLabel": "Ganti Warna Tema"
     },
     "2026-06-stock-search-scan": {

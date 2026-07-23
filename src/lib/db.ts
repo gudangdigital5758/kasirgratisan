@@ -308,7 +308,7 @@ export interface StoreSettings {
   allowDebt?: boolean; // opt-in pembayaran sebagian/seluruhnya sebagai hutang
   cloudStoreId?: string | null; // cloud store ID yang di-bind ke device ini untuk sync
   printLogo?: boolean; // toggle to print store logo on ESC/POS receipt
-  hideWatermark?: boolean; // toggle to hide FreeKasir.com credit/watermark on ESC/POS receipt
+  hideWatermark?: boolean; // toggle to hide Profitku.my.id credit/watermark on ESC/POS receipt
 }
 
 // === Database ===

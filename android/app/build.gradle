@@ -18,10 +18,10 @@ if (hasKeystore) {
 }
 
 android {
-    namespace = "com.freekasir.app"
+    namespace = "com.profitku.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.freekasir.app"
+        applicationId "com.profitku.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode webVersionCode

@@ -45,7 +45,7 @@ export default function IssueReport() {
   const submitReport = async () => {
     setBusy(true);
     try {
-      const response = await fetch('https://external-api.freekasir.com/webhook/issue-report', {
+      const response = await fetch('https://api.profitku.my.id/webhook/issue-report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

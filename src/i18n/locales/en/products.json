@@ -76,7 +76,7 @@
     "flashUnsupported": "Flash is not supported on this device",
     "httpsRequired": "The app must be accessed via HTTPS to use the camera.",
     "browserUnsupported": "Browser does not support camera access. Try updating the app or use another browser.",
-    "permissionDeniedNative": "Camera permission denied. Go to device Settings > Apps > FreeKasir > Permissions, then enable Camera.",
+    "permissionDeniedNative": "Camera permission denied. Go to device Settings > Apps > Profitku > Permissions, then enable Camera.",
     "permissionDeniedWeb": "Camera permission denied. Click the lock icon in the address bar and allow camera access.",
     "permissionDeniedGeneric": "Camera permission denied. Please allow camera access and try again.",
     "noCamera": "No camera found on this device.",

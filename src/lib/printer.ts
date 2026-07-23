@@ -135,13 +135,13 @@ export const getESCPOSData = ({
   if (!hideWatermark) {
     const lang = language || 'id';
     let line1 = 'Dicetak Dari Aplikasi';
-    let line2 = 'FreeKasir.com';
+    let line2 = 'Profitku.my.id';
     if (lang === 'en') {
       line1 = 'Printed From';
-      line2 = 'FreeKasir.com App';
+      line2 = 'Profitku.my.id App';
     } else if (lang === 'ms') {
       line1 = 'Dicetak Daripada Aplikasi';
-      line2 = 'FreeKasir.com';
+      line2 = 'Profitku.my.id';
     }
     lines.push(`\n${line1}\n${line2}\n`);
   }
@@ -270,13 +270,13 @@ export const getDailyReportESCPOSData = ({
   if (!hideWatermark) {
     const lang = language || 'id';
     let line1 = 'Dicetak Dari Aplikasi';
-    let line2 = 'FreeKasir.com';
+    let line2 = 'Profitku.my.id';
     if (lang === 'en') {
       line1 = 'Printed From';
-      line2 = 'FreeKasir.com App';
+      line2 = 'Profitku.my.id App';
     } else if (lang === 'ms') {
       line1 = 'Dicetak Daripada Aplikasi';
-      line2 = 'FreeKasir.com';
+      line2 = 'Profitku.my.id';
     }
     lines.push(`\n${line1}\n${line2}\n`);
   }

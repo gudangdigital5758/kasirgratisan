@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "FreeKasir",
+    "name": "Profitku",
     "tagline": "POS Percuma — Urus Jualan Dengan Mudah 🇮🇩"
   },
   "nav": {
@@ -64,7 +64,7 @@
     "storageUsed": "Storan Diguna"
   },
   "whatsNew": {
-    "title": "Apa Yang Baru di FreeKasir",
+    "title": "Apa Yang Baru di Profitku",
     "slide": "Slaid {{number}}",
     "finish": "Selesai",
     "skip": "Langkau"
@@ -72,12 +72,12 @@
   "whatsNewFeatures": {
     "2026-07-telegram-support": {
       "title": "Sokongan Telegram",
-      "description": "Kini anda boleh menghubungi pasukan sokongan FreeKasir secara langsung melalui Telegram untuk bantuan cepat, maklum balas, atau melaporkan kendala.",
+      "description": "Kini anda boleh menghubungi pasukan sokongan Profitku secara langsung melalui Telegram untuk bantuan cepat, maklum balas, atau melaporkan kendala.",
       "ctaLabel": "Hubungi Sekarang"
     },
     "2026-06-join-whatsapp": {
       "title": "Sertai Saluran WhatsApp Rasmi",
-      "description": "Sertai Saluran WhatsApp rasmi FreeKasir untuk mendapatkan maklumat tips perniagaan terkini, panduan penggunaan, serta pengumuman kemas kini ciri secara langsung di WhatsApp anda!",
+      "description": "Sertai Saluran WhatsApp rasmi Profitku untuk mendapatkan maklumat tips perniagaan terkini, panduan penggunaan, serta pengumuman kemas kini ciri secara langsung di WhatsApp anda!",
       "ctaLabel": "Sertai Sekarang"
     },
     "2026-06-kitchen-ticket": {
@@ -120,9 +120,14 @@
       "description": "Data kedai kini boleh disandarkan secara automatik ke awan yang selamat — kekal selamat walaupun telefon hilang, rosak, atau bertukar peranti. Log masuk dengan akaun Google, pilih pakej langganan, dan tetapkan jadual sandaran automatik. Anda juga boleh memulihkan data terus dari awan pada bila-bila masa.",
       "ctaLabel": "Aktifkan Cloud Backup"
     },
-    "2026-06-rebrand-freekasir": {
-      "title": "Wajah Baru: FreeKasir",
-      "description": "Aplikasi ini kini dinamakan FreeKasir dengan paparan dan warna baru yang lebih segar. Fungsi & data anda kekal sama. Suka warna lain? Anda masih boleh memilih tema kegemaran anda di Tetapan → Warna Tema.",
+    "2026-07-profitku-rebrand": {
+      "title": "Selamat datang ke Profitku",
+      "description": "Aplikasi ini kini bernama Profitku (profitku.my.id). POS luar talian kekal percuma. Profitku Cloud pilihan untuk sandaran, sync, dan langganan bulanan — data di peranti anda tidak hilang.",
+      "ctaLabel": "Lihat Profitku Cloud"
+    },
+    "2026-06-rebrand-Profitku": {
+      "title": "Wajah Baru: Profitku",
+      "description": "Aplikasi ini kini dinamakan Profitku dengan paparan dan warna baru yang lebih segar. Fungsi & data anda kekal sama. Suka warna lain? Anda masih boleh memilih tema kegemaran anda di Tetapan → Warna Tema.",
       "ctaLabel": "Tukar Warna Tema"
     },
     "2026-06-stock-search-scan": {

@@ -1,4 +1,5 @@
 import { db } from './db';
+import { BRAND } from './brand';
 
 /**
  * Survei "jenis usaha" — ditampilkan saat user membuka halaman Laporan.
@@ -7,12 +8,12 @@ import { db } from './db';
  * Jawaban dikirim ke webhook (fire-and-forget) dan ditandai selesai secara lokal.
  */
 
-const WEBHOOK_URL = 'https://external-api.freekasir.com/webhook/user-type';
+const WEBHOOK_URL = `${BRAND.apiOrigin}/webhook/user-type`;
 const TIMEOUT_MS = 8000;
 
-const ANSWERED_KEY = 'freekasir_user_type_answered_v1';
-const DISMISSED_KEY = 'freekasir_user_type_dismissed_v1';
-const SKIP_COUNT_KEY = 'freekasir_user_type_skips_v1';
+const ANSWERED_KEY = 'profitku_user_type_answered_v1';
+const DISMISSED_KEY = 'profitku_user_type_dismissed_v1';
+const SKIP_COUNT_KEY = 'profitku_user_type_skips_v1';
 
 /** Jumlah skip sebelum opsi "jangan tampilkan lagi" ditawarkan. */
 export const SKIP_LIMIT = 3;

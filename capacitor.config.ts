@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.freekasir.app',
-  appName: 'FreeKasir',
+  appId: 'com.profitku.app',
+  appName: 'Profitku',
   webDir: 'dist',
   android: {
     allowMixedContent: true,

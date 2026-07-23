@@ -1,6 +1,21 @@
-# 🧾 FreeKasir
+# 🧾 Profitku
 
-A free, offline-first, open source Point of Sale (POS) Progressive Web App built for Indonesian Micro, Small, and Medium Enterprises (UMKM). All data is stored locally on the user's device — no server, no registration, no cost.
+**Domain:** [profitku.my.id](https://profitku.my.id) · **API:** [api.profitku.my.id](https://api.profitku.my.id)
+
+Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan laporan berjalan 100% di perangkat (IndexedDB) — gratis, tanpa wajib daftar.
+
+**Profitku Cloud** (opsional): **Rp 25.000/bulan** — backup cloud (2 GB), auto-backup, sync 1 toko. Stack: **Git · Cloudflare · Supabase · Resend · Fonnte**. Distribusi utama: **PWA** (`profitku.my.id`); listing Play Store ditunda.
+
+### Documentation map
+
+| Doc | Isi |
+|-----|-----|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Batas offline vs cloud, alur backup/auth/langganan |
+| [docs/profitku-cloud.md](docs/profitku-cloud.md) | Deploy Supabase, Worker, R2, Resend, Fonnte |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Keputusan stabil (harga 25rb, Play ditunda, dll.) |
+| [docs/android-google-signin.md](docs/android-google-signin.md) | Google Sign-In native Android |
+| [AGENTS.md](AGENTS.md) | Instruksi agent (bootstrap, boundary, validasi, commit) |
+| [workers/api/README.md](workers/api/README.md) | Endpoint Cloudflare Worker |
 
 ---
 
@@ -50,6 +65,11 @@ A free, offline-first, open source Point of Sale (POS) Progressive Web App built
 | Receipt | html2canvas (to PNG), Web Bluetooth Print (PWA), Bluetooth Classic (Android APK via Capacitor) |
 | Font | Plus Jakarta Sans |
 | Native Wrapper | Capacitor 8 (Android) |
+| Cloud API | Cloudflare Workers (Hono) |
+| Database cloud | Supabase (Postgres + Auth + RLS) |
+| Email | Resend |
+| WhatsApp | Fonnte |
+| Hosting web | Cloudflare Pages (`profitku.my.id`) |
 
 ---
 
@@ -64,14 +84,18 @@ A free, offline-first, open source Point of Sale (POS) Progressive Web App built
 
 ```bash
 # Clone the repository
-git clone https://github.com/user/kasirgratisan.git
+git clone https://github.com/gudangdigital5758/kasirgratisan.git
 cd kasirgratisan
 
 # Install dependencies
 npm install
+cp .env.example .env
 
-# Start the development server
+# Start the development server (web)
 npm run dev
+
+# Optional: API Worker lokal (port 8787)
+npm run api:dev
 ```
 
 The app will be running at `http://localhost:8080`.
@@ -248,19 +272,19 @@ Join the Telegram group to discuss the app, ask questions, and share tips with o
 
 ## 💎 Sponsors
 
-FreeKasir is proudly supported by:
+Profitku is proudly supported by:
 
 <a href="https://sumopod.com/" target="_blank">
   <img src="public/sponsors/sumopod.png" alt="Sumopod" height="60">
 </a>
 
-Want to sponsor FreeKasir and have your logo featured here? Reach out at **[sponsorship@freekasir.com](mailto:sponsorship@freekasir.com)**.
+Want to sponsor Profitku and have your logo featured here? Reach out at **[sponsorship@profitku.my.id](mailto:sponsorship@profitku.my.id)**.
 
 ---
 
 ## ☕ Support the Developer
 
-FreeKasir is built and maintained for free. If you find it useful, you can buy the developer a coffee to support continued development:
+Profitku is built and maintained for free. If you find it useful, you can buy the developer a coffee to support continued development:
 
 👉 **[traktir.jipraks.com](https://traktir.jipraks.com/)**
 

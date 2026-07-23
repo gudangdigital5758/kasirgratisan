@@ -1,7 +1,9 @@
 import { db } from './db';
 import { APP_VERSION } from './app-version';
 
-const API_URL = 'https://api.kasirgratisan.my.id/webhook/kasir-gratisan/latest-version';
+import { BRAND } from './brand';
+
+const API_URL = `${BRAND.apiOrigin}/webhook/latest-version`;
 const TIMEOUT_MS = 5000;
 
 export async function checkVersion(): Promise<void> {

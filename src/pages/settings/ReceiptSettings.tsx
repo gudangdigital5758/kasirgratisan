@@ -184,7 +184,7 @@ export default function ReceiptSettings() {
             {!(hideWatermark && isCloudActive) && (
               <div className="text-center text-[10px] text-zinc-500 pt-2 border-t border-dotted border-zinc-200 dark:border-zinc-800 space-y-0.5">
                 <p>Dicetak Dari Aplikasi</p>
-                <p className="font-semibold">FreeKasir.com</p>
+                <p className="font-semibold">Profitku.my.id</p>
               </div>
             )}
           </CardContent>

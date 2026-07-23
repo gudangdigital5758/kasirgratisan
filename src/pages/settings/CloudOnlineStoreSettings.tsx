@@ -264,7 +264,7 @@ export default function CloudOnlineStoreSettings() {
   useEffect(() => {
     if (store?.identifier) {
       QRCode.toDataURL(
-        `https://market.freekasir.com/stores/${store.identifier}`,
+        `https://market.profitku.my.id/stores/${store.identifier}`,
         {
           width: 512,
           margin: 2,
@@ -430,8 +430,8 @@ export default function CloudOnlineStoreSettings() {
           <div class="container">
             <img src="\${qrUrl}" alt="QR Code" />
             <h1>\${store?.name || 'Toko Online'}</h1>
-            <p>market.freekasir.com/stores/\${store?.identifier}</p>
-            <div class="footer">Dicetak melalui FreeKasir</div>
+            <p>market.profitku.my.id/stores/\${store?.identifier}</p>
+            <div class="footer">Dicetak melalui Profitku</div>
           </div>
           <script>
             window.onload = function() {
@@ -992,12 +992,12 @@ export default function CloudOnlineStoreSettings() {
                       {t('cloudOnlineStore.identifier.slugInfo')}
                     </span>
                     <a
-                      href={`https://market.freekasir.com/stores/${store.identifier}`}
+                      href={`https://market.profitku.my.id/stores/${store.identifier}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline font-bold flex items-center gap-1"
                     >
-                      market.freekasir.com/stores/{store.identifier}
+                      market.profitku.my.id/stores/{store.identifier}
                       <ChevronRight className="w-3 h-3" />
                     </a>
                   </div>
@@ -1022,7 +1022,7 @@ export default function CloudOnlineStoreSettings() {
                         <p className="text-xs text-muted-foreground text-left">
                           {hasTemplate 
                             ? 'QR Code telah berhasil digabungkan dengan template cetak Anda.' 
-                            : 'Scan QR Code ini untuk langsung membuka halaman toko online Anda di Market FreeKasir.'
+                            : 'Scan QR Code ini untuk langsung membuka halaman toko online Anda di Market Profitku.'
                           }
                         </p>
                       </DialogHeader>
@@ -1041,7 +1041,7 @@ export default function CloudOnlineStoreSettings() {
                           </div>
                         )}
                         <p className="text-xs font-semibold mt-3 text-primary truncate max-w-[280px]">
-                          market.freekasir.com/stores/{store.identifier}
+                          market.profitku.my.id/stores/{store.identifier}
                         </p>
                       </div>
                       <div className="flex gap-2">

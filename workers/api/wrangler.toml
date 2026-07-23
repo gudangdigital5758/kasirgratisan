@@ -1,0 +1,21 @@
+name = "profitku-api"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+# Custom domain (set di Cloudflare dashboard setelah deploy):
+# api.profitku.my.id → this worker
+
+[vars]
+APP_ORIGIN = "https://profitku.my.id"
+# Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY
+#          RESEND_API_KEY | RESEND_FROM | FONNTE_TOKEN | WEBHOOK_SECRET
+
+# R2 backup — buat bucket `profitku-backups` di dashboard, lalu uncomment:
+# [[r2_buckets]]
+# binding = "BACKUP_BUCKET"
+# bucket_name = "profitku-backups"
+
+# Dunning H-3 / H-1 setiap hari 01:00 UTC (~08:00 WIB)
+[triggers]
+crons = ["0 1 * * *"]

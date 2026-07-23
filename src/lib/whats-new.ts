@@ -24,18 +24,25 @@ export interface WhatsNewFeature {
 
 export const FEATURES: WhatsNewFeature[] = [
   {
+    id: '2026-07-profitku-rebrand',
+    icon: Sparkles,
+    iconColor: 'text-primary bg-primary/10',
+    publishedAt: '2026-07-23',
+    cta: { to: '/settings/cloud-backup' },
+  },
+  {
     id: '2026-07-telegram-support',
     icon: Send,
     iconColor: 'text-sky-500 bg-sky-500/10',
     publishedAt: '2026-07-06',
-    cta: { to: 'https://t.me/freekasir' },
+    cta: { to: 'https://t.me/profitku' },
   },
   {
     id: '2026-06-join-whatsapp',
     icon: UsersIcon,
     iconColor: 'text-primary bg-primary/10',
     publishedAt: '2026-06-30',
-    cta: { to: 'https://s.id/wafreekasir' },
+    cta: { to: 'https://s.id/waprofitku' },
   },
   {
     id: '2026-06-kitchen-ticket',
@@ -94,7 +101,7 @@ export const FEATURES: WhatsNewFeature[] = [
     cta: { to: '/settings/cloud-backup' },
   },
   {
-    id: '2026-06-rebrand-freekasir',
+    id: '2026-06-rebrand-Profitku',
     icon: Sparkles,
     iconColor: 'text-primary bg-primary/10',
     publishedAt: '2026-06-11',

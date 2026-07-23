@@ -1,15 +1,28 @@
 /**
- * Thin client untuk FreeKasir Cloud API (backup + subscription).
+ * Thin client untuk Profitku Cloud API (backup + subscription).
  *
- * Token Google ID (JWT) di-inject lewat getter yang didaftarkan oleh
- * use-cloud-auth, supaya call site tidak perlu mengoper token manual.
+ * Token (Google ID JWT / Supabase access token) di-inject lewat getter
+ * yang didaftarkan oleh use-cloud-auth, supaya call site tidak perlu
+ * mengoper token manual.
+ *
+ * Backend target: Cloudflare Worker (`workers/api`) + Supabase.
  */
 
-const BASE_URL = (import.meta.env.VITE_AUTH_API_URL ?? 'http://localhost:3210').replace(/\/$/, '');
+import { BRAND } from './brand';
+
+const BASE_URL = (
+  import.meta.env.VITE_AUTH_API_URL ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:8787' : BRAND.apiOrigin)
+).replace(/\/$/, '');
 
 let tokenGetter: () => string | null = () => null;
 export function setCloudTokenGetter(fn: () => string | null) {
   tokenGetter = fn;
+}
+
+/** Sync token dari storage Supabase (dipakai sebelum request jika ref kosong). */
+export function peekCloudToken(): string | null {
+  return tokenGetter();
 }
 
 // === Types ===

@@ -4,13 +4,13 @@
   "notSet": "Not set",
   "playStoreAlert": {
     "title": "Use the Official Android App!",
-    "description": "For the best performance, Bluetooth printer support, and more stable offline features, please download the FreeKasir app on the Google Play Store.",
+    "description": "For the best performance, Bluetooth printer support, and more stable offline features, please download the Profitku app on the Google Play Store.",
     "migrationInstructions": "Easily migrate your data: 1. Export your backup file via the Backup & Restore menu below. 2. Download and install the app from Google Play Store. 3. Import the backup file in your new app.",
     "downloadButton": "Download on Play Store",
     "backupButton": "Export Backup Now"
   },
   "cloudSync": {
-    "title": "FreeKasir Cloud",
+    "title": "Profitku Cloud",
     "status": {
       "inactive": "INACTIVE",
       "selectStore": "SELECT STORE",
@@ -18,10 +18,10 @@
       "active": "ACTIVE"
     },
     "desc": {
-      "inactive": "Secure cloud data, access dashboard.freekasir.com, and list your store on market.freekasir.com!",
+      "inactive": "Secure cloud data, access dashboard.profitku.my.id, and list your store on market.profitku.my.id!",
       "selectStore": "Subscription is active, but the device hasn't been linked to a store. Select a store to sync data.",
       "needsSetup": "Store is linked, but automatic sync isn't enabled yet. Set up a schedule so data syncs regularly.",
-      "active": "Sync is active. Monitor store reports in real-time on dashboard.freekasir.com from any device."
+      "active": "Sync is active. Monitor store reports in real-time on dashboard.profitku.my.id from any device."
     },
     "lastSync": "Last sync: {{time}}",
     "neverSynced": "Never synced"
@@ -30,7 +30,7 @@
     "title": "Install as App",
     "hint": "Open directly from home screen, no browser needed",
     "installButton": "Install",
-    "installSuccess": "FreeKasir installed successfully!",
+    "installSuccess": "Profitku installed successfully!",
     "helpButton": "How to Install"
   },
   "installHelp": {
@@ -179,7 +179,7 @@
     },
     "telegramSupport": {
       "title": "Telegram Support",
-      "description": "Contact FreeKasir support team via Telegram"
+      "description": "Contact Profitku support team via Telegram"
     }
   },
   "bluetoothPrinter": {
@@ -203,10 +203,10 @@
     "title": "Language / Bahasa"
   },
   "about": {
-    "appName": "FreeKasir",
+    "appName": "Profitku",
     "tagline": "Free POS for Indonesian MSMEs 🇮🇩",
     "version": "v{{version}} • Data stored on device",
-    "whatsNew": "What's New in FreeKasir",
+    "whatsNew": "What's New in Profitku",
     "requestFeature": "💡 Request Feature",
     "donate": "☕ Buy Developer a Coffee",
     "telegram": "💬 Join Telegram Group",
@@ -245,21 +245,21 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "FreeKasir Cloud",
+      "title": "Profitku Cloud",
       "permissionLabel": "Manage Backup"
     },
     "promo": {
       "title": "Reach More Customers!",
       "description": "Activate your Online Store to make your store publicly accessible with various benefits:",
-      "benefit1": "Showcase on market.freekasir.com to reach new buyers",
+      "benefit1": "Showcase on market.profitku.my.id to reach new buyers",
       "benefit2": "Customers can view your online menu in real-time from mobile",
       "benefit3": "Your own unique online store link/identifier",
       "button": "Fill Store Details"
     },
     "hero": {
-      "title": "Upgrade to FreeKasir Cloud",
-      "description": "Monitor reports in real-time at {{dashboard}} and promote your store online at {{market}}!",
-      "startFrom": "From",
+      "title": "Upgrade to Profitku Cloud",
+      "description": "Secure backup + manage your store from anywhere. Just Rp 25,000/month — one simple plan.",
+      "startFrom": "Only",
       "perMonth": "/month"
     },
     "benefits": {
@@ -293,18 +293,19 @@
     "neverSynced": "Never synced",
     "manageFromAnywhere": "Manage store from anywhere",
     "subscription": {
-      "description": "Monitor sales, stock, & store finances from anywhere — just open on another phone or laptop. All data is safely stored in the cloud and remains intact even if the device is lost, damaged, or replaced.",
+      "singleTitle": "Profitku Cloud",
+      "description": "One plan at Rp 25,000/month: cloud backup (up to 2 GB), auto-backup, 1-store sync, and reports from other devices. Your data stays safe if the phone is lost or replaced.",
       "loadingPlans": "Loading plans…",
-      "activePlan": "(active plan)",
+      "activePlan": "(active)",
       "unlimitedStores": "Unlimited",
       "store_one": "{{count}} store",
       "store_other": "{{count}} stores",
       "estimatedBackups": "≈ {{count}} backup files",
       "estimateNote": "*Estimate based on current data size ({{size}}).",
-      "subscribe": "Subscribe",
+      "subscribe": "Subscribe Rp 25,000",
       "renew": "Renew",
       "choose": "Choose",
-      "extendOrChange": "Choose the same plan to renew, or another plan to switch.",
+      "extendOrChange": "Renew your monthly subscription.",
       "close": "Close",
       "changePlan": "Change Plan",
       "used": "used",
@@ -370,7 +371,7 @@
       "permissionLabel": "Manage Backup"
     },
     "title": "Automatic Sync",
-    "requiresSubscription": "Enable FreeKasir Cloud subscription first to set up automatic sync.",
+    "requiresSubscription": "Enable Profitku Cloud subscription first to set up automatic sync.",
     "scheduleLabel": "Automatic Sync Schedule",
     "interval": {
       "off": "Off",
@@ -419,7 +420,7 @@
     },
     "title": "Manage Stores",
     "loading": "Loading…",
-    "requiresSubscription": "FreeKasir Cloud subscription is required to manage stores.",
+    "requiresSubscription": "Profitku Cloud subscription is required to manage stores.",
     "activeDevice": "This device is connected to:",
     "syncActive": "Automatic background sync active",
     "disconnect": "Disconnect",
@@ -429,7 +430,7 @@
     "addButton": "Add",
     "atLimit": {
       "title": "Your plan's store limit is full",
-      "description": "Current plan only allows {{max}} stores. Upgrade FreeKasir Cloud plan to add more.",
+      "description": "Current plan only allows {{max}} stores. Upgrade Profitku Cloud plan to add more.",
       "upgrade": "Upgrade Plan"
     },
     "noStore": "No stores yet. Create your first store.",
@@ -1142,7 +1143,7 @@
     }
   },
   "loginScreen": {
-    "storeFallback": "FreeKasir",
+    "storeFallback": "Profitku",
     "continuePrompt": "Sign in to continue",
     "usernameLabel": "Username",
     "usernamePlaceholder": "e.g. budi",
@@ -1178,7 +1179,7 @@
     "print": "Print",
     "printKitchen": "Print Kitchen",
     "watermarkLine1": "Printed From",
-    "watermarkLine2": "FreeKasir.com App",
+    "watermarkLine2": "Profitku.my.id App",
     "done": "Done",
     "toast": {
       "captureError": "Failed to create receipt image",
@@ -1270,8 +1271,8 @@
     "lastBackup": "Last backup: {{time}}",
     "neverBackedUp": "You have not backed up data yet",
     "backupNow": "Backup Now",
-    "shareTitle": "Backup FreeKasir",
-    "shareText": "FreeKasir backup data file (JSON)",
+    "shareTitle": "Backup Profitku",
+    "shareText": "Profitku backup data file (JSON)",
     "shareDialogTitle": "Save / Share Backup",
     "successCreated": "Backup created successfully!",
     "successDownloaded": "Backup downloaded successfully",
@@ -1283,7 +1284,7 @@
     "benefits": {
       "cloudBackup": "Cloud backup status: success, failure, or quota almost full.",
       "payment": "Payment confirmation & reminders before subscription ends.",
-      "announcement": "Maintenance info & important announcements from FreeKasir."
+      "announcement": "Maintenance info & important announcements from Profitku."
     },
     "enable": "Enable Notifications",
     "later": "Maybe Later",
@@ -1345,14 +1346,14 @@
     "printLogoDescription": "Print the store logo at the very top of the physical receipt. Ensure your thermal printer supports image/bitmap printing.",
     "footerLabel": "Receipt Footer Text",
     "hideWatermarkLabel": "Hide Application Watermark",
-    "hideWatermarkDescActive": "Hide the \"Printed From FreeKasir.com App\" watermark at the bottom of the receipt.",
-    "hideWatermarkDescRequired": "Watermark can only be disabled if FreeKasir Cloud is active.",
+    "hideWatermarkDescActive": "Hide the \"Printed From Profitku.my.id App\" watermark at the bottom of the receipt.",
+    "hideWatermarkDescRequired": "Watermark can only be disabled if Profitku Cloud is active.",
     "saveSuccess": "Receipt settings saved successfully",
     "saveFailed": "Failed to save receipt settings"
   },
   "cloudOnlineStore": {
     "title": "Online Store & Market",
-    "linkedStoreRequired": "This device is not linked to a cloud store. Please link it first on the FreeKasir Cloud settings page.",
+    "linkedStoreRequired": "This device is not linked to a cloud store. Please link it first on the Profitku Cloud settings page.",
     "identifier": {
       "label": "Store URL (Identifier)",
       "placeholder": "your-store-name",
@@ -1366,7 +1367,7 @@
     },
     "visibility": {
       "title": "Show Store in Market",
-      "description": "Enable to make your store product catalog publicly viewable at market.freekasir.com.",
+      "description": "Enable to make your store product catalog publicly viewable at market.profitku.my.id.",
       "requiresIdentifier": "Store URL must be saved before making the store public.",
       "unsavedIdentifier": "There are unsaved Store URL changes. Please save the Store URL first.",
       "unsavedDetails": "There are unsaved store detail changes. Please save the store details first.",

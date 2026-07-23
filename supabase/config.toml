@@ -1,0 +1,16 @@
+# Supabase local config (opsional). Deploy production lewat dashboard / CLI linked project.
+
+[project]
+id = "profitku"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323

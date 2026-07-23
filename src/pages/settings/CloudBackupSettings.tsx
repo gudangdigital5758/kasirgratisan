@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { Link } from 'react-router-dom';
@@ -38,12 +38,12 @@ import { format, type Locale } from 'date-fns';
 import { id, enUS, ms } from 'date-fns/locale';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
-import { App } from '@capacitor/app';
 import { isNativePlatform } from '@/lib/printer';
 import { nativeGoogleSignIn } from '@/lib/google-auth';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
-import { fetchPlans, checkoutPlan, verifyPayment, verifyGooglePlayPurchase, fetchStores, uploadBackup, type Plan, type CloudStore } from '@/lib/cloud-api';
+import { fetchPlans, checkoutPlan, verifyPayment, fetchStores, uploadBackup, type Plan, type CloudStore } from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
+import { BRAND } from '@/lib/brand';
 import { useTranslation, Trans } from 'react-i18next';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
@@ -72,18 +72,27 @@ export default function CloudBackupSettings() {
   const [stores, setStores] = useState<CloudStore[]>([]);
   const [loadingStores, setLoadingStores] = useState(false);
   const [hasLoadedStores, setHasLoadedStores] = useState(false);
-  const [showStoragePlans, setShowStoragePlans] = useState(false);
-  const [showSyncPlans, setShowSyncPlans] = useState(false);
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   const storeCount = hasLoadedStores ? stores.length : null;
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
   const activeStore = stores.find((s) => s.id === activeStoreId);
   const isStorePublic = activeStore?.isPublic ?? false;
 
-  const byPrice = (a: Plan, b: Plan) => a.price - b.price;
-  const storagePlans = plans.filter((p) => p.category === 'STORAGE').sort(byPrice);
-  const syncPlans = plans.filter((p) => p.category === 'SYNC' && p.id === 'plan_sync_1').sort(byPrice);
-  const cheapestSyncPrice = syncPlans.length ? syncPlans[0].price : null;
+  // Single plan: Profitku Cloud (fallback ke brand id bila API belum siap)
+  const cloudPlans =
+    plans.length > 0
+      ? plans
+      : [
+          {
+            id: BRAND.cloudPlanId,
+            name: 'Profitku Cloud',
+            storageLimitMb: BRAND.cloudStorageMb,
+            price: BRAND.cloudPriceIdr,
+            category: 'SYNC' as const,
+            maxStores: BRAND.cloudMaxStores,
+          },
+        ];
 
   const loadPlans = useCallback(async () => {
     try {
@@ -138,8 +147,7 @@ export default function CloudBackupSettings() {
           await refreshProfile();
           setPendingTxId(null);
           setPaymentLink(null);
-          setShowStoragePlans(false);
-          setShowSyncPlans(false);
+          setShowPlanPicker(false);
           toast.success(t('cloudBackup.toast.paymentSuccess'));
         } else if (!silent) {
           toast.info(t('cloudBackup.toast.paymentNotDetected'));
@@ -159,96 +167,7 @@ export default function CloudBackupSettings() {
     return () => window.clearInterval(id);
   }, [pendingTxId, checkPayment]);
 
-  const handleVerifyNativePurchase = async (transaction: any) => {
-    console.log('Google Play Billing: Verifying transaction:', JSON.stringify(transaction));
-    
-    const purchaseToken = 
-      transaction.parentReceipt?.purchaseToken || 
-      transaction.parentReceipt?.token || 
-      transaction.purchaseToken || 
-      transaction.token || 
-      transaction.transactionId || 
-      transaction.id;
-      
-    const productId = transaction.products?.[0]?.id || transaction.productId;
-    
-    if (!purchaseToken || !productId) {
-      console.warn('Google Play Billing: Missing purchaseToken or productId. purchaseToken:', purchaseToken, 'productId:', productId);
-      toast.error(t('cloudBackup.toast.invalidPurchaseData', { defaultValue: 'Invalid purchase data from Google Play' }));
-      return;
-    }
-
-    setBusy('verify_native');
-    try {
-      let packageName = 'com.freekasir.app';
-      try {
-        const info = await App.getInfo();
-        packageName = info.id;
-      } catch (err) {
-        console.warn('Failed to get app package name dynamically, using fallback', err);
-      }
-
-      const plan = plans.find(p => p.id === productId);
-      const planId = plan ? plan.id : productId;
-
-      await verifyGooglePlayPurchase(planId, productId, purchaseToken, packageName);
-      
-      transaction.finish();
-      await refreshProfile();
-      
-      setShowSyncPlans(false);
-      setShowStoragePlans(false);
-      
-      toast.success(t('cloudBackup.toast.paymentSuccess'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.verifyFailed'));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleVerifyNativePurchaseRef = useRef(handleVerifyNativePurchase);
-  useEffect(() => {
-    handleVerifyNativePurchaseRef.current = handleVerifyNativePurchase;
-  });
-
-  useEffect(() => {
-    if (isNativePlatform() && plans.length > 0) {
-      const CdvPurchase = (window as any).CdvPurchase;
-      if (CdvPurchase && !(window as any).isGooglePlayBillingInitialized) {
-        const { store, ProductType, Platform } = CdvPurchase;
-        
-        plans.forEach((plan) => {
-          store.register({
-            id: plan.id,
-            type: ProductType.PAID_SUBSCRIPTION,
-            platform: Platform.GOOGLE_PLAY,
-          });
-        });
-
-        store.when()
-          .approved((transaction: any) => {
-            handleVerifyNativePurchaseRef.current(transaction);
-          })
-          .verified((receipt: any) => {
-            receipt.finish();
-          })
-          .finished(() => {
-            setBusy(null);
-          });
-
-        store.error((err: any) => {
-          if (err.code !== 2 && err.code !== 'PAYMENT_CANCELLED') {
-            toast.error(`Google Play Billing Error: ${err.message}`);
-          }
-          setBusy(null);
-        });
-
-        store.initialize([Platform.GOOGLE_PLAY]);
-        (window as any).isGooglePlayBillingInitialized = true;
-      }
-    }
-  }, [plans]);
+  // Google Play Billing ditunda (BRAND.playStoreEnabled === false). Checkout lewat web payment.
 
   if (!can('manage_backup')) {
     return <LockedPage title={t('cloudBackup.locked.title')} permissionLabel={t('cloudBackup.locked.permissionLabel')} />;
@@ -269,44 +188,17 @@ export default function CloudBackupSettings() {
   const handleSubscribe = async (planId: string) => {
     setBusy(`checkout:${planId}`);
     try {
-      if (isNativePlatform()) {
-        const CdvPurchase = (window as any).CdvPurchase;
-        if (!CdvPurchase) {
-          toast.error(t('cloudBackup.toast.billingNotAvailable', { defaultValue: 'Google Play Billing not available on this device' }));
-          setBusy(null);
-          return;
-        }
-        const { store } = CdvPurchase;
-        const product = store.get(planId);
-        if (!product) {
-          const registered = store.products?.map((p: any) => p.id).join(', ') || 'none';
-          console.warn(`Product ${planId} not found in Google Play. Registered products: ${registered}`);
-          toast.error(t('cloudBackup.toast.productNotFound', { defaultValue: `Product ${planId} not found in Google Play Store` }));
-          setBusy(null);
-          return;
-        }
-        
-        console.log('Google Play Billing: Product details loaded:', product);
-        const offer = product.getOffer() || product.offers?.[0];
-        if (offer) {
-          console.log('Google Play Billing: Ordering offer:', offer.id);
-          store.order(offer);
-        } else {
-          console.warn('Google Play Billing: No offer found for subscription. Ordering product directly.');
-          store.order(planId);
-        }
-      } else {
-        const result = await checkoutPlan(planId, { redirectURL: `${window.location.origin}/settings/cloud-backup` });
-        setPaymentLink(result.paymentLink);
-        setPendingTxId(result.transaction.id);
-        window.open(result.paymentLink, '_blank');
-      }
+      // Play Billing ditunda — selalu checkout web (Midtrans/Xendit/mock via API).
+      const result = await checkoutPlan(planId, {
+        redirectURL: `${window.location.origin}/settings/cloud-backup`,
+      });
+      setPaymentLink(result.paymentLink);
+      setPendingTxId(result.transaction.id);
+      window.open(result.paymentLink, '_blank');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.checkoutFailed'));
     } finally {
-      if (!isNativePlatform()) {
-        setBusy(null);
-      }
+      setBusy(null);
     }
   };
 
@@ -367,16 +259,14 @@ export default function CloudBackupSettings() {
                   <Trans i18nKey="cloudBackup.hero.title" ns="settings" components={{ br: <br /> }} />
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-                  {t('cloudBackup.hero.description', { dashboard: 'dashboard.freekasir.com' })}
+                  {t('cloudBackup.hero.description')}
                 </p>
               </div>
-              {cheapestSyncPrice != null && (
-                <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-[11px] font-medium shadow-sm">
-                  <span className="text-muted-foreground">{t('cloudBackup.hero.startFrom')}</span>
-                  <span className="text-primary font-bold">{rp(cheapestSyncPrice)}</span>
-                  <span className="text-muted-foreground">{t('cloudBackup.hero.perMonth')}</span>
-                </div>
-              )}
+              <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-[11px] font-medium shadow-sm">
+                <span className="text-muted-foreground">{t('cloudBackup.hero.startFrom')}</span>
+                <span className="text-primary font-bold">{rp(cloudPlans[0]?.price ?? BRAND.cloudPriceIdr)}</span>
+                <span className="text-muted-foreground">{t('cloudBackup.hero.perMonth')}</span>
+              </div>
             </div>
 
             <CardContent className="p-5 space-y-4">
@@ -389,12 +279,12 @@ export default function CloudBackupSettings() {
                 <BenefitItem
                   icon={<MonitorSmartphone className="w-4 h-4" />}
                   title={t('cloudBackup.benefits.dashboard.title')}
-                  desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.freekasir.com' })}
+                  desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.profitku.my.id' })}
                 />
                 <BenefitItem
                   icon={<Store className="w-4 h-4" />}
                   title={t('cloudBackup.benefits.market.title')}
-                  desc={t('cloudBackup.benefits.market.desc', { market: 'market.freekasir.com' })}
+                  desc={t('cloudBackup.benefits.market.desc', { market: 'market.profitku.my.id' })}
                 />
                 <BenefitItem
                   icon={<Sparkles className="w-4 h-4" />}
@@ -427,12 +317,12 @@ export default function CloudBackupSettings() {
           </Card>
 
           <a
-            href="https://dashboard.freekasir.com"
+            href="https://dashboard.profitku.my.id"
             target="_blank"
             rel="noopener noreferrer"
             className="block text-center text-[11px] font-medium text-primary"
           >
-            {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.freekasir.com' })}
+            {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.profitku.my.id' })}
           </a>
         </div>
       ) : (
@@ -585,12 +475,12 @@ export default function CloudBackupSettings() {
                       <BenefitItem
                         icon={<MonitorSmartphone className="w-4 h-4" />}
                         title={t('cloudBackup.benefits.dashboard.title')}
-                        desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.freekasir.com' })}
+                        desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.profitku.my.id' })}
                       />
                       <BenefitItem
                         icon={<Store className="w-4 h-4" />}
                         title={t('cloudBackup.benefits.market.title')}
-                        desc={t('cloudBackup.benefits.market.desc', { market: 'market.freekasir.com' })}
+                        desc={t('cloudBackup.benefits.market.desc', { market: 'market.profitku.my.id' })}
                       />
                       <BenefitItem
                         icon={<Sparkles className="w-4 h-4" />}
@@ -599,30 +489,30 @@ export default function CloudBackupSettings() {
                       />
                     </ul>
                     <a
-                      href="https://dashboard.freekasir.com"
+                      href="https://dashboard.profitku.my.id"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block text-center text-[11px] font-medium text-primary pt-0.5"
                     >
-                      {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.freekasir.com' })}
+                      {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.profitku.my.id' })}
                     </a>
                   </CardContent>
                 </Card>
               )}
 
               <SubscriptionSection
-                title={t('cloudBackup.locked.title')}
+                title={t('cloudBackup.subscription.singleTitle', { defaultValue: 'Profitku Cloud' })}
                 icon={<RefreshCw className="w-4 h-4" />}
                 description={t('cloudBackup.subscription.description')}
-                plans={syncPlans}
-                subscription={profile?.syncSubscription ?? null}
+                plans={cloudPlans}
+                subscription={profile?.syncSubscription ?? profile?.subscription ?? null}
                 isActive={isSyncSubscribed}
-                showPlans={showSyncPlans}
-                onTogglePlans={() => setShowSyncPlans((v) => !v)}
+                showPlans={showPlanPicker}
+                onTogglePlans={() => setShowPlanPicker((v) => !v)}
                 busy={busy}
                 onSubscribe={handleSubscribe}
-                backupSizeBytes={null}
-                storageUsage={null}
+                backupSizeBytes={backupSizeBytes}
+                storageUsage={profile?.storageUsage ?? null}
               />
 
 
@@ -633,10 +523,10 @@ export default function CloudBackupSettings() {
             {isSyncSubscribed && (
               <>
                 <ExternalMenuCard
-                  href="https://dashboard.freekasir.com"
+                  href="https://dashboard.profitku.my.id"
                   icon={<BarChart3 className="w-4 h-4" />}
                   title={t('cloudBackup.menu.dashboard.title')}
-                  subtitle={t('cloudBackup.menu.dashboard.subtitle', { dashboard: 'dashboard.freekasir.com' })}
+                  subtitle={t('cloudBackup.menu.dashboard.subtitle', { dashboard: 'dashboard.profitku.my.id' })}
                 />
 
                 <MenuCard
@@ -836,11 +726,13 @@ function SubscriptionSection({
               >
                 {busy === `checkout:${currentPlanId}` ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cloudBackup.subscription.renew')}
               </Button>
-              <Button size="sm" variant="outline" className="flex-1 h-9" onClick={onTogglePlans}>
-                {showPlans ? t('cloudBackup.subscription.close') : t('cloudBackup.subscription.changePlan')}
-              </Button>
+              {plans.length > 1 && (
+                <Button size="sm" variant="outline" className="flex-1 h-9" onClick={onTogglePlans}>
+                  {showPlans ? t('cloudBackup.subscription.close') : t('cloudBackup.subscription.changePlan')}
+                </Button>
+              )}
             </div>
-            {showPlans && (
+            {showPlans && plans.length > 1 && (
               <div className="pt-1 space-y-3 border-t">
                 <p className="text-xs text-muted-foreground pt-2">
                   {t('cloudBackup.subscription.extendOrChange')}

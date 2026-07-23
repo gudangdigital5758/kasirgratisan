@@ -4,13 +4,13 @@
   "notSet": "Belum ditetapkan",
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Rasmi!",
-    "description": "Untuk prestasi terbaik, sokongan pencetak Bluetooth, dan ciri luar talian yang lebih stabil, sila muat turun aplikasi FreeKasir di Google Play Store.",
+    "description": "Untuk prestasi terbaik, sokongan pencetak Bluetooth, dan ciri luar talian yang lebih stabil, sila muat turun aplikasi Profitku di Google Play Store.",
     "migrationInstructions": "Pindahkan data anda dengan mudah: 1. Eksport fail sandaran anda melalui menu Sandaran & Pulihkan di bawah. 2. Muat turun dan pasang aplikasi dari Play Store. 3. Import fail sandaran tersebut dalam aplikasi baru anda.",
     "downloadButton": "Muat Turun di Play Store",
     "backupButton": "Eksport Sandaran Sekarang"
   },
   "cloudSync": {
-    "title": "FreeKasir Cloud",
+    "title": "Profitku Cloud",
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH KEDAI",
@@ -18,17 +18,17 @@
       "active": "AKTIF"
     },
     "desc": {
-      "inactive": "Data selamat di cloud, akses dashboard.freekasir.com, dan hubungkan kedai ke market.freekasir.com!",
+      "inactive": "Data selamat di cloud, akses dashboard.profitku.my.id, dan hubungkan kedai ke market.profitku.my.id!",
       "selectStore": "Langganan aktif, tetapi peranti belum disambungkan ke kedai. Pilih kedai untuk menyelaraskan data.",
       "needsSetup": "Kedai telah disambungkan, tetapi penyelarasan automatik belum diaktifkan. Tetapkan jadual untuk menyelaraskan data secara berkala.",
-      "active": "Penyelarasan aktif. Pantau laporan kedai secara real-time di dashboard.freekasir.com dari mana-mana peranti."
+      "active": "Penyelarasan aktif. Pantau laporan kedai secara real-time di dashboard.profitku.my.id dari mana-mana peranti."
     }
   },
   "installApp": {
     "title": "Pasang sebagai Aplikasi",
     "hint": "Buka terus dari skrin utama, tanpa pelayar",
     "installButton": "Pasang",
-    "installSuccess": "Berjaya pasang FreeKasir!",
+    "installSuccess": "Berjaya pasang Profitku!",
     "helpButton": "Cara Pasang"
   },
   "installHelp": {
@@ -150,7 +150,7 @@
     },
     "telegramSupport": {
       "title": "Sokongan Telegram",
-      "description": "Hubungi pasukan sokongan FreeKasir melalui Telegram"
+      "description": "Hubungi pasukan sokongan Profitku melalui Telegram"
     }
   },
   "bluetoothPrinter": {
@@ -174,10 +174,10 @@
     "title": "Bahasa / Language"
   },
   "about": {
-    "appName": "FreeKasir",
+    "appName": "Profitku",
     "tagline": "POS Percuma untuk UMK Indonesia 🇮🇩",
     "version": "v{{version}} • Data tersimpan dalam peranti",
-    "whatsNew": "Apa Yang Baru di FreeKasir",
+    "whatsNew": "Apa Yang Baru di Profitku",
     "requestFeature": "💡 Minta Fitur",
     "donate": "☕ Belanja Kopi untuk Pembangun",
     "telegram": "💬 Sertai Grup Telegram",
@@ -216,21 +216,21 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "FreeKasir Cloud",
+      "title": "Profitku Cloud",
       "permissionLabel": "Urus Backup"
     },
     "promo": {
       "title": "Jangkau Lebih Ramai Pelanggan!",
       "description": "Aktifkan Kedai Online supaya kedai anda boleh diakses secara terbuka dengan pelbagai kelebihan:",
-      "benefit1": "Tampil di market.freekasir.com untuk menjangkau pembeli baru",
+      "benefit1": "Tampil di market.profitku.my.id untuk menjangkau pembeli baru",
       "benefit2": "Pelanggan boleh melihat menu dalam talian secara real-time dari telefon",
       "benefit3": "Pautan kedai dalam talian yang unik untuk anda sendiri",
       "button": "Lengkapkan Butiran Kedai"
     },
     "hero": {
-      "title": "Naik Taraf ke FreeKasir Cloud",
-      "description": "Pantau laporan secara real-time lewat {{dashboard}} dan promosikan kedai anda secara online di {{market}}!",
-      "startFrom": "Mulai",
+      "title": "Naik Taraf ke Profitku Cloud",
+      "description": "Sandaran selamat + urus kedai dari mana saja. Hanya Rp 25.000/bulan — satu pakej ringkas.",
+      "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
     "benefits": {
@@ -264,18 +264,19 @@
     "neverSynced": "Belum pernah diselaraskan",
     "manageFromAnywhere": "Urus kedai dari mana saja",
     "subscription": {
-      "description": "Pantau laporan jualan, stok, & kewangan kedai dari mana saja — cukup buka di HP atau laptop lain. Semua data tersimpan selamat di cloud, kekal utuh walau peranti hilang, rosak, atau ganti HP.",
+      "singleTitle": "Profitku Cloud",
+      "description": "Satu pakej Rp 25.000/bulan: sandaran cloud (hingga 2 GB), auto-backup, sync 1 kedai, dan laporan dari peranti lain. Data kekal selamat jika telefon hilang atau diganti.",
       "loadingPlans": "Memuat pakej…",
-      "activePlan": "(pakej aktif)",
+      "activePlan": "(aktif)",
       "unlimitedStores": "Unlimited",
       "store_one": "{{count}} kedai",
       "store_other": "{{count}} kedai",
       "estimatedBackups": "≈ {{count}} fail backup",
       "estimateNote": "*Anggaran berdasarkan saiz data semasa ({{size}}).",
-      "subscribe": "Langganan",
+      "subscribe": "Langganan Rp 25.000",
       "renew": "Perpanjang",
       "choose": "Pilih",
-      "extendOrChange": "Pilih pakej sama untuk memperpanjang, atau pakej lain untuk tukar.",
+      "extendOrChange": "Perpanjang langganan bulanan anda.",
       "close": "Tutup",
       "changePlan": "Tukar Pakej",
       "used": "terpakai",
@@ -341,7 +342,7 @@
       "permissionLabel": "Urus Backup"
     },
     "title": "Penyelarasan Otomatis",
-    "requiresSubscription": "Aktifkan langganan FreeKasir Cloud dulu untuk mengatur penyelarasan automatik.",
+    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk mengatur penyelarasan automatik.",
     "scheduleLabel": "Jadual Penyelarasan Automatik",
     "interval": {
       "off": "Nonaktif",
@@ -390,7 +391,7 @@
     },
     "title": "Urus Kedai",
     "loading": "Memuat…",
-    "requiresSubscription": "Langganan FreeKasir Cloud diperlukan untuk mengurus kedai.",
+    "requiresSubscription": "Langganan Profitku Cloud diperlukan untuk mengurus kedai.",
     "activeDevice": "Peranti ini disambungkan ke:",
     "disconnect": "Putuskan",
     "storeList": "Senarai Kedai",
@@ -399,7 +400,7 @@
     "addButton": "Tambah",
     "atLimit": {
       "title": "Had kedai pakej anda sudah penuh",
-      "description": "Pakej semasa hanya membenarkan {{max}} kedai. Naik taraf pakej FreeKasir Cloud untuk menambah kedai.",
+      "description": "Pakej semasa hanya membenarkan {{max}} kedai. Naik taraf pakej Profitku Cloud untuk menambah kedai.",
       "upgrade": "Naik Taraf Pakej"
     },
     "noStore": "Belum ada kedai. Buat kedai pertama anda.",
@@ -694,7 +695,7 @@
     }
   },
   "loginScreen": {
-    "storeFallback": "FreeKasir",
+    "storeFallback": "Profitku",
     "continuePrompt": "Log masuk untuk teruskan",
     "usernameLabel": "Username",
     "usernamePlaceholder": "Cth: budi",
@@ -730,7 +731,7 @@
     "print": "Cetak",
     "printKitchen": "Cetak Dapur",
     "watermarkLine1": "Dicetak Daripada Aplikasi",
-    "watermarkLine2": "FreeKasir.com",
+    "watermarkLine2": "Profitku.my.id",
     "done": "Selesai",
     "toast": {
       "captureError": "Gagal membuat gambar resit",
@@ -822,8 +823,8 @@
     "lastBackup": "Backup terakhir: {{time}}",
     "neverBackedUp": "Anda belum pernah backup data",
     "backupNow": "Backup Sekarang",
-    "shareTitle": "Backup FreeKasir",
-    "shareText": "Fail backup data FreeKasir (JSON)",
+    "shareTitle": "Backup Profitku",
+    "shareText": "Fail backup data Profitku (JSON)",
     "shareDialogTitle": "Simpan / Kongsi Backup",
     "successCreated": "Backup berjaya dibuat!",
     "successDownloaded": "Backup berjaya dimuat turun",
@@ -835,7 +836,7 @@
     "benefits": {
       "cloudBackup": "Status backup cloud: berjaya, gagal, atau kuota hampir penuh.",
       "payment": "Pengesahan pembayaran & peringatan sebelum langganan tamat.",
-      "announcement": "Info penyelenggaraan & pengumuman penting daripada FreeKasir."
+      "announcement": "Info penyelenggaraan & pengumuman penting daripada Profitku."
     },
     "enable": "Aktifkan Notifikasi",
     "later": "Nanti",
@@ -897,14 +898,14 @@
     "printLogoDescription": "Cetak logo kedai di bahagian paling atas resit fizikal. Pastikan pencetak thermal anda menyokong pencetakan imej/bitmap.",
     "footerLabel": "Teks Footer Resit",
     "hideWatermarkLabel": "Sembunyikan Watermark Aplikasi",
-    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Daripada Aplikasi FreeKasir.com\" di bahagian bawah resit.",
-    "hideWatermarkDescRequired": "Watermark hanya boleh dinyahaktifkan jika FreeKasir Cloud aktif.",
+    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Daripada Aplikasi Profitku.my.id\" di bahagian bawah resit.",
+    "hideWatermarkDescRequired": "Watermark hanya boleh dinyahaktifkan jika Profitku Cloud aktif.",
     "saveSuccess": "Tetapan resit berjaya disimpan",
     "saveFailed": "Gagal menyimpan tetapan resit"
   },
   "cloudOnlineStore": {
     "title": "Kedai Online & Market",
-    "linkedStoreRequired": "Peranti ini belum disambungkan ke kedai cloud. Sila sambungkannya terlebih dahulu di halaman tetapan FreeKasir Cloud.",
+    "linkedStoreRequired": "Peranti ini belum disambungkan ke kedai cloud. Sila sambungkannya terlebih dahulu di halaman tetapan Profitku Cloud.",
     "identifier": {
       "label": "URL Kedai (Identifier)",
       "placeholder": "nama-kedai-anda",
@@ -918,7 +919,7 @@
     },
     "visibility": {
       "title": "Pamerkan Kedai di Market",
-      "description": "Aktifkan untuk membolehkan katalog produk kedai anda dilihat secara umum di market.freekasir.com.",
+      "description": "Aktifkan untuk membolehkan katalog produk kedai anda dilihat secara umum di market.profitku.my.id.",
       "requiresIdentifier": "URL Kedai mesti disimpan terlebih dahulu sebelum membolehkan kedai diakses secara umum.",
       "unsavedIdentifier": "Terdapat perubahan URL Kedai yang belum disimpan. Sila simpan URL Kedai terlebih dahulu.",
       "unsavedDetails": "Terdapat perubahan maklumat kedai yang belum disimpan. Sila simpan maklumat kedai terlebih dahulu.",

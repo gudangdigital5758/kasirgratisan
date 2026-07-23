@@ -76,7 +76,7 @@
     "flashUnsupported": "Flash tidak disokong pada peranti ini",
     "httpsRequired": "Aplikasi mesti diakses melalui HTTPS untuk menggunakan kamera.",
     "browserUnsupported": "Pelayar tidak menyokong akses kamera. Cuba kemas kini aplikasi atau guna pelayar lain.",
-    "permissionDeniedNative": "Keizinan kamera ditolak. Pergi ke Tetapan peranti > Apl > FreeKasir > Keizinan, kemudian aktifkan Kamera.",
+    "permissionDeniedNative": "Keizinan kamera ditolak. Pergi ke Tetapan peranti > Apl > Profitku > Keizinan, kemudian aktifkan Kamera.",
     "permissionDeniedWeb": "Keizinan kamera ditolak. Klik ikon gembok di bar alamat dan benarkan akses kamera.",
     "permissionDeniedGeneric": "Keizinan kamera ditolak. Sila benarkan akses kamera dan cuba lagi.",
     "noCamera": "Tiada kamera ditemui pada peranti ini.",

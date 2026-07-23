@@ -4,13 +4,13 @@
   "notSet": "Belum diatur",
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Resmi!",
-    "description": "Untuk performa terbaik, dukungan printer Bluetooth, dan fitur offline yang lebih stabil, silakan unduh aplikasi FreeKasir di Google Play Store.",
+    "description": "Untuk performa terbaik, dukungan printer Bluetooth, dan fitur offline yang lebih stabil, silakan unduh aplikasi Profitku di Google Play Store.",
     "migrationInstructions": "Pindahkan data Anda dengan mengekspor backup di menu Backup & Restore, lalu impor file backup tersebut di aplikasi Play Store Anda.",
     "downloadButton": "Unduh di Play Store",
     "backupButton": "Ekspor Backup Sekarang"
   },
   "cloudSync": {
-    "title": "FreeKasir Cloud",
+    "title": "Profitku Cloud",
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH TOKO",
@@ -18,10 +18,10 @@
       "active": "AKTIF"
     },
     "desc": {
-      "inactive": "Data aman di cloud, akses dashboard.freekasir.com, dan hubungkan tokomu ke market.freekasir.com!",
+      "inactive": "Data aman di cloud, akses dashboard.profitku.my.id, dan hubungkan tokomu ke market.profitku.my.id!",
       "selectStore": "Langganan aktif, tapi perangkat belum terhubung ke toko. Pilih toko agar data bisa disinkronkan.",
       "needsSetup": "Toko sudah terhubung, tapi sinkronisasi otomatis belum dinyalakan. Atur jadwalnya agar data tersinkron rutin.",
-      "active": "Sinkronisasi aktif. Pantau laporan toko real-time di dashboard.freekasir.com dari perangkat mana saja."
+      "active": "Sinkronisasi aktif. Pantau laporan toko real-time di dashboard.profitku.my.id dari perangkat mana saja."
     },
     "lastSync": "Terakhir sync: {{time}}",
     "neverSynced": "Belum pernah disinkronkan"
@@ -30,7 +30,7 @@
     "title": "Install sebagai Aplikasi",
     "hint": "Buka langsung dari home screen, tanpa browser",
     "installButton": "Install",
-    "installSuccess": "Berhasil install FreeKasir!",
+    "installSuccess": "Berhasil install Profitku!",
     "helpButton": "Cara Install"
   },
   "installHelp": {
@@ -179,7 +179,7 @@
     },
     "telegramSupport": {
       "title": "Support Telegram",
-      "description": "Hubungi tim support FreeKasir via Telegram"
+      "description": "Hubungi tim support Profitku via Telegram"
     }
   },
   "bluetoothPrinter": {
@@ -203,10 +203,10 @@
     "title": "Bahasa / Language"
   },
   "about": {
-    "appName": "FreeKasir",
+    "appName": "Profitku",
     "tagline": "POS Gratis untuk UMKM Indonesia 🇮🇩",
     "version": "v{{version}} • Data tersimpan di perangkat",
-    "whatsNew": "Yang Baru di FreeKasir",
+    "whatsNew": "Yang Baru di Profitku",
     "requestFeature": "💡 Request Fitur",
     "donate": "☕ Traktir Kopi untuk Developer",
     "telegram": "💬 Gabung Grup Telegram",
@@ -245,21 +245,21 @@
   },
   "cloudBackup": {
     "locked": {
-      "title": "FreeKasir Cloud",
+      "title": "Profitku Cloud",
       "permissionLabel": "Kelola Backup"
     },
     "promo": {
       "title": "Jangkau Lebih Banyak Pelanggan!",
       "description": "Aktifkan Toko Online agar tokomu dapat diakses secara publik dengan berbagai keuntungan:",
-      "benefit1": "Tampil di market.freekasir.com untuk menjangkau pembeli baru",
+      "benefit1": "Tampil di market.profitku.my.id untuk menjangkau pembeli baru",
       "benefit2": "Pelanggan bisa lihat menu online secara real-time dari HP",
       "benefit3": "Link toko online unik milikmu sendiri",
       "button": "Lengkapi Detail Toko"
     },
     "hero": {
-      "title": "Upgrade ke FreeKasir Cloud",
-      "description": "Pantau laporan secara real-time lewat {{dashboard}} dan promosikan tokomu secara online di {{market}}!",
-      "startFrom": "Mulai",
+      "title": "Upgrade ke Profitku Cloud",
+      "description": "Backup aman + pantau toko dari mana saja. Cukup Rp 25.000/bulan — satu paket, tanpa pusing pilih tier.",
+      "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
     "benefits": {
@@ -293,18 +293,19 @@
     "neverSynced": "Belum pernah disinkronkan",
     "manageFromAnywhere": "Kelola toko dari mana saja",
     "subscription": {
-      "description": "Pantau laporan penjualan, stok, & keuangan toko dari mana saja — cukup buka di HP atau laptop lain. Semua data tersimpan aman di cloud, tetap utuh walau perangkat hilang, rusak, atau ganti HP.",
+      "singleTitle": "Profitku Cloud",
+      "description": "Satu paket Rp 25.000/bulan: backup cloud (hingga 2 GB), auto-backup, sinkron 1 toko, dan akses laporan dari perangkat lain. Data tetap aman walau HP hilang atau ganti perangkat.",
       "loadingPlans": "Memuat paket…",
-      "activePlan": "(paket aktif)",
+      "activePlan": "(aktif)",
       "unlimitedStores": "Unlimited",
       "store_one": "{{count}} toko",
       "store_other": "{{count}} toko",
       "estimatedBackups": "≈ {{count}} file backup",
       "estimateNote": "*Estimasi berdasarkan ukuran data saat ini ({{size}}).",
-      "subscribe": "Langganan",
+      "subscribe": "Langganan Rp 25.000",
       "renew": "Perpanjang",
       "choose": "Pilih",
-      "extendOrChange": "Pilih paket sama untuk memperpanjang, atau paket lain untuk ganti.",
+      "extendOrChange": "Perpanjang langganan bulanan Anda.",
       "close": "Tutup",
       "changePlan": "Ubah Paket",
       "used": "terpakai",
@@ -370,7 +371,7 @@
       "permissionLabel": "Kelola Backup"
     },
     "title": "Sinkronisasi Otomatis",
-    "requiresSubscription": "Aktifkan langganan FreeKasir Cloud dulu untuk mengatur sinkronisasi otomatis.",
+    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk mengatur sinkronisasi otomatis.",
     "scheduleLabel": "Jadwal Sinkronisasi Otomatis",
     "interval": {
       "off": "Nonaktif",
@@ -419,7 +420,7 @@
     },
     "title": "Kelola Toko",
     "loading": "Memuat…",
-    "requiresSubscription": "Langganan FreeKasir Cloud diperlukan untuk mengelola toko.",
+    "requiresSubscription": "Langganan Profitku Cloud diperlukan untuk mengelola toko.",
     "activeDevice": "Device ini terhubung ke:",
     "syncActive": "Sinkronisasi otomatis latar belakang aktif",
     "disconnect": "Putuskan",
@@ -429,7 +430,7 @@
     "addButton": "Tambah",
     "atLimit": {
       "title": "Batas toko paketmu sudah penuh",
-      "description": "Paket saat ini hanya mengizinkan {{max}} toko. Upgrade paket FreeKasir Cloud untuk menambah toko.",
+      "description": "Paket saat ini hanya mengizinkan {{max}} toko. Upgrade paket Profitku Cloud untuk menambah toko.",
       "upgrade": "Upgrade Paket"
     },
     "noStore": "Belum ada toko. Buat toko pertamamu.",
@@ -1141,7 +1142,7 @@
     }
   },
   "loginScreen": {
-    "storeFallback": "FreeKasir",
+    "storeFallback": "Profitku",
     "continuePrompt": "Masuk untuk melanjutkan",
     "usernameLabel": "Username",
     "usernamePlaceholder": "Contoh: budi",
@@ -1177,7 +1178,7 @@
     "print": "Cetak",
     "printKitchen": "Cetak Dapur",
     "watermarkLine1": "Dicetak Dari Aplikasi",
-    "watermarkLine2": "FreeKasir.com",
+    "watermarkLine2": "Profitku.my.id",
     "done": "Selesai",
     "toast": {
       "captureError": "Gagal membuat gambar struk",
@@ -1269,8 +1270,8 @@
     "lastBackup": "Terakhir backup {{time}}",
     "neverBackedUp": "Kamu belum pernah backup data",
     "backupNow": "Backup Sekarang",
-    "shareTitle": "Backup FreeKasir",
-    "shareText": "File backup data FreeKasir (JSON)",
+    "shareTitle": "Backup Profitku",
+    "shareText": "File backup data Profitku (JSON)",
     "shareDialogTitle": "Simpan / Bagikan Backup",
     "successCreated": "Backup berhasil dibuat!",
     "successDownloaded": "Backup berhasil diunduh",
@@ -1282,7 +1283,7 @@
     "benefits": {
       "cloudBackup": "Status backup cloud: berhasil, gagal, atau kuota hampir penuh.",
       "payment": "Konfirmasi pembayaran & pengingat sebelum langganan berakhir.",
-      "announcement": "Info maintenance & pengumuman penting dari FreeKasir."
+      "announcement": "Info maintenance & pengumuman penting dari Profitku."
     },
     "enable": "Aktifkan Notifikasi",
     "later": "Nanti saja",
@@ -1344,14 +1345,14 @@
     "printLogoDescription": "Cetak logo toko di bagian paling atas struk belanja fisik. Pastikan printer thermal Anda mendukung pencetakan gambar/bitmap.",
     "footerLabel": "Teks Footer Struk",
     "hideWatermarkLabel": "Sembunyikan Watermark Aplikasi",
-    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Dari Aplikasi FreeKasir.com\" di bagian bawah struk.",
-    "hideWatermarkDescRequired": "Watermark hanya dapat dinonaktifkan jika FreeKasir Cloud aktif.",
+    "hideWatermarkDescActive": "Sembunyikan tulisan \"Dicetak Dari Aplikasi Profitku.my.id\" di bagian bawah struk.",
+    "hideWatermarkDescRequired": "Watermark hanya dapat dinonaktifkan jika Profitku Cloud aktif.",
     "saveSuccess": "Pengaturan struk berhasil disimpan",
     "saveFailed": "Gagal menyimpan pengaturan struk"
   },
   "cloudOnlineStore": {
     "title": "Toko Online & Market",
-    "linkedStoreRequired": "Device ini belum terhubung ke toko cloud. Hubungkan dulu di halaman utama FreeKasir Cloud.",
+    "linkedStoreRequired": "Device ini belum terhubung ke toko cloud. Hubungkan dulu di halaman utama Profitku Cloud.",
     "identifier": {
       "label": "URL Toko (Identifier)",
       "placeholder": "nama-tokomu",
@@ -1365,7 +1366,7 @@
     },
     "visibility": {
       "title": "Tampilkan Toko di Market",
-      "description": "Aktifkan agar katalog produk toko Anda dapat dilihat secara publik di market.freekasir.com.",
+      "description": "Aktifkan agar katalog produk toko Anda dapat dilihat secara publik di market.profitku.my.id.",
       "requiresIdentifier": "URL Toko harus disimpan terlebih dahulu sebelum mengaktifkan toko di market.",
       "unsavedIdentifier": "Ada perubahan URL Toko yang belum disimpan. Silakan simpan URL Toko terlebih dahulu.",
       "unsavedDetails": "Ada perubahan detail informasi toko yang belum disimpan. Silakan simpan detail toko terlebih dahulu.",

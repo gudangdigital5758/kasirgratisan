@@ -1,4 +1,4 @@
-package com.freekasir.app;
+﻿package com.profitku.app;
 
 import android.Manifest;
 import android.os.Build;

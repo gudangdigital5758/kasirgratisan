@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">FreeKasir</string>
-    <string name="title_activity_main">FreeKasir</string>
-    <string name="package_name">com.freekasir.app</string>
-    <string name="custom_url_scheme">com.freekasir.app</string>
+    <string name="app_name">Profitku</string>
+    <string name="title_activity_main">Profitku</string>
+    <string name="package_name">com.profitku.app</string>
+    <string name="custom_url_scheme">com.profitku.app</string>
 </resources>

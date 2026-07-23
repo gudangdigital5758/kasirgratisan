@@ -61,7 +61,7 @@ Gunakan **project yang sama** dengan Web Client ID (`...gd7ih98st6vo9sqqni1kmkh4
 
 1. [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Credentials**.
 2. **Create Credentials → OAuth client ID → Application type: Android**.
-3. **Package name:** `com.freekasir.app`.
+3. **Package name:** `com.profitku.app`.
 4. **SHA-1:** tempel salah satu SHA-1 dari langkah 1.
 5. Ulangi (buat client Android terpisah) untuk **tiap** SHA-1: debug, upload, Play App Signing.
 

@@ -338,7 +338,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     <>
                       <img
                         src="/header-icon.png"
-                        alt="FreeKasir"
+                        alt="Profitku"
                         className="w-28 h-28 object-contain"
                       />
                       <div className="space-y-3">
@@ -416,7 +416,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                       const ok = await install();
                       if (ok) {
                         setInstallDone(true);
-                        toast.success('Berhasil install FreeKasir!');
+                        toast.success('Berhasil install Profitku!');
                       }
                     }}
                   >
@@ -691,7 +691,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <span className="text-xs text-muted-foreground leading-relaxed">
               {t('tnc.agree')}{' '}
               <a
-                href="https://freekasir.com/terms"
+                href="https://Profitku.my.id/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
@@ -701,7 +701,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </a>{' '}
               {t('tnc.and')}{' '}
               <a
-                href="https://freekasir.com/privacy"
+                href="https://Profitku.my.id/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
