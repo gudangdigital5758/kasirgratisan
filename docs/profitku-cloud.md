@@ -38,27 +38,31 @@ src/lib/cloud-api.ts   # client → api.profitku.my.id
 
 ## Setup Worker
 
+**Panduan langkah-demi-langkah:** [DEPLOY-CLOUD.md](./DEPLOY-CLOUD.md)
+
 ```bash
 cd workers/api
 npm install
 npx wrangler login
+# secrets — lihat npm run cloud:secrets-help
 npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put FONNTE_TOKEN
-# opsional payment:
 npx wrangler secret put WEBHOOK_SECRET
-npm run deploy
+npm run deploy   # atau dari root: npm run api:deploy
 ```
 
-Di Cloudflare dashboard: route `api.profitku.my.id/*` → worker `profitku-api`.
+R2: bucket `profitku-backups`, binding `BACKUP_BUCKET` di `wrangler.toml`.
 
 Local:
 
 ```bash
+copy workers/api/.dev.vars.example workers/api/.dev.vars
 npm run api:dev
 # → http://127.0.0.1:8787/health
+npm run cloud:check
 ```
 
 ## Setup app web

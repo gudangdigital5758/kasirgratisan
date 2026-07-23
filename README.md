@@ -12,6 +12,7 @@ Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan
 |-----|-----|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Batas offline vs cloud, alur backup/auth/langganan |
 | [docs/profitku-cloud.md](docs/profitku-cloud.md) | Deploy Supabase, Worker, R2, Resend, Fonnte |
+| [docs/DEPLOY-CLOUD.md](docs/DEPLOY-CLOUD.md) | Checklist setup/deploy operasional (secrets, domain, smoke) |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Keputusan stabil (harga 25rb, Play ditunda, dll.) |
 | [docs/android-google-signin.md](docs/android-google-signin.md) | Google Sign-In native Android |
 | [AGENTS.md](AGENTS.md) | Instruksi agent (bootstrap, boundary, validasi, commit) |

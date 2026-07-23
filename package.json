@@ -15,7 +15,10 @@
     "cap:android": "node scripts/bump-version.js && vite build && cap sync android && cap open android",
     "cap:run": "node scripts/bump-version.js && vite build && cap sync android && cap run android",
     "api:dev": "npm run dev --prefix workers/api",
-    "api:deploy": "npm run deploy --prefix workers/api"
+    "api:deploy": "npm run deploy --prefix workers/api",
+    "cloud:check": "node scripts/cloud-check.mjs",
+    "cloud:secrets-help": "node scripts/cloud-secrets-help.mjs",
+    "cloud:deploy-api": "npm run deploy --prefix workers/api"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

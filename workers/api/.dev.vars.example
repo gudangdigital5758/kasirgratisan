@@ -1,0 +1,21 @@
+# Salin ke .dev.vars untuk wrangler dev lokal (file ini digitignore via workers/api/.gitignore .dev.vars)
+# JANGAN commit nilai asli.
+
+# --- Supabase ---
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_ANON_KEY=eyJ...anon
+SUPABASE_SERVICE_ROLE_KEY=eyJ...service_role
+
+# --- Email / WA ---
+RESEND_API_KEY=re_...
+RESEND_FROM=Profitku <noreply@profitku.my.id>
+FONNTE_TOKEN=
+
+# --- Ops ---
+# midtrans | xendit | mock
+PAYMENT_PROVIDER=mock
+WEBHOOK_SECRET=generate-long-random-string
+
+# APP_ORIGIN sudah di wrangler.toml [vars] untuk prod;
+# override lokal jika perlu:
+# APP_ORIGIN=http://localhost:8080
