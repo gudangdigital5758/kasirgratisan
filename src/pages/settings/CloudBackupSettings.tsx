@@ -542,6 +542,13 @@ export default function CloudBackupSettings() {
                   title={t('cloudBackup.menu.autoSync.title')}
                   subtitle={intervalSubtitle}
                 />
+
+                <MenuCard
+                  to="/settings/cloud-backup/files"
+                  icon={<Cloud className="w-4 h-4" />}
+                  title={t('cloudBackup.menu.files.title')}
+                  subtitle={t('cloudBackup.menu.files.subtitle')}
+                />
               </>
             )}
             <MenuCard

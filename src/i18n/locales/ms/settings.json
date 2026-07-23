@@ -305,6 +305,10 @@
       "autoSync": {
         "title": "Penyelarasan Otomatis"
       },
+      "files": {
+        "title": "Fail Sandaran Awan",
+        "subtitle": "Senarai, pulih, atau padam sandaran awan"
+      },
       "history": {
         "title": "Sejarah Transaksi",
         "subtitle": "Lihat pembelian & cek status pembayaran"
@@ -382,6 +386,42 @@
       "paymentSuccess": "Pembayaran berjaya! Langganan aktif. 🎉",
       "pending": "Pembayaran belum dikesan. Cuba lagi sebentar.",
       "verifyFailed": "Gagal semak pembayaran"
+    }
+  },
+  "cloudBackupsList": {
+    "locked": {
+      "title": "Fail Sandaran Awan",
+      "permissionLabel": "Urus Backup"
+    },
+    "title": "Fail Sandaran Awan",
+    "loginPrompt": "Log masuk dulu untuk melihat sandaran awan.",
+    "quotaTitle": "Kuota storan",
+    "quotaUsed": "Digunakan {{used}}",
+    "quotaUnknown": "Kuota dipaparkan selepas profil awan dimuat.",
+    "needSubscription": "Langganan Profitku Cloud aktif diperlukan untuk muat naik sandaran baharu.",
+    "uploadNow": "Sandar sekarang",
+    "refresh": "Muat semula",
+    "empty": "Belum ada fail sandaran di awan.",
+    "restore": "Pulihkan",
+    "restoreWarning": "Pulih menimpa data kedai pada peranti ini. Aplikasi dimuat semula selepas pulih berjaya.",
+    "restoreDialog": {
+      "title": "Pulih dari awan?",
+      "description": "Data setempat diganti dengan sandaran \"{{name}}\". Tindakan ini tidak boleh dibatalkan.",
+      "confirm": "Ya, pulihkan"
+    },
+    "deleteDialog": {
+      "title": "Padam sandaran awan?",
+      "description": "Fail \"{{name}}\" akan dipadam kekal dari awan.",
+      "confirm": "Padam"
+    },
+    "toast": {
+      "loadFailed": "Gagal memuat senarai sandaran",
+      "uploadSuccess": "Sandaran berjaya dimuat naik ke awan",
+      "uploadFailed": "Gagal memuat naik sandaran",
+      "restoreSuccess": "Pulih berjaya. Memuat semula…",
+      "restoreFailed": "Gagal pulih dari awan",
+      "deleteSuccess": "Sandaran awan dipadam",
+      "deleteFailed": "Gagal memadam sandaran"
     }
   },
   "cloudStore": {

@@ -334,6 +334,10 @@
       "autoSync": {
         "title": "Sinkronisasi Otomatis"
       },
+      "files": {
+        "title": "File Backup Cloud",
+        "subtitle": "Daftar, restore, atau hapus backup di cloud"
+      },
       "history": {
         "title": "Riwayat Transaksi",
         "subtitle": "Lihat pembelian & cek status pembayaran"
@@ -411,6 +415,42 @@
       "paymentSuccess": "Pembayaran berhasil! Langganan aktif. 🎉",
       "pending": "Pembayaran belum terdeteksi. Coba lagi beberapa saat.",
       "verifyFailed": "Gagal cek pembayaran"
+    }
+  },
+  "cloudBackupsList": {
+    "locked": {
+      "title": "File Backup Cloud",
+      "permissionLabel": "Kelola Backup"
+    },
+    "title": "File Backup Cloud",
+    "loginPrompt": "Login dulu untuk melihat backup cloud.",
+    "quotaTitle": "Kuota penyimpanan",
+    "quotaUsed": "Terpakai {{used}}",
+    "quotaUnknown": "Kuota akan tampil setelah profil cloud dimuat.",
+    "needSubscription": "Langganan Profitku Cloud aktif diperlukan untuk mengunggah backup baru.",
+    "uploadNow": "Backup sekarang",
+    "refresh": "Muat ulang",
+    "empty": "Belum ada file backup di cloud.",
+    "restore": "Restore",
+    "restoreWarning": "Restore menimpa data toko di perangkat ini. Pastikan Anda sudah yakin. Aplikasi akan dimuat ulang setelah restore berhasil.",
+    "restoreDialog": {
+      "title": "Restore dari cloud?",
+      "description": "Data lokal akan diganti dengan isi backup \"{{name}}\". Tindakan ini tidak bisa dibatalkan.",
+      "confirm": "Ya, restore"
+    },
+    "deleteDialog": {
+      "title": "Hapus backup cloud?",
+      "description": "File \"{{name}}\" akan dihapus permanen dari cloud.",
+      "confirm": "Hapus"
+    },
+    "toast": {
+      "loadFailed": "Gagal memuat daftar backup",
+      "uploadSuccess": "Backup berhasil diunggah ke cloud",
+      "uploadFailed": "Gagal mengunggah backup",
+      "restoreSuccess": "Restore berhasil. Memuat ulang…",
+      "restoreFailed": "Gagal restore dari cloud",
+      "deleteSuccess": "Backup cloud dihapus",
+      "deleteFailed": "Gagal menghapus backup"
     }
   },
   "cloudStore": {

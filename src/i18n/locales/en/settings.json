@@ -334,6 +334,10 @@
       "autoSync": {
         "title": "Automatic Sync"
       },
+      "files": {
+        "title": "Cloud Backup Files",
+        "subtitle": "List, restore, or delete cloud backups"
+      },
       "history": {
         "title": "Transaction History",
         "subtitle": "View purchases & check payment status"
@@ -411,6 +415,42 @@
       "paymentSuccess": "Payment successful! Subscription active. 🎉",
       "pending": "Payment not detected yet. Please try again in a moment.",
       "verifyFailed": "Failed to check payment"
+    }
+  },
+  "cloudBackupsList": {
+    "locked": {
+      "title": "Cloud Backup Files",
+      "permissionLabel": "Manage Backup"
+    },
+    "title": "Cloud Backup Files",
+    "loginPrompt": "Sign in first to view cloud backups.",
+    "quotaTitle": "Storage quota",
+    "quotaUsed": "Used {{used}}",
+    "quotaUnknown": "Quota appears after the cloud profile loads.",
+    "needSubscription": "An active Profitku Cloud plan is required to upload new backups.",
+    "uploadNow": "Back up now",
+    "refresh": "Refresh",
+    "empty": "No cloud backup files yet.",
+    "restore": "Restore",
+    "restoreWarning": "Restore overwrites store data on this device. The app reloads after a successful restore.",
+    "restoreDialog": {
+      "title": "Restore from cloud?",
+      "description": "Local data will be replaced with backup \"{{name}}\". This cannot be undone.",
+      "confirm": "Yes, restore"
+    },
+    "deleteDialog": {
+      "title": "Delete cloud backup?",
+      "description": "File \"{{name}}\" will be permanently removed from the cloud.",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "loadFailed": "Failed to load backups",
+      "uploadSuccess": "Backup uploaded to the cloud",
+      "uploadFailed": "Failed to upload backup",
+      "restoreSuccess": "Restore succeeded. Reloading…",
+      "restoreFailed": "Failed to restore from cloud",
+      "deleteSuccess": "Cloud backup deleted",
+      "deleteFailed": "Failed to delete backup"
     }
   },
   "cloudStore": {

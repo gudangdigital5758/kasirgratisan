@@ -43,6 +43,7 @@ import BackupRestoreSettings from "./pages/settings/BackupRestoreSettings";
 import CloudBackupSettings from "./pages/settings/CloudBackupSettings";
 import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
 import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
+import CloudBackupsListSettings from "./pages/settings/CloudBackupsListSettings";
 import CloudStoreSettings from "./pages/settings/CloudStoreSettings";
 import CloudOnlineStoreSettings from "./pages/settings/CloudOnlineStoreSettings";
 import NotFound from "./pages/NotFound";
@@ -302,6 +303,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <CloudHistorySettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/cloud-backup/files"
+                    element={
+                      <ErrorBoundary>
+                        <CloudBackupsListSettings />
                       </ErrorBoundary>
                     }
                   />
