@@ -136,6 +136,20 @@ Detail: `AGENTS.md` → **Approval codes**.
 
 ---
 
+## 2026-07-23 — Checkout / open bill atomik + stok dari DB
+
+**Status:** Accepted
+
+Operasi kasir sensitif (save open bill, cancel, checkout) lewat `src/lib/cashier-ops.ts`:
+
+- Multi-table Dexie `transaction('rw', …)`
+- Penyesuaian stok membaca **stok terkini di IndexedDB**, bukan nilai di memori cart
+- Tolak oversell (`CashierOpsError`)
+
+**Implications:** UI `Cashier.tsx` memanggil helper; jangan tulis stok ad-hoc di page tanpa path yang sama.
+
+---
+
 ## Template decision baru
 
 ```markdown

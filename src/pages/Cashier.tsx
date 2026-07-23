@@ -25,6 +25,13 @@ import { trackEvent } from '@/lib/analytics';
 import CustomerPicker from '@/components/CustomerPicker';
 import LockedPage from '@/components/LockedPage';
 import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  saveOpenBillAtomic,
+  cancelOpenBillAtomic,
+  checkoutAtomic,
+  CashierOpsError,
+  type CartLine,
+} from '@/lib/cashier-ops';
 
 interface CartItem {
   product: Product;
@@ -32,6 +39,22 @@ interface CartItem {
   discountType: 'percentage' | 'nominal' | null;
   discountValue: number;
   notes?: string;
+}
+
+function toCartLines(
+  cart: CartItem[],
+  getItemDiscountAmount: (c: CartItem) => number,
+  getItemSubtotal: (c: CartItem) => number,
+): CartLine[] {
+  return cart.map((c) => ({
+    product: c.product,
+    qty: c.qty,
+    discountType: c.discountType,
+    discountValue: c.discountValue,
+    discountAmount: getItemDiscountAmount(c),
+    lineSubtotal: getItemSubtotal(c),
+    notes: c.notes,
+  }));
 }
 
 const CURRENCY_SYMBOL: Record<string, string> = {
@@ -252,136 +275,46 @@ export default function Kasir() {
   const totalItemDiscount = cart.reduce((sum, item) => sum + getItemDiscountAmount(item), 0);
   const totalProfit = cart.reduce((sum, item) => sum + (item.product.price - item.product.hpp) * item.qty, 0) - totalItemDiscount - txDiscountAmount;
 
-  // === Open Bill Operations ===
+  // === Open Bill Operations (atomic via cashier-ops) ===
 
   const saveOpenBill = async (shouldPrintKitchen: boolean = false) => {
     if (cart.length === 0) { toast.error(t('cashier.toast.cartEmpty')); return; }
 
-    const now = new Date();
-    let savedTxObj: Transaction | null = null;
-    let savedItemsObj: TransactionItemRecord[] = [];
-
-    if (editingTxId) {
-      // Update existing open bill
-      const oldItems = await db.transactionItems.where('transactionId').equals(editingTxId).toArray();
-
-      await db.transactions.update(editingTxId, {
+    try {
+      const result = await saveOpenBillAtomic({
+        lines: toCartLines(cart, getItemDiscountAmount, getItemSubtotal),
+        editingTxId,
         subtotal,
         discountType: txDiscountType,
         discountValue: Number(txDiscountValue) || 0,
         discountAmount: txDiscountAmount,
         total,
-        customerId,
-        customerName: customerName.trim() || undefined,
-        tableNumber: tableNumber.trim() || undefined,
-        remarks: remarks.trim() || undefined,
-        date: now,
-      });
-      await db.transactionItems.where('transactionId').equals(editingTxId).delete();
-      const itemRecords: TransactionItemRecord[] = cart.map(c => ({
-        transactionId: editingTxId,
-        productId: c.product.id!,
-        productName: c.product.name,
-        quantity: c.qty,
-        price: c.product.price,
-        hpp: c.product.hpp,
-        discountType: c.discountType,
-        discountValue: c.discountValue,
-        discountAmount: getItemDiscountAmount(c),
-        subtotal: getItemSubtotal(c),
-        notes: c.notes,
-      }));
-      await db.transactionItems.bulkAdd(itemRecords);
-
-      // Adjust stock deltas
-      for (const cartItem of cart) {
-        if (!isStockManaged(cartItem.product)) continue;
-        const oldItem = oldItems.find(oi => oi.productId === cartItem.product.id);
-        const oldQty = oldItem?.quantity ?? 0;
-        const newQty = cartItem.qty;
-        const delta = newQty - oldQty;
-        if (delta !== 0) {
-          await db.products.update(cartItem.product.id!, { stock: cartItem.product.stock - delta, updatedAt: new Date() });
-        }
-      }
-      // Restore stock for removed items that were in old bill
-      for (const oldItem of oldItems) {
-        const stillInCart = cart.find(c => c.product.id === oldItem.productId);
-        if (!stillInCart) {
-          const product = await db.products.get(oldItem.productId);
-          if (product && isStockManaged(product)) {
-            await db.products.update(oldItem.productId, { stock: product.stock + oldItem.quantity });
-          }
-        }
-      }
-
-      const updatedTx = await db.transactions.get(editingTxId);
-      toast.success(t('cashier.toast.billUpdated', { receiptNumber: updatedTx?.receiptNumber }));
-
-      if (updatedTx) {
-        savedTxObj = updatedTx;
-        savedItemsObj = itemRecords;
-      }
-    } else {
-      const receiptNumber = `TX${Date.now()}`;
-
-      const txData: Transaction = {
-        subtotal,
-        discountType: txDiscountType,
-        discountValue: Number(txDiscountValue) || 0,
-        discountAmount: txDiscountAmount,
-        total,
-        paymentMethodId: 0,
-        paymentAmount: 0,
-        change: 0,
         profit: 0,
-        date: now,
-        receiptNumber,
-        status: 'open',
         customerId,
         customerName: customerName.trim() || undefined,
         tableNumber: tableNumber.trim() || undefined,
         remarks: remarks.trim() || undefined,
-        openedAt: now,
         createdBy: currentUser?.id,
-      };
+      });
 
-      const txId = await db.transactions.add(txData);
+      toast.success(
+        editingTxId
+          ? t('cashier.toast.billUpdated', { receiptNumber: result.transaction.receiptNumber })
+          : t('cashier.toast.billSaved', { receiptNumber: result.transaction.receiptNumber }),
+      );
 
-      const itemRecords: TransactionItemRecord[] = cart.map(c => ({
-        transactionId: txId as number,
-        productId: c.product.id!,
-        productName: c.product.name,
-        quantity: c.qty,
-        price: c.product.price,
-        hpp: c.product.hpp,
-        discountType: c.discountType,
-        discountValue: c.discountValue,
-        discountAmount: getItemDiscountAmount(c),
-        subtotal: getItemSubtotal(c),
-        notes: c.notes,
-      }));
-      await db.transactionItems.bulkAdd(itemRecords);
-
-      for (const item of cart) {
-        if (!isStockManaged(item.product)) continue;
-        await db.products.update(item.product.id!, { stock: item.product.stock - item.qty, updatedAt: new Date() });
+      if (shouldPrintKitchen) {
+        setKitchenTicketTx(result.transaction);
+        setKitchenTicketItems(result.items);
+        setKitchenTicketOpen(true);
       }
 
-      toast.success(t('cashier.toast.billSaved', { receiptNumber }));
-
-      savedTxObj = { ...txData, id: txId as number };
-      savedItemsObj = itemRecords;
+      doFullReset();
+      setCartOpen(false);
+    } catch (err) {
+      const msg = err instanceof CashierOpsError || err instanceof Error ? err.message : t('cashier.toast.cartEmpty');
+      toast.error(msg);
     }
-
-    if (shouldPrintKitchen && savedTxObj) {
-      setKitchenTicketTx(savedTxObj);
-      setKitchenTicketItems(savedItemsObj);
-      setKitchenTicketOpen(true);
-    }
-
-    doFullReset();
-    setCartOpen(false);
   };
 
   const loadOpenBill = async (tx: Transaction) => {
@@ -415,21 +348,17 @@ export default function Kasir() {
 
   const cancelOpenBill = async (tx: Transaction) => {
     if (!tx.id) return;
-    const items = await db.transactionItems.where('transactionId').equals(tx.id).toArray();
-    for (const item of items) {
-      const product = await db.products.get(item.productId);
-      if (product && isStockManaged(product)) {
-        await db.products.update(item.productId, { stock: product.stock + item.quantity });
+    try {
+      await cancelOpenBillAtomic(tx);
+      toast.success(t('cashier.toast.billCancelled', { receiptNumber: tx.receiptNumber }));
+      setCancelDialogOpen(false);
+      setCancelTargetTx(null);
+      if (editingTxId === tx.id) {
+        doFullReset();
+        setCartOpen(false);
       }
-    }
-    await db.transactionItems.where('transactionId').equals(tx.id).delete();
-    await db.transactions.delete(tx.id);
-    toast.success(t('cashier.toast.billCancelled', { receiptNumber: tx.receiptNumber }));
-    setCancelDialogOpen(false);
-    setCancelTargetTx(null);
-    if (editingTxId === tx.id) {
-      doFullReset();
-      setCartOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('cashier.toast.billCancelled', { receiptNumber: tx.receiptNumber }));
     }
   };
 
@@ -446,7 +375,7 @@ export default function Kasir() {
     setCancelDialogOpen(true);
   };
 
-  // === Checkout ===
+  // === Checkout (atomic via cashier-ops) ===
 
   const handleCheckout = async () => {
     if (useDebt) {
@@ -467,154 +396,39 @@ export default function Kasir() {
       return;
     }
 
-    if (editingTxId) {
-      // Update existing open bill → paid
-      const oldItems = await db.transactionItems.where('transactionId').equals(editingTxId).toArray();
-
-      await db.transactions.update(editingTxId, {
-        status: 'completed',
+    try {
+      const result = await checkoutAtomic({
+        lines: toCartLines(cart, getItemDiscountAmount, getItemSubtotal),
+        editingTxId,
         subtotal,
         discountType: txDiscountType,
         discountValue: Number(txDiscountValue) || 0,
         discountAmount: txDiscountAmount,
         total,
+        profit: totalProfit,
         paymentMethodId: checkoutPaidAmount > 0 ? Number(paymentMethodId) : 0,
         paymentAmount: checkoutPaidAmount,
         change,
-        profit: totalProfit,
-        customerId,
-        customerName: customerName.trim() || undefined,
-        tableNumber: tableNumber.trim() || undefined,
-        remarks: remarks.trim() || undefined,
-        closedAt: new Date(),
         debtAmount,
-      });
-
-      if (debtAmount > 0) {
-        await db.debts.add({
-          transactionId: editingTxId,
-          customerId: customerId!,
-          customerName: customerName.trim(),
-          originalAmount: debtAmount,
-          remainingAmount: debtAmount,
-          status: checkoutPaidAmount > 0 ? 'partial' : 'unpaid',
-          createdAt: new Date(),
-          settledAt: null,
-        });
-      }
-
-      await db.transactionItems.where('transactionId').equals(editingTxId).delete();
-      const itemRecords: TransactionItemRecord[] = cart.map(c => ({
-        transactionId: editingTxId,
-        productId: c.product.id!,
-        productName: c.product.name,
-        quantity: c.qty,
-        price: c.product.price,
-        hpp: c.product.hpp,
-        discountType: c.discountType,
-        discountValue: c.discountValue,
-        discountAmount: getItemDiscountAmount(c),
-        subtotal: getItemSubtotal(c),
-        notes: c.notes,
-      }));
-      await db.transactionItems.bulkAdd(itemRecords);
-
-      // Adjust stock deltas (same as saveOpenBill)
-      for (const cartItem of cart) {
-        if (!isStockManaged(cartItem.product)) continue;
-        const oldItem = oldItems.find(oi => oi.productId === cartItem.product.id);
-        const oldQty = oldItem?.quantity ?? 0;
-        const newQty = cartItem.qty;
-        const delta = newQty - oldQty;
-        if (delta !== 0) {
-          await db.products.update(cartItem.product.id!, { stock: cartItem.product.stock - delta, updatedAt: new Date() });
-        }
-      }
-      for (const oldItem of oldItems) {
-        const stillInCart = cart.find(c => c.product.id === oldItem.productId);
-        if (!stillInCart) {
-          const product = await db.products.get(oldItem.productId);
-          if (product && isStockManaged(product)) {
-            await db.products.update(oldItem.productId, { stock: product.stock + oldItem.quantity });
-          }
-        }
-      }
-
-      const updatedTx = await db.transactions.get(editingTxId);
-      toast.success(t('cashier.toast.transactionSuccess', { receiptNumber: updatedTx?.receiptNumber }));
-      trackEvent('create_transaction');
-      setLastTransaction(updatedTx || null);
-      setLastTxItems(itemRecords);
-      setReceiptOpen(true);
-    } else {
-      const receiptNumber = `TX${Date.now()}`;
-
-      const txData: Transaction = {
-        subtotal,
-        discountType: txDiscountType,
-        discountValue: Number(txDiscountValue) || 0,
-        discountAmount: txDiscountAmount,
-        total,
-        paymentMethodId: checkoutPaidAmount > 0 ? Number(paymentMethodId) : 0,
-        paymentAmount: checkoutPaidAmount,
-        change,
-        profit: totalProfit,
-        date: new Date(),
-        receiptNumber,
-        status: 'completed',
         customerId,
         customerName: customerName.trim() || undefined,
         tableNumber: tableNumber.trim() || undefined,
         remarks: remarks.trim() || undefined,
         createdBy: currentUser?.id,
-        debtAmount,
-      };
+      });
 
-      const txId = await db.transactions.add(txData);
-
-      if (debtAmount > 0) {
-        await db.debts.add({
-          transactionId: txId as number,
-          customerId: customerId!,
-          customerName: customerName.trim(),
-          originalAmount: debtAmount,
-          remainingAmount: debtAmount,
-          status: checkoutPaidAmount > 0 ? 'partial' : 'unpaid',
-          createdAt: new Date(),
-          settledAt: null,
-        });
-      }
-
-      const itemRecords: TransactionItemRecord[] = cart.map(c => ({
-        transactionId: txId as number,
-        productId: c.product.id!,
-        productName: c.product.name,
-        quantity: c.qty,
-        price: c.product.price,
-        hpp: c.product.hpp,
-        discountType: c.discountType,
-        discountValue: c.discountValue,
-        discountAmount: getItemDiscountAmount(c),
-        subtotal: getItemSubtotal(c),
-        notes: c.notes,
-      }));
-      await db.transactionItems.bulkAdd(itemRecords);
-
-      for (const item of cart) {
-        if (!isStockManaged(item.product)) continue;
-        await db.products.update(item.product.id!, { stock: item.product.stock - item.qty, updatedAt: new Date() });
-      }
-
-      toast.success(t('cashier.toast.transactionSuccess', { receiptNumber }));
+      toast.success(t('cashier.toast.transactionSuccess', { receiptNumber: result.transaction.receiptNumber }));
       trackEvent('create_transaction');
-      setLastTransaction({ ...txData, id: txId as number });
-      setLastTxItems(itemRecords);
+      setLastTransaction(result.transaction);
+      setLastTxItems(result.items);
       setReceiptOpen(true);
-    }
 
-    doFullReset();
-    setCheckoutOpen(false);
-    setCartOpen(false);
+      doFullReset();
+      setCheckoutOpen(false);
+      setCartOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('cashier.toast.cartEmpty'));
+    }
   };
 
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
