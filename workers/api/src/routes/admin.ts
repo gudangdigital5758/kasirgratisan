@@ -3,7 +3,7 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '../env';
-import { sbGet, sbPatch, sbPost } from '../lib/supabase';
+import { sbGet, sbPatch, sbPost, sbDelete } from '../lib/supabase';
 import {
   canMutateBilling,
   canWrite,
@@ -641,6 +641,92 @@ admin.patch('/vouchers/:id', async (c) => {
     return c.json({ ok: true, voucher });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Gagal update voucher' }, 500);
+  }
+});
+
+/**
+ * Hapus voucher:
+ * - redemptionCount = 0 → hard-delete baris
+ * - ada klaim → soft-delete (is_active=false + note flag [deleted])
+ * Query force=true → hard-delete meski ada klaim (redemptions ikut cascade)
+ */
+admin.delete('/vouchers/:id', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canMutateBilling(a.role)) {
+    return c.json({ error: 'Role tidak boleh menghapus voucher' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const force = c.req.query('force') === 'true' || c.req.query('force') === '1';
+
+  try {
+    type V = { id: string; code: string; is_active: boolean; note: string | null };
+    const found = await sbGet<V[]>(c.env, `vouchers?id=eq.${id}&select=id,code,is_active,note&limit=1`);
+    const voucher = found[0];
+    if (!voucher) return c.json({ error: 'Voucher tidak ditemukan' }, 404);
+
+    const redRows = await sbGet<{ id: string }[]>(
+      c.env,
+      `voucher_redemptions?voucher_id=eq.${id}&select=id&limit=1000`,
+    );
+    const redemptionCount = redRows.length;
+
+    if (redemptionCount === 0 || force) {
+      await sbDelete(c.env, `vouchers?id=eq.${id}`);
+      await writeAudit(c.env, a, 'voucher.delete.hard', 'voucher', id, {
+        code: voucher.code,
+        redemptionCount,
+        force,
+      });
+      await writeEvent(c.env, {
+        type: 'admin.voucher.delete',
+        message: `Admin hard-deleted voucher ${voucher.code}`,
+        actorUserId: a.userId,
+        payload: { code: voucher.code, redemptionCount, force, actorEmail: a.email },
+      });
+      return c.json({
+        ok: true,
+        mode: 'hard',
+        message: force && redemptionCount > 0
+          ? `Voucher ${voucher.code} dihapus permanen (termasuk riwayat klaim via cascade).`
+          : `Voucher ${voucher.code} dihapus permanen.`,
+      });
+    }
+
+    // Soft-delete: nonaktif + flag di note
+    const stamp = new Date().toISOString();
+    const flag = `[deleted ${stamp.slice(0, 10)}]`;
+    const noteBase = (voucher.note || '').replace(/\s*\[deleted[^\]]*\]/gi, '').trim();
+    const note = noteBase ? `${noteBase} ${flag}` : flag;
+
+    const rows = await sbPatch<Record<string, unknown>[]>(c.env, `vouchers?id=eq.${id}`, {
+      is_active: false,
+      note,
+      updated_at: stamp,
+    });
+    const updated = Array.isArray(rows) ? rows[0] : rows;
+
+    await writeAudit(c.env, a, 'voucher.delete.soft', 'voucher', id, {
+      code: voucher.code,
+      redemptionCount,
+    });
+    await writeEvent(c.env, {
+      type: 'admin.voucher.delete',
+      message: `Admin soft-deleted voucher ${voucher.code} (${redemptionCount} klaim)`,
+      actorUserId: a.userId,
+      payload: { code: voucher.code, redemptionCount, mode: 'soft', actorEmail: a.email },
+    });
+
+    return c.json({
+      ok: true,
+      mode: 'soft',
+      redemptionCount,
+      voucher: updated,
+      message: `Voucher ${voucher.code} dinonaktifkan (soft-delete): sudah ada ${redemptionCount} klaim. Riwayat tetap disimpan.`,
+    });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal menghapus voucher' }, 500);
   }
 });
 

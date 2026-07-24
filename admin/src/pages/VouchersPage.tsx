@@ -84,6 +84,32 @@ export default function VouchersPage() {
     }
   };
 
+  const removeVoucher = async (v: VoucherRow) => {
+    const count = v.redemptionCount ?? 0;
+    const msg =
+      count === 0
+        ? `Hapus permanen kode ${v.code}? (belum ada klaim)`
+        : `Kode ${v.code} sudah diklaim ${count}×.\n\nOK = soft-delete (nonaktifkan, riwayat tetap)\nCancel = batal`;
+    if (!window.confirm(msg)) return;
+
+    setBusy(true);
+    setErr(null);
+    setOk(null);
+    try {
+      const res = await adminApi.deleteVoucher(v.id);
+      setOk(res.message || (res.mode === 'hard' ? 'Dihapus permanen' : 'Dinonaktifkan (soft-delete)'));
+      if (detailId === v.id) {
+        setDetailId(null);
+        setRedemptions([]);
+      }
+      load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Gagal hapus');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openDetail = async (id: string) => {
     setDetailId(id);
     try {
@@ -105,7 +131,8 @@ export default function VouchersPage() {
       <div>
         <h2 style={{ margin: 0 }}>Vouchers</h2>
         <p className="muted">
-          Promo cloud: diskon %, hari gratis, atau lifetime (keluarga/teman). Amount 0 skip Midtrans.
+          Promo cloud: diskon %, hari gratis, atau lifetime. Hapus: permanen jika 0 klaim; soft-delete
+          (nonaktif) jika sudah diklaim.
         </p>
       </div>
       {err && <p className="err">{err}</p>}
@@ -264,6 +291,20 @@ export default function VouchersPage() {
                     </button>{' '}
                     <button type="button" className="btn ghost" onClick={() => void toggleActive(v)}>
                       {v.is_active ? 'Disable' : 'Enable'}
+                    </button>{' '}
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      style={{ color: 'var(--danger)' }}
+                      disabled={busy}
+                      onClick={() => void removeVoucher(v)}
+                      title={
+                        (v.redemptionCount ?? 0) === 0
+                          ? 'Hapus permanen (belum ada klaim)'
+                          : 'Soft-delete: nonaktifkan (ada klaim)'
+                      }
+                    >
+                      Hapus
                     </button>
                   </td>
                 </tr>

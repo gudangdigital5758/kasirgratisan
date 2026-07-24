@@ -121,6 +121,18 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+
+  /** hard jika 0 klaim; soft (is_active=false) jika ada klaim. force=true → hard + cascade. */
+  deleteVoucher: (id: string, opts?: { force?: boolean }) =>
+    request<{
+      ok: boolean;
+      mode: 'hard' | 'soft';
+      message?: string;
+      redemptionCount?: number;
+      voucher?: VoucherRow;
+    }>(`/admin/api/vouchers/${id}${opts?.force ? '?force=true' : ''}`, {
+      method: 'DELETE',
+    }),
 };
 
 export type VoucherRow = {
