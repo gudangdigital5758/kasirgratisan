@@ -337,7 +337,7 @@ export default function Pengaturan() {
 
       {/* Cloud Sync — featured, status-aware */}
       {can('manage_backup') && (
-        <Link to="/settings/cloud-backup" className="block mt-2">
+        <Link to="/settings/cloud" className="block mt-2">
           <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${cloudStatus.iconWrap}`}>
@@ -345,7 +345,7 @@ export default function Pengaturan() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold">{t('cloudSync.title')}</p>
+                  <p className="text-sm font-bold">{t('cloud.hub.title')}</p>
                   <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
                     {cloudStatus.badgeText}
                   </span>

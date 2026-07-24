@@ -82,7 +82,7 @@ export async function notifySubscriptionActivated(
           <tr><td style="padding:6px 0;color:#666">No. pembayaran</td><td style="padding:6px 0;text-align:right;font-size:12px">${opts.paymentId}</td></tr>
         </table>
         <p style="margin-top:20px">
-          <a href="${APP}/settings/cloud-backup" style="background:#0169ff;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">
+          <a href="${APP}/settings/cloud" style="background:#0169ff;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">
             Buka Profitku Cloud
           </a>
         </p>
@@ -111,7 +111,7 @@ export async function notifySubscriptionActivated(
       `Paket: ${opts.planName}\n` +
       `Total: ${formatIdr(opts.amount)}\n` +
       `Berlaku s/d: ${formatDateId(opts.periodEnd)}\n\n` +
-      `Kelola backup: ${APP}/settings/cloud-backup\n` +
+      `Kelola backup: ${APP}/settings/cloud\n` +
       `— Tim Profitku`;
     const res = await sendWhatsApp(env, { target: opts.phone, message: msg });
     await logNotification(env, {
@@ -151,7 +151,7 @@ export async function notifyDunning(
         <p>${urgency.replace(/\*/g, '')}</p>
         <p>Paket: <strong>${opts.planName}</strong><br/>Aktif s/d: <strong>${endLabel}</strong></p>
         <p>Perpanjang sekarang agar backup cloud tetap aman.</p>
-        <p><a href="${APP}/settings/cloud-backup" style="background:#0169ff;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Perpanjang Rp 25.000</a></p>
+        <p><a href="${APP}/settings/cloud" style="background:#0169ff;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Perpanjang Rp 25.000</a></p>
         <p style="color:#888;font-size:12px">— Tim Profitku</p>
       </div>
     `;
@@ -177,7 +177,7 @@ export async function notifyDunning(
       `*Pengingat Profitku*\n\n${urgency}\n` +
       `Paket: ${opts.planName}\n` +
       `Aktif s/d: ${endLabel}\n\n` +
-      `Perpanjang: ${APP}/settings/cloud-backup\n` +
+      `Perpanjang: ${APP}/settings/cloud\n` +
       `— Tim Profitku`;
     const res = await sendWhatsApp(env, { target: opts.phone, message: msg });
     await logNotification(env, {

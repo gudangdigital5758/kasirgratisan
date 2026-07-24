@@ -214,6 +214,31 @@
     "multiUserEnabled": "Multi-user aktif. Anda log masuk sebagai pemilik.",
     "multiUserDisabled": "Multi-user dinyahaktifkan"
   },
+  "cloud": {
+    "hub": {
+      "title": "Profitku Cloud",
+      "status": {
+        "loggedOut": "Belum log masuk",
+        "loggedOutDetail": "Log masuk Google untuk backup cloud · {{price}}/bulan",
+        "loading": "Memuatkan status…",
+        "active": "Aktif",
+        "activeUntil": "Sah hingga {{date}}",
+        "activeNoDate": "Langganan cloud aktif",
+        "inactive": "Belum melanggan",
+        "inactiveDetail": "Satu pakej {{price}}/bulan",
+        "expired": "Tamat tempoh",
+        "expiredDetail": "Perbaharui {{price}}/bulan supaya backup cloud berjalan semula"
+      },
+      "footer": {
+        "offlineNote": "Kasir luar talian kekal percuma. Cloud pilihan — satu pakej Rp 25.000/bulan."
+      },
+      "menu": {
+        "onlineStore": {
+          "subtitle": "Alamat, peta, dan waktu operasi kedai dalam talian"
+        }
+      }
+    }
+  },
   "cloudBackup": {
     "locked": {
       "title": "Profitku Cloud",
@@ -229,14 +254,26 @@
     },
     "hero": {
       "title": "Naik Taraf ke Profitku Cloud",
-      "description": "Sandaran selamat + urus kedai dari mana saja. Hanya Rp 25.000/bulan — satu pakej ringkas.",
+      "description": "Backup cloud selamat, auto-backup, dan 2 GB untuk 1 kedai. Hanya Rp 25.000/bulan — satu pakej.",
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
     "benefits": {
       "safe": {
-        "title": "Data Selamat di Cloud",
-        "desc": "Data disimpan secara automatik & kekal utuh walaupun telefon hilang, rosak, atau ganti peranti."
+        "title": "Backup selamat di cloud",
+        "desc": "Simpan salinan data kedai di cloud. Pulihkan jika telefon hilang, rosak, atau diganti."
+      },
+      "auto": {
+        "title": "Auto-backup",
+        "desc": "Jadualkan backup automatik (jam / harian / mingguan) semasa langganan aktif."
+      },
+      "quota": {
+        "title": "Kuota & kedai",
+        "desc": "Sehingga {{storageMb}} MB storan backup dan {{stores}} kedai mengikut pakej."
+      },
+      "watermark": {
+        "title": "Tanpa watermark resit",
+        "desc": "Langganan cloud aktif boleh mengalih keluar watermark resit mengikut entitlement pakej."
       },
       "dashboard": {
         "title": "Akses Dashboard Web",

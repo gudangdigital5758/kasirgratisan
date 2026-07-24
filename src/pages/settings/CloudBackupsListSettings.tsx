@@ -149,7 +149,7 @@ export default function CloudBackupsListSettings() {
   return (
     <div className="px-4 pt-6 pb-20 space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/settings/cloud-backup">
+        <Link to="/settings/cloud">
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <ChevronLeft className="w-4 h-4" />
           </Button>

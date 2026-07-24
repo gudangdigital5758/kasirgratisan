@@ -311,11 +311,19 @@ app.post('/api/payments/checkout', async (c) => {
   const provider = c.env.PAYMENT_PROVIDER || 'mock';
 
   // Mock payment link — ganti dengan Midtrans Snap / Xendit Invoice
-  const redirect = body.redirectURL || c.env.APP_ORIGIN || 'https://profitku.my.id';
+  // redirectURL may be origin or full hub path; always land on /settings/cloud
+  let cloudReturn = 'https://profitku.my.id/settings/cloud';
+  try {
+    const raw = (body.redirectURL || c.env.APP_ORIGIN || 'https://profitku.my.id').trim();
+    const u = new URL(raw.includes('://') ? raw : `https://${raw}`);
+    cloudReturn = `${u.origin}/settings/cloud`;
+  } catch {
+    /* keep default */
+  }
   const paymentLink =
     provider === 'mock'
-      ? `${redirect}/settings/cloud-backup?mock_pay=${paymentId}&plan=${body.planId}`
-      : `${redirect}/settings/cloud-backup?pending=${paymentId}`;
+      ? `${cloudReturn}?mock_pay=${paymentId}&plan=${body.planId}`
+      : `${cloudReturn}?pending=${paymentId}`;
 
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {

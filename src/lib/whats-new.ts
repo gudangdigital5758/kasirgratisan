@@ -28,7 +28,7 @@ export const FEATURES: WhatsNewFeature[] = [
     icon: Sparkles,
     iconColor: 'text-primary bg-primary/10',
     publishedAt: '2026-07-23',
-    cta: { to: '/settings/cloud-backup' },
+    cta: { to: '/settings/cloud' },
   },
   {
     id: '2026-07-telegram-support',
@@ -98,7 +98,7 @@ export const FEATURES: WhatsNewFeature[] = [
     icon: Cloud,
     iconColor: 'text-primary bg-primary/10',
     publishedAt: '2026-06-11',
-    cta: { to: '/settings/cloud-backup' },
+    cta: { to: '/settings/cloud' },
   },
   {
     id: '2026-06-rebrand-Profitku',

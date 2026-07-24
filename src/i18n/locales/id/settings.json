@@ -243,6 +243,31 @@
     "multiUserEnabled": "Multi-user aktif. Anda login sebagai pemilik.",
     "multiUserDisabled": "Multi-user dinonaktifkan"
   },
+  "cloud": {
+    "hub": {
+      "title": "Profitku Cloud",
+      "status": {
+        "loggedOut": "Belum login",
+        "loggedOutDetail": "Login Google untuk backup cloud · {{price}}/bulan",
+        "loading": "Memuat status…",
+        "active": "Aktif",
+        "activeUntil": "Berlaku s/d {{date}}",
+        "activeNoDate": "Langganan cloud aktif",
+        "inactive": "Belum berlangganan",
+        "inactiveDetail": "Satu paket {{price}}/bulan",
+        "expired": "Kedaluwarsa",
+        "expiredDetail": "Perpanjang {{price}}/bulan agar backup cloud jalan lagi"
+      },
+      "footer": {
+        "offlineNote": "Kasir offline tetap gratis. Cloud opsional — satu paket Rp 25.000/bulan."
+      },
+      "menu": {
+        "onlineStore": {
+          "subtitle": "Alamat, peta, dan jam operasional toko online"
+        }
+      }
+    }
+  },
   "cloudBackup": {
     "locked": {
       "title": "Profitku Cloud",
@@ -258,14 +283,26 @@
     },
     "hero": {
       "title": "Upgrade ke Profitku Cloud",
-      "description": "Backup aman + pantau toko dari mana saja. Cukup Rp 25.000/bulan — satu paket, tanpa pusing pilih tier.",
+      "description": "Backup aman di cloud, auto-backup, dan kuota 2 GB untuk 1 toko. Cukup Rp 25.000/bulan — satu paket.",
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
     "benefits": {
       "safe": {
-        "title": "Data aman di cloud",
-        "desc": "Data otomatis tersimpan & tetap utuh walau HP hilang, rusak, atau ganti perangkat."
+        "title": "Backup aman di cloud",
+        "desc": "Simpan salinan data toko di cloud. Pulihkan saat HP hilang, rusak, atau ganti perangkat."
+      },
+      "auto": {
+        "title": "Auto-backup",
+        "desc": "Jadwalkan backup otomatis (jam / harian / mingguan) saat langganan aktif."
+      },
+      "quota": {
+        "title": "Kuota & toko",
+        "desc": "Hingga {{storageMb}} MB penyimpanan backup dan sinkron {{stores}} toko sesuai paket."
+      },
+      "watermark": {
+        "title": "Tanpa watermark struk",
+        "desc": "Langganan cloud aktif dapat menghilangkan watermark sesuai entitlement paket."
       },
       "dashboard": {
         "title": "Akses Dashboard Web",

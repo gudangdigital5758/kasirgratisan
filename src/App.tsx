@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { checkVersion } from "@/lib/version-check";
 import { initAnalytics } from "@/lib/analytics";
@@ -40,13 +40,20 @@ import ReceiptSettings from "./pages/settings/ReceiptSettings";
 import IssueReport from "./pages/settings/IssueReport";
 import StockOpname from "./pages/settings/StockOpname";
 import BackupRestoreSettings from "./pages/settings/BackupRestoreSettings";
-import CloudBackupSettings from "./pages/settings/CloudBackupSettings";
+import CloudHub from "./pages/settings/CloudHub";
 import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
 import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
 import CloudBackupsListSettings from "./pages/settings/CloudBackupsListSettings";
 import CloudStoreSettings from "./pages/settings/CloudStoreSettings";
 import CloudOnlineStoreSettings from "./pages/settings/CloudOnlineStoreSettings";
 import NotFound from "./pages/NotFound";
+import { CLOUD_ROUTES, CLOUD_LEGACY_REDIRECTS } from "./lib/cloud-routes";
+
+/** Preserve query/hash when redirecting legacy cloud-backup URLs. */
+function LegacyCloudRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={`${to}${location.search}${location.hash}`} replace />;
+}
 
 const queryClient = new QueryClient();
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -283,15 +290,15 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup"
+                    path={CLOUD_ROUTES.hub}
                     element={
                       <ErrorBoundary>
-                        <CloudBackupSettings />
+                        <CloudHub />
                       </ErrorBoundary>
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/auto"
+                    path={CLOUD_ROUTES.auto}
                     element={
                       <ErrorBoundary>
                         <CloudAutoBackupSettings />
@@ -299,7 +306,7 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/history"
+                    path={CLOUD_ROUTES.history}
                     element={
                       <ErrorBoundary>
                         <CloudHistorySettings />
@@ -307,7 +314,7 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/files"
+                    path={CLOUD_ROUTES.files}
                     element={
                       <ErrorBoundary>
                         <CloudBackupsListSettings />
@@ -315,7 +322,7 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/stores"
+                    path={CLOUD_ROUTES.stores}
                     element={
                       <ErrorBoundary>
                         <CloudStoreSettings />
@@ -323,13 +330,16 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/settings/cloud-backup/online-store"
+                    path={CLOUD_ROUTES.onlineStore}
                     element={
                       <ErrorBoundary>
                         <CloudOnlineStoreSettings />
                       </ErrorBoundary>
                     }
                   />
+                  {CLOUD_LEGACY_REDIRECTS.map(({ from, to }) => (
+                    <Route key={from} path={from} element={<LegacyCloudRedirect to={to} />} />
+                  ))}
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

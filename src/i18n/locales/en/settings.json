@@ -243,6 +243,31 @@
     "multiUserEnabled": "Multi-user enabled. You are logged in as owner.",
     "multiUserDisabled": "Multi-user disabled"
   },
+  "cloud": {
+    "hub": {
+      "title": "Profitku Cloud",
+      "status": {
+        "loggedOut": "Not signed in",
+        "loggedOutDetail": "Sign in with Google for cloud backup · {{price}}/month",
+        "loading": "Loading status…",
+        "active": "Active",
+        "activeUntil": "Valid until {{date}}",
+        "activeNoDate": "Cloud subscription active",
+        "inactive": "Not subscribed",
+        "inactiveDetail": "One plan {{price}}/month",
+        "expired": "Expired",
+        "expiredDetail": "Renew {{price}}/month to keep cloud backup running"
+      },
+      "footer": {
+        "offlineNote": "Offline cashier stays free. Cloud is optional — one plan at Rp 25,000/month."
+      },
+      "menu": {
+        "onlineStore": {
+          "subtitle": "Address, map, and online store hours"
+        }
+      }
+    }
+  },
   "cloudBackup": {
     "locked": {
       "title": "Profitku Cloud",
@@ -258,14 +283,26 @@
     },
     "hero": {
       "title": "Upgrade to Profitku Cloud",
-      "description": "Secure backup + manage your store from anywhere. Just Rp 25,000/month — one simple plan.",
+      "description": "Secure cloud backup, auto-backup, and 2 GB for 1 store. Just Rp 25,000/month — one plan.",
       "startFrom": "Only",
       "perMonth": "/month"
     },
     "benefits": {
       "safe": {
-        "title": "Data Safe in Cloud",
-        "desc": "Data is automatically stored & remains intact even if your phone is lost, damaged, or replaced."
+        "title": "Secure cloud backup",
+        "desc": "Keep a cloud copy of your store data. Restore if your phone is lost, damaged, or replaced."
+      },
+      "auto": {
+        "title": "Auto-backup",
+        "desc": "Schedule automatic backups (hourly / daily / weekly) while subscribed."
+      },
+      "quota": {
+        "title": "Quota & store",
+        "desc": "Up to {{storageMb}} MB backup storage and {{stores}} store on the plan."
+      },
+      "watermark": {
+        "title": "No receipt watermark",
+        "desc": "An active cloud plan can remove the receipt watermark per plan entitlements."
       },
       "dashboard": {
         "title": "Access Web Dashboard",

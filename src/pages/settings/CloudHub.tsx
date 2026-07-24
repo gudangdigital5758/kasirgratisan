@@ -15,10 +15,9 @@ import {
   RefreshCw,
   Store,
   BarChart3,
-  MonitorSmartphone,
   ShieldCheck,
   ExternalLink,
-  AlertTriangle,
+  HardDrive,
   Sparkles,
   Globe,
 } from 'lucide-react';
@@ -44,7 +43,9 @@ import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { fetchPlans, checkoutPlan, verifyPayment, fetchStores, uploadBackup, type Plan, type CloudStore } from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { BRAND } from '@/lib/brand';
+import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -54,9 +55,9 @@ const fmtMb = (mb: number) => `${mb.toFixed(2)} MB`;
 const fmtSize = (bytes: number) =>
   bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 
-export default function CloudBackupSettings() {
+export default function CloudHub() {
   const { can } = useAuth();
-  const { isLoggedIn, googleUser, profile, loadingProfile, isSubscribed, isSyncSubscribed, login, logout, refreshProfile } = useCloudAuth();
+  const { isLoggedIn, googleUser, profile, loadingProfile, isSyncSubscribed, login, logout, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? id;
@@ -190,7 +191,7 @@ export default function CloudBackupSettings() {
     try {
       // Play Billing ditunda — selalu checkout web (Midtrans/Xendit/mock via API).
       const result = await checkoutPlan(planId, {
-        redirectURL: `${window.location.origin}/settings/cloud-backup`,
+        redirectURL: `${window.location.origin}${CLOUD_ROUTES.hub}`,
       });
       setPaymentLink(result.paymentLink);
       setPendingTxId(result.transaction.id);
@@ -227,7 +228,59 @@ export default function CloudBackupSettings() {
     }
   };
 
-  const usage = profile?.storageUsage;
+  const subscription = profile?.syncSubscription ?? profile?.subscription ?? null;
+  const subEndDate = subscription?.endDate ? new Date(subscription.endDate) : null;
+  const subEndValid = subEndDate && !Number.isNaN(subEndDate.getTime()) ? subEndDate : null;
+  const isExpired =
+    isLoggedIn &&
+    !isSyncSubscribed &&
+    !!subscription &&
+    (subscription.status === 'EXPIRED' ||
+      (subEndValid != null && subEndValid.getTime() < Date.now()));
+
+  const hubStatus = !isLoggedIn
+    ? {
+        kind: 'loggedOut' as const,
+        stripClass: 'bg-muted/60 text-muted-foreground ring-border/60',
+        dotClass: 'bg-muted-foreground',
+        label: t('cloud.hub.status.loggedOut'),
+        detail: t('cloud.hub.status.loggedOutDetail', { price: rp(BRAND.cloudPriceIdr) }),
+      }
+    : loadingProfile && !profile
+      ? {
+          kind: 'loading' as const,
+          stripClass: 'bg-muted/40 text-muted-foreground ring-border/40',
+          dotClass: 'bg-muted-foreground animate-pulse',
+          label: t('cloud.hub.status.loading'),
+          detail: null as string | null,
+        }
+      : isSyncSubscribed
+        ? {
+            kind: 'active' as const,
+            stripClass: 'bg-success/10 text-success ring-success/20',
+            dotClass: 'bg-success',
+            label: t('cloud.hub.status.active'),
+            detail: subEndValid
+              ? t('cloud.hub.status.activeUntil', {
+                  date: format(subEndValid, 'd MMM yyyy', { locale: dateLocale }),
+                })
+              : t('cloud.hub.status.activeNoDate'),
+          }
+        : isExpired
+          ? {
+              kind: 'expired' as const,
+              stripClass: 'bg-destructive/10 text-destructive ring-destructive/20',
+              dotClass: 'bg-destructive',
+              label: t('cloud.hub.status.expired'),
+              detail: t('cloud.hub.status.expiredDetail', { price: rp(BRAND.cloudPriceIdr) }),
+            }
+          : {
+              kind: 'inactive' as const,
+              stripClass: 'bg-warning/10 text-warning ring-warning/25',
+              dotClass: 'bg-warning',
+              label: t('cloud.hub.status.inactive'),
+              detail: t('cloud.hub.status.inactiveDetail', { price: rp(BRAND.cloudPriceIdr) }),
+            };
 
   const interval = storeSettings?.cloudAutoBackupInterval ?? 'off';
   const intervalSubtitle =
@@ -243,8 +296,24 @@ export default function CloudBackupSettings() {
         </Link>
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Cloud className="w-5 h-5 text-primary" />
-          {t('cloudBackup.locked.title')}
+          {t('cloud.hub.title')}
         </h1>
+      </div>
+
+      {/* [A] Status strip */}
+      <div
+        className={cn(
+          'rounded-xl ring-1 px-3.5 py-2.5 flex items-start gap-2.5',
+          hubStatus.stripClass,
+        )}
+      >
+        <span className={cn('mt-1.5 h-2 w-2 rounded-full shrink-0', hubStatus.dotClass)} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-tight">{hubStatus.label}</p>
+          {hubStatus.detail && (
+            <p className="text-[11px] opacity-90 mt-0.5 leading-snug">{hubStatus.detail}</p>
+          )}
+        </div>
       </div>
 
       {!isLoggedIn ? (
@@ -277,19 +346,22 @@ export default function CloudBackupSettings() {
                   desc={t('cloudBackup.benefits.safe.desc')}
                 />
                 <BenefitItem
-                  icon={<MonitorSmartphone className="w-4 h-4" />}
-                  title={t('cloudBackup.benefits.dashboard.title')}
-                  desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.profitku.my.id' })}
+                  icon={<Clock className="w-4 h-4" />}
+                  title={t('cloudBackup.benefits.auto.title')}
+                  desc={t('cloudBackup.benefits.auto.desc')}
                 />
                 <BenefitItem
-                  icon={<Store className="w-4 h-4" />}
-                  title={t('cloudBackup.benefits.market.title')}
-                  desc={t('cloudBackup.benefits.market.desc', { market: 'market.profitku.my.id' })}
+                  icon={<HardDrive className="w-4 h-4" />}
+                  title={t('cloudBackup.benefits.quota.title')}
+                  desc={t('cloudBackup.benefits.quota.desc', {
+                    storageMb: BRAND.cloudStorageMb,
+                    stores: BRAND.cloudMaxStores,
+                  })}
                 />
                 <BenefitItem
                   icon={<Sparkles className="w-4 h-4" />}
-                  title={t('cloudBackup.benefits.growth.title')}
-                  desc={t('cloudBackup.benefits.growth.desc')}
+                  title={t('cloudBackup.benefits.watermark.title')}
+                  desc={t('cloudBackup.benefits.watermark.desc')}
                 />
               </ul>
 
@@ -316,14 +388,9 @@ export default function CloudBackupSettings() {
             </CardContent>
           </Card>
 
-          <a
-            href="https://dashboard.profitku.my.id"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-[11px] font-medium text-primary"
-          >
-            {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.profitku.my.id' })}
-          </a>
+          <p className="text-center text-[11px] text-muted-foreground px-2 leading-relaxed">
+            {t('cloud.hub.footer.offlineNote')}
+          </p>
         </div>
       ) : (
         <>
@@ -357,7 +424,7 @@ export default function CloudBackupSettings() {
                     </label>
                     {storeCount !== null && storeCount > 0 && (
                       <Link
-                        to="/settings/cloud-backup/stores"
+                        to={CLOUD_ROUTES.stores}
                         className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                       >
                         {t('cloudBackup.menu.manageStore.title')} <ChevronRight className="w-3 h-3" />
@@ -371,7 +438,7 @@ export default function CloudBackupSettings() {
                   ) : storeCount === 0 ? (
                     <div className="flex flex-col gap-2 p-3 border border-dashed rounded-xl text-center bg-muted/5">
                       <p className="text-xs text-muted-foreground">{t('cloudBackup.noStore.title')}</p>
-                      <Link to="/settings/cloud-backup/stores">
+                      <Link to={CLOUD_ROUTES.stores}>
                         <Button size="sm" variant="outline" className="h-8 text-xs w-full gap-1">
                           <Store className="w-3.5 h-3.5" /> {t('cloudBackup.noStore.createStore')}
                         </Button>
@@ -443,7 +510,7 @@ export default function CloudBackupSettings() {
                     </ul>
                   </div>
                 </div>
-                <Link to="/settings/cloud-backup/online-store" className="block">
+                <Link to={CLOUD_ROUTES.onlineStore} className="block">
                   <Button size="sm" className="w-full h-9 text-xs gap-1.5 font-semibold">
                     <Store className="w-3.5 h-3.5" />
                     {t('cloudBackup.promo.button')}
@@ -473,29 +540,24 @@ export default function CloudBackupSettings() {
                         desc={t('cloudBackup.benefits.safe.desc')}
                       />
                       <BenefitItem
-                        icon={<MonitorSmartphone className="w-4 h-4" />}
-                        title={t('cloudBackup.benefits.dashboard.title')}
-                        desc={t('cloudBackup.benefits.dashboard.desc', { dashboard: 'dashboard.profitku.my.id' })}
+                        icon={<Clock className="w-4 h-4" />}
+                        title={t('cloudBackup.benefits.auto.title')}
+                        desc={t('cloudBackup.benefits.auto.desc')}
                       />
                       <BenefitItem
-                        icon={<Store className="w-4 h-4" />}
-                        title={t('cloudBackup.benefits.market.title')}
-                        desc={t('cloudBackup.benefits.market.desc', { market: 'market.profitku.my.id' })}
+                        icon={<HardDrive className="w-4 h-4" />}
+                        title={t('cloudBackup.benefits.quota.title')}
+                        desc={t('cloudBackup.benefits.quota.desc', {
+                          storageMb: BRAND.cloudStorageMb,
+                          stores: BRAND.cloudMaxStores,
+                        })}
                       />
                       <BenefitItem
                         icon={<Sparkles className="w-4 h-4" />}
-                        title={t('cloudBackup.benefits.growth.title')}
-                        desc={t('cloudBackup.benefits.growth.desc')}
+                        title={t('cloudBackup.benefits.watermark.title')}
+                        desc={t('cloudBackup.benefits.watermark.desc')}
                       />
                     </ul>
-                    <a
-                      href="https://dashboard.profitku.my.id"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-center text-[11px] font-medium text-primary pt-0.5"
-                    >
-                      {t('cloudBackup.previewDashboard', { dashboard: 'dashboard.profitku.my.id' })}
-                    </a>
                   </CardContent>
                 </Card>
               )}
@@ -505,7 +567,7 @@ export default function CloudBackupSettings() {
                 icon={<RefreshCw className="w-4 h-4" />}
                 description={t('cloudBackup.subscription.description')}
                 plans={cloudPlans}
-                subscription={profile?.syncSubscription ?? profile?.subscription ?? null}
+                subscription={subscription}
                 isActive={isSyncSubscribed}
                 showPlans={showPlanPicker}
                 onTogglePlans={() => setShowPlanPicker((v) => !v)}
@@ -523,41 +585,49 @@ export default function CloudBackupSettings() {
             {isSyncSubscribed && (
               <>
                 <ExternalMenuCard
-                  href="https://dashboard.profitku.my.id"
+                  href={BRAND.dashboardOrigin}
                   icon={<BarChart3 className="w-4 h-4" />}
                   title={t('cloudBackup.menu.dashboard.title')}
-                  subtitle={t('cloudBackup.menu.dashboard.subtitle', { dashboard: 'dashboard.profitku.my.id' })}
+                  subtitle={t('cloudBackup.menu.dashboard.subtitle', {
+                    dashboard: BRAND.dashboardOrigin.replace(/^https?:\/\//, ''),
+                  })}
                 />
 
                 <MenuCard
-                  to="/settings/cloud-backup/online-store"
+                  to={CLOUD_ROUTES.onlineStore}
                   icon={<Globe className="w-4 h-4" />}
                   title={t('cloudOnlineStore.title')}
-                  subtitle="Atur alamat, peta koordinat, dan jam operasional tokomu"
+                  subtitle={t('cloud.hub.menu.onlineStore.subtitle')}
                 />
 
                 <MenuCard
-                  to="/settings/cloud-backup/auto"
+                  to={CLOUD_ROUTES.auto}
                   icon={<Clock className="w-4 h-4" />}
                   title={t('cloudBackup.menu.autoSync.title')}
                   subtitle={intervalSubtitle}
                 />
 
                 <MenuCard
-                  to="/settings/cloud-backup/files"
+                  to={CLOUD_ROUTES.files}
                   icon={<Cloud className="w-4 h-4" />}
                   title={t('cloudBackup.menu.files.title')}
                   subtitle={t('cloudBackup.menu.files.subtitle')}
                 />
               </>
             )}
-            <MenuCard
-              to="/settings/cloud-backup/history"
-              icon={<History className="w-4 h-4" />}
-              title={t('cloudBackup.menu.history.title')}
-              subtitle={t('cloudBackup.menu.history.subtitle')}
-            />
+            {isLoggedIn && (
+              <MenuCard
+                to={CLOUD_ROUTES.history}
+                icon={<History className="w-4 h-4" />}
+                title={t('cloudBackup.menu.history.title')}
+                subtitle={t('cloudBackup.menu.history.subtitle')}
+              />
+            )}
           </div>
+
+          <p className="text-center text-[11px] text-muted-foreground px-2 leading-relaxed pb-2">
+            {t('cloud.hub.footer.offlineNote')}
+          </p>
         </>
       )}
 

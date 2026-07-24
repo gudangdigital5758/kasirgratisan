@@ -169,7 +169,7 @@ export default function CloudStoreSettings() {
   return (
     <div className="px-4 pt-6 pb-20 space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/settings/cloud-backup">
+        <Link to="/settings/cloud">
           <Button variant="ghost" size="icon" className="h-8 w-8"><ChevronLeft className="w-4 h-4" /></Button>
         </Link>
         <h1 className="text-xl font-bold flex items-center gap-2">
@@ -243,7 +243,7 @@ export default function CloudStoreSettings() {
                     <p className="text-[10px] text-muted-foreground leading-snug">
                       {t('cloudStore.atLimit.description', { max: maxStores })}
                     </p>
-                    <Link to="/settings/cloud-backup" className="inline-block mt-1.5">
+                    <Link to="/settings/cloud" className="inline-block mt-1.5">
                       <Button size="sm" variant="outline" className="h-7 text-[11px]">{t('cloudStore.atLimit.upgrade')}</Button>
                     </Link>
                   </div>
