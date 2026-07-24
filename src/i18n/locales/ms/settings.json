@@ -12,6 +12,10 @@
     "title": "Sandaran & pulihkan (tempatan)",
     "description": "Eksport/import JSON pada peranti ini"
   },
+  "shiftMenu": {
+    "title": "Shift kasir",
+    "description": "Buka/tutup shift & beza tunai"
+  },
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Rasmi!",
     "description": "Untuk prestasi terbaik, sokongan pencetak Bluetooth, dan ciri luar talian yang lebih stabil, sila muat turun aplikasi Profitku di Google Play Store.",

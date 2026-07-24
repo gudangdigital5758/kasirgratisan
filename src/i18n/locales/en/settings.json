@@ -12,6 +12,10 @@
     "title": "Backup & restore (local)",
     "description": "Export/import JSON on this device"
   },
+  "shiftMenu": {
+    "title": "Cashier shift",
+    "description": "Open/close shift & cash variance"
+  },
   "playStoreAlert": {
     "title": "Use the Official Android App!",
     "description": "For the best performance, Bluetooth printer support, and more stable offline features, please download the Profitku app on the Google Play Store.",

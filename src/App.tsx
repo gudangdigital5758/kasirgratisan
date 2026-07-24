@@ -31,6 +31,7 @@ import StockReport from "./pages/StockReport";
 import UsersPage from "./pages/Users";
 import ExpensesPage from "./pages/Expenses";
 import DebtsPage from "./pages/Debts";
+import ShiftsPage from "./pages/Shifts";
 import PaymentMethodsSettings from "./pages/settings/PaymentMethodsSettings";
 import ProductCategoriesSettings from "./pages/settings/ProductCategoriesSettings";
 import ExpenseCategoriesSettings from "./pages/settings/ExpenseCategoriesSettings";
@@ -214,6 +215,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <DebtsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/shifts"
+                    element={
+                      <ErrorBoundary>
+                        <ShiftsPage />
                       </ErrorBoundary>
                     }
                   />

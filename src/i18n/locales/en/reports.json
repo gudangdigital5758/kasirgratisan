@@ -20,7 +20,8 @@
   "summary": {
     "transactions": "Transactions",
     "sales": "Sales",
-    "profit": "Profit"
+    "profit": "Gross profit",
+    "netProfit": "Net profit"
   },
   "hub": {
     "title": "See also",

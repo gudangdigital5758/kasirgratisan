@@ -20,7 +20,8 @@
   "summary": {
     "transactions": "Transaksi",
     "sales": "Jualan",
-    "profit": "Untung"
+    "profit": "Untung kasar",
+    "netProfit": "Untung bersih"
   },
   "hub": {
     "title": "Lihat juga",

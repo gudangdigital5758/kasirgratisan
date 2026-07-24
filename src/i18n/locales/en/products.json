@@ -17,6 +17,16 @@
     "stock": "Stock",
     "stockUnmanaged": "Stock not managed"
   },
+  "margin": {
+    "label": "Gross margin",
+    "profit": "profit/unit",
+    "targetLabel": "Target margin %",
+    "suggestButton": "Set price",
+    "suggestApplied": "Suggested price: {{price}}",
+    "suggestFailed": "Enter COGS & target margin (0–99)",
+    "hint": "Price = COGS ÷ (1 − margin%). Simple math — not AI.",
+    "short": "Margin {{pct}}%"
+  },
   "dialog": {
     "titleEdit": "Edit Product",
     "titleAdd": "Add Product",

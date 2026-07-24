@@ -17,6 +17,16 @@
     "stock": "Stok",
     "stockUnmanaged": "Stok tidak dikelola"
   },
+  "margin": {
+    "label": "Margin kotor",
+    "profit": "laba/unit",
+    "targetLabel": "Target margin %",
+    "suggestButton": "Isi harga",
+    "suggestApplied": "Harga disarankan: {{price}}",
+    "suggestFailed": "Isi HPP & target margin (0–99)",
+    "hint": "Harga = HPP ÷ (1 − margin%). Bukan saran AI — hitungan sederhana.",
+    "short": "Margin {{pct}}%"
+  },
   "dialog": {
     "titleEdit": "Edit Produk",
     "titleAdd": "Tambah Produk",

@@ -97,6 +97,7 @@ export default function Dashboard() {
   const totalSales = todayTransactions?.reduce((sum, t) => sum + t.total, 0) ?? 0;
   const totalProfit = todayTransactions?.reduce((sum, t) => sum + t.profit, 0) ?? 0;
   const totalExpensesToday = todayExpenses?.reduce((sum, e) => sum + e.amount, 0) ?? 0;
+  const netProfitToday = totalProfit - totalExpensesToday;
   const txCount = todayTransactions?.length ?? 0;
   const expenseCount = todayExpenses?.length ?? 0;
 
@@ -213,7 +214,41 @@ export default function Dashboard() {
             </Card>
           </Link>
         )}
+        {can('view_reports') && (
+          <Link to="/reports" className="contents">
+            <Card className="border-0 shadow-sm ring-1 ring-primary/20 hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-1.5 text-primary">
+                  <TrendingUp className="w-4 h-4" />
+                  <p className="text-xs font-medium">{t('stats.netProfitToday')}</p>
+                </div>
+                <p className={cn('text-xl font-bold mt-1', netProfitToday >= 0 ? 'text-success' : 'text-destructive')}>
+                  Rp {netProfitToday.toLocaleString(numberLocale)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t('stats.netProfitHint')}</p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
+
+      {/* End of day / tutup toko shortcut */}
+      {can('view_reports') && (
+        <Link to="/reports">
+          <Card className="border-0 shadow-sm bg-muted/40 hover:shadow-md transition-shadow cursor-pointer">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('dayClose.title')}</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">{t('dayClose.description')}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Open Bills */}
       {openBillsCount != null && openBillsCount > 0 && (

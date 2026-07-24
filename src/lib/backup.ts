@@ -8,7 +8,7 @@ import { db, type Product, sanitizeDatabaseDates } from '@/lib/db';
  * Dipisah dari komponen UI supaya logika yang sama tidak terduplikasi.
  */
 
-export const BACKUP_VERSION = 7;
+export const BACKUP_VERSION = 8;
 
 // Bentuk longgar — file backup bisa berasal dari versi lama (v1–v6).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +39,7 @@ export async function buildBackupData() {
     stockOpnames: await db.stockOpnames.toArray(),
     stockOpnameItems: await db.stockOpnameItems.toArray(),
     deletedRecords: await db.deletedRecords.toArray(),
+    cashierShifts: await db.cashierShifts.toArray(),
   };
 }
 
@@ -90,6 +91,9 @@ async function clearAllTables(includeConditional: BackupData) {
     await db.stockOpnames.clear();
     await db.stockOpnameItems.clear();
   }
+  if (Array.isArray(includeConditional.cashierShifts)) {
+    await db.cashierShifts.clear();
+  }
   await db.deletedRecords.clear();
 }
 
@@ -122,6 +126,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     stockOpnames: await db.stockOpnames.toArray(),
     stockOpnameItems: await db.stockOpnameItems.toArray(),
     deletedRecords: await db.deletedRecords.toArray(),
+    cashierShifts: await db.cashierShifts.toArray(),
   };
 
   try {
@@ -150,6 +155,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     if (data.stockOpnames?.length) await db.stockOpnames.bulkAdd(data.stockOpnames);
     if (data.stockOpnameItems?.length) await db.stockOpnameItems.bulkAdd(data.stockOpnameItems);
     if (data.deletedRecords?.length) await db.deletedRecords.bulkAdd(data.deletedRecords);
+    if (data.cashierShifts?.length) await db.cashierShifts.bulkAdd(data.cashierShifts);
 
     // Units (v3+ backup) atau diturunkan dari produk (backup v1/v2).
     if (Array.isArray(data.units) && data.units.length > 0) {
@@ -225,6 +231,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       await db.stockOpnames.clear();
       await db.stockOpnameItems.clear();
       await db.deletedRecords.clear();
+      await db.cashierShifts.clear();
 
       if (snapshot.categories.length) await db.categories.bulkAdd(snapshot.categories);
       if (snapshot.products.length) await db.products.bulkAdd(snapshot.products);
@@ -246,6 +253,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       if (snapshot.stockOpnames.length) await db.stockOpnames.bulkAdd(snapshot.stockOpnames);
       if (snapshot.stockOpnameItems.length) await db.stockOpnameItems.bulkAdd(snapshot.stockOpnameItems);
       if (snapshot.deletedRecords.length) await db.deletedRecords.bulkAdd(snapshot.deletedRecords);
+      if (snapshot.cashierShifts?.length) await db.cashierShifts.bulkAdd(snapshot.cashierShifts);
     } catch {
       throw new Error('Import gagal dan rollback gagal. Coba restore dari file backup.');
     }

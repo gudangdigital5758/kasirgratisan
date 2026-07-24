@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged, type Product, type Category } from '@/lib/db';
 import { useState, useRef } from 'react';
-import { Plus, Search, Edit2, Trash2, Package as PackageIcon, Camera, X, Copy, Infinity as InfinityIcon, ScanLine, Upload, Download, AlertTriangle, CheckCircle2, XCircle, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package as PackageIcon, Camera, X, Copy, Infinity as InfinityIcon, ScanLine, Upload, Download, AlertTriangle, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Percent } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import BarcodeScanner from '@/components/BarcodeScanner';
 import { useTranslation } from 'react-i18next';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { downloadOrShareFile } from '@/lib/file-utils';
+import { calcMarginPercent, calcProfitPerUnit, marginTone, priceFromMargin } from '@/lib/pricing';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -70,6 +71,7 @@ export default function Produk() {
   const [categoryId, setCategoryId] = useState<string>('');
   const [price, setPrice] = useState('');
   const [hpp, setHpp] = useState('');
+  const [targetMargin, setTargetMargin] = useState('30');
   const [stock, setStock] = useState('');
   const [trackStock, setTrackStock] = useState(true);
   const [unit, setUnit] = useState('pcs');
@@ -653,6 +655,23 @@ export default function Produk() {
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="text-sm font-bold text-primary">{rp(p.price)}</span>
                       <span className="text-xs text-muted-foreground">{t('card.hpp')}: {rp(p.hpp)}</span>
+                      {(() => {
+                        const m = calcMarginPercent(p.price, p.hpp);
+                        if (m == null) return null;
+                        const tone = marginTone(m);
+                        return (
+                          <span
+                            className={cn(
+                              'text-[10px] font-semibold',
+                              tone === 'danger' && 'text-destructive',
+                              tone === 'warn' && 'text-warning',
+                              tone === 'ok' && 'text-success',
+                            )}
+                          >
+                            {t('margin.short', { pct: m.toFixed(0) })}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       {isStockManaged(p) ? (
@@ -784,6 +803,71 @@ export default function Produk() {
                 <Input type="number" value={hpp} onChange={e => setHpp(e.target.value)} placeholder={t('dialog.hppPlaceholder')} className="h-11" />
               </div>
             </div>
+            {(() => {
+              const p = Number(price) || 0;
+              const h = Number(hpp) || 0;
+              const margin = calcMarginPercent(p, h);
+              const profit = calcProfitPerUnit(p, h);
+              const tone = marginTone(margin);
+              if (p <= 0 && h <= 0) return null;
+              return (
+                <div
+                  className={cn(
+                    'rounded-xl border p-3 space-y-2',
+                    tone === 'danger' && 'border-destructive/40 bg-destructive/5',
+                    tone === 'warn' && 'border-warning/40 bg-warning/5',
+                    tone === 'ok' && 'border-success/30 bg-success/5',
+                    tone === 'neutral' && 'border-border bg-muted/30',
+                  )}
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Percent className="w-3.5 h-3.5" />
+                      {t('margin.label')}
+                    </span>
+                    <span className="font-bold">
+                      {margin == null ? '—' : `${margin.toFixed(1)}%`}
+                      {p > 0 && (
+                        <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                          ({t('margin.profit')}: {rp(profit)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[11px]">{t('margin.targetLabel')}</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={targetMargin}
+                        onChange={(e) => setTargetMargin(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 shrink-0"
+                      onClick={() => {
+                        const suggested = priceFromMargin(Number(hpp) || 0, Number(targetMargin) || 0);
+                        if (suggested == null) {
+                          toast.error(t('margin.suggestFailed'));
+                          return;
+                        }
+                        setPrice(String(Math.ceil(suggested)));
+                        toast.success(t('margin.suggestApplied', { price: rp(Math.ceil(suggested)) }));
+                      }}
+                    >
+                      {t('margin.suggestButton')}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-snug">{t('margin.hint')}</p>
+                </div>
+              );
+            })()}
             <div className="flex items-center justify-between rounded-xl border border-border p-3">
               <div className="space-y-0.5 pr-3">
                 <Label className="text-sm">{t('dialog.manageStockLabel')}</Label>

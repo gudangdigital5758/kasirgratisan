@@ -289,6 +289,27 @@ export interface DeletedRecord {
   syncedAt: Date | null;
 }
 
+/** Shift kasir — buka/tutup kas, hitung selisih tunai (v2). */
+export interface CashierShift {
+  id?: number;
+  userId: number | null;
+  userName: string;
+  openedAt: Date;
+  closedAt: Date | null;
+  openingCash: number;
+  closingCash: number | null;
+  /** Expected drawer cash at close (opening + cash in − cash out). */
+  expectedCash: number | null;
+  cashSales: number;
+  cashExpenses: number;
+  txCount: number;
+  salesTotal: number;
+  notes?: string;
+  status: 'open' | 'closed';
+  updatedAt?: Date;
+  syncedAt?: Date | null;
+}
+
 export interface StoreSettings {
   id?: number;
   storeName: string;
@@ -334,6 +355,7 @@ class PosDatabase extends Dexie {
   stockOpnames!: Table<StockOpname>;
   stockOpnameItems!: Table<StockOpnameItem>;
   deletedRecords!: Table<DeletedRecord>;
+  cashierShifts!: Table<CashierShift>;
 
   constructor() {
     super('kasirgratisan-db');
@@ -797,6 +819,31 @@ class PosDatabase extends Dexie {
       await backfillTable('debtPayments', ['date']);
       await backfillTable('stockOpnames', ['date']);
     });
+
+    // Version 15 — Cashier shifts (buka/tutup kas)
+    this.version(15).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+    });
   }
 }
 
@@ -847,6 +894,7 @@ export async function sanitizeDatabaseDates() {
   await sanitizeTableDates(db.stockOpnames, ['date', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.deletedRecords, ['deletedAt', 'syncedAt']);
   await sanitizeTableDates(db.storeSettings, ['lastBackupAt', 'lastCloudBackupAt']);
+  await sanitizeTableDates(db.cashierShifts, ['openedAt', 'closedAt', 'updatedAt', 'syncedAt']);
 }
 
 export function setupSyncHooks(db: PosDatabase) {
@@ -866,7 +914,8 @@ export function setupSyncHooks(db: PosDatabase) {
     'hppHistory',
     'debts',
     'debtPayments',
-    'stockOpnames'
+    'stockOpnames',
+    'cashierShifts',
   ];
 
   syncTables.forEach((tableName) => {

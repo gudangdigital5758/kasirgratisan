@@ -21,6 +21,7 @@ import { isNativePlatform, printRawNativeBluetooth, getDailyReportESCPOSData, ty
 import DailyReportReceipt from '@/components/reports/DailyReportReceipt';
 import { useTranslation } from 'react-i18next';
 import { InAppReview } from '@capacitor-community/in-app-review';
+import { cn } from '@/lib/utils';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -303,7 +304,7 @@ export default function Laporan() {
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-3 text-center">
             <ShoppingCart className="w-4 h-4 mx-auto text-primary mb-1" />
@@ -323,6 +324,15 @@ export default function Laporan() {
             <TrendingUp className="w-4 h-4 mx-auto text-accent mb-1" />
             <p className="text-sm font-bold">{rp(totalProfit)}</p>
             <p className="text-[10px] text-muted-foreground">{t('summary.profit')}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm ring-1 ring-primary/15">
+          <CardContent className="p-3 text-center">
+            <DollarSign className="w-4 h-4 mx-auto text-primary mb-1" />
+            <p className={cn('text-sm font-bold', netProfit >= 0 ? 'text-success' : 'text-destructive')}>
+              {rp(netProfit)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{t('summary.netProfit')}</p>
           </CardContent>
         </Card>
       </div>

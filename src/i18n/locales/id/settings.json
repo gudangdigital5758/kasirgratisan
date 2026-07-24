@@ -12,6 +12,10 @@
     "title": "Backup & pulihkan (lokal)",
     "description": "Export/import JSON di perangkat ini"
   },
+  "shiftMenu": {
+    "title": "Shift kasir",
+    "description": "Buka/tutup shift & hitung selisih kas"
+  },
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Resmi!",
     "description": "Untuk performa terbaik, dukungan printer Bluetooth, dan fitur offline yang lebih stabil, silakan unduh aplikasi Profitku di Google Play Store.",

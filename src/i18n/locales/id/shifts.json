@@ -1,0 +1,48 @@
+{
+  "title": "Shift Kasir",
+  "subtitle": "Catat modal kas awal, tutup shift, dan cek selisih tunai. Opsional — kasir tetap bisa jalan tanpa shift.",
+  "fallbackCashier": "Kasir",
+  "status": {
+    "open": "Shift sedang berjalan",
+    "closed": "Tidak ada shift aktif",
+    "closedHint": "Buka shift sebelum mulai jualan agar rekap kas rapi."
+  },
+  "openedBy": "{{name}} · dibuka {{time}}",
+  "openingCash": "Modal kas awal",
+  "multiUserHint": "Mode multi-user: shift terikat ke akun yang login.",
+  "actions": {
+    "open": "Buka Shift",
+    "close": "Tutup Shift"
+  },
+  "historyTitle": "Riwayat shift",
+  "historyEmpty": "Belum ada shift yang ditutup.",
+  "fields": {
+    "sales": "Omzet",
+    "txCount": "Transaksi",
+    "expected": "Kas diharapkan",
+    "actual": "Kas dihitung",
+    "variance": "Selisih",
+    "cashIn": "Tunai masuk",
+    "cashOut": "Tunai keluar (expense)"
+  },
+  "openDialog": {
+    "title": "Buka Shift",
+    "openingCash": "Modal kas di laci (Rp)",
+    "hint": "Hitung uang tunai di laci sebelum jualan."
+  },
+  "closeDialog": {
+    "title": "Tutup Shift",
+    "closingCash": "Kas di laci (hitung fisik)",
+    "notes": "Catatan (opsional)",
+    "notesPlaceholder": "Mis. ada selisih karena kembalian"
+  },
+  "commonCancel": "Batal",
+  "toast": {
+    "opened": "Shift dibuka",
+    "alreadyOpen": "Masih ada shift yang belum ditutup",
+    "openFailed": "Gagal membuka shift",
+    "closed": "Shift ditutup",
+    "closedWithVariance": "Shift ditutup · selisih {{variance}}",
+    "closeFailed": "Gagal menutup shift"
+  }
+}

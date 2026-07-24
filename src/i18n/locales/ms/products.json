@@ -17,6 +17,16 @@
     "stock": "Stok",
     "stockUnmanaged": "Stok tidak diurus"
   },
+  "margin": {
+    "label": "Margin kasar",
+    "profit": "untung/unit",
+    "targetLabel": "Sasaran margin %",
+    "suggestButton": "Isi harga",
+    "suggestApplied": "Harga dicadangkan: {{price}}",
+    "suggestFailed": "Isi kos & sasaran margin (0–99)",
+    "hint": "Harga = Kos ÷ (1 − margin%). Kiraan ringkas — bukan AI.",
+    "short": "Margin {{pct}}%"
+  },
   "dialog": {
     "titleEdit": "Sunting Produk",
     "titleAdd": "Tambah Produk",

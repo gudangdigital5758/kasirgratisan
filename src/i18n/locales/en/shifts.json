@@ -1,0 +1,48 @@
+{
+  "title": "Cashier Shift",
+  "subtitle": "Record opening float, close the shift, and check cash variance. Optional — selling still works without a shift.",
+  "fallbackCashier": "Cashier",
+  "status": {
+    "open": "Shift in progress",
+    "closed": "No active shift",
+    "closedHint": "Open a shift before selling to keep cash reconciliation tidy."
+  },
+  "openedBy": "{{name}} · opened {{time}}",
+  "openingCash": "Opening cash",
+  "multiUserHint": "Multi-user mode: shifts are tied to the logged-in account.",
+  "actions": {
+    "open": "Open Shift",
+    "close": "Close Shift"
+  },
+  "historyTitle": "Shift history",
+  "historyEmpty": "No closed shifts yet.",
+  "fields": {
+    "sales": "Sales",
+    "txCount": "Transactions",
+    "expected": "Expected cash",
+    "actual": "Counted cash",
+    "variance": "Variance",
+    "cashIn": "Cash in",
+    "cashOut": "Cash out (expenses)"
+  },
+  "openDialog": {
+    "title": "Open Shift",
+    "openingCash": "Drawer float (Rp)",
+    "hint": "Count cash in the drawer before selling."
+  },
+  "closeDialog": {
+    "title": "Close Shift",
+    "closingCash": "Drawer cash (physical count)",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "e.g. variance due to change"
+  },
+  "commonCancel": "Cancel",
+  "toast": {
+    "opened": "Shift opened",
+    "alreadyOpen": "A shift is still open",
+    "openFailed": "Failed to open shift",
+    "closed": "Shift closed",
+    "closedWithVariance": "Shift closed · variance {{variance}}",
+    "closeFailed": "Failed to close shift"
+  }
+}

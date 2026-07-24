@@ -5,9 +5,15 @@
   "stats": {
     "salesToday": "Today's Sales",
     "transactions": "{{count}} transactions",
-    "profitToday": "Today's Profit",
+    "profitToday": "Today's Gross Profit",
     "expensesToday": "Today's Expenses",
-    "expenseNotes": "{{count}} entries"
+    "expenseNotes": "{{count}} entries",
+    "netProfitToday": "Today's Net Profit",
+    "netProfitHint": "Gross profit − expenses"
+  },
+  "dayClose": {
+    "title": "End of day / daily report",
+    "description": "Print closing report, net profit & payment breakdown"
   },
   "openBills": {
     "title": "Open Bills",

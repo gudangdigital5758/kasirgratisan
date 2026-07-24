@@ -1,0 +1,48 @@
+{
+  "title": "Shift Kasir",
+  "subtitle": "Catat modal tunai awal, tutup shift, dan semak beza tunai. Pilihan — jualan tetap boleh tanpa shift.",
+  "fallbackCashier": "Kasir",
+  "status": {
+    "open": "Shift sedang berjalan",
+    "closed": "Tiada shift aktif",
+    "closedHint": "Buka shift sebelum jualan supaya rekap tunai kemas."
+  },
+  "openedBy": "{{name}} · dibuka {{time}}",
+  "openingCash": "Modal tunai awal",
+  "multiUserHint": "Mod multi-pengguna: shift terikat kepada akaun yang log masuk.",
+  "actions": {
+    "open": "Buka Shift",
+    "close": "Tutup Shift"
+  },
+  "historyTitle": "Sejarah shift",
+  "historyEmpty": "Belum ada shift yang ditutup.",
+  "fields": {
+    "sales": "Jualan",
+    "txCount": "Transaksi",
+    "expected": "Tunai dijangka",
+    "actual": "Tunai dikira",
+    "variance": "Beza",
+    "cashIn": "Tunai masuk",
+    "cashOut": "Tunai keluar (perbelanjaan)"
+  },
+  "openDialog": {
+    "title": "Buka Shift",
+    "openingCash": "Modal laci (Rp)",
+    "hint": "Kira wang tunai dalam laci sebelum jualan."
+  },
+  "closeDialog": {
+    "title": "Tutup Shift",
+    "closingCash": "Tunai laci (kiraan fizikal)",
+    "notes": "Nota (pilihan)",
+    "notesPlaceholder": "cth. beza kerana baki duit"
+  },
+  "commonCancel": "Batal",
+  "toast": {
+    "opened": "Shift dibuka",
+    "alreadyOpen": "Masih ada shift yang belum ditutup",
+    "openFailed": "Gagal membuka shift",
+    "closed": "Shift ditutup",
+    "closedWithVariance": "Shift ditutup · beza {{variance}}",
+    "closeFailed": "Gagal menutup shift"
+  }
+}

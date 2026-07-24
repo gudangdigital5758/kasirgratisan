@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged, type Product, type Category, type Transaction, type TransactionItemRecord } from '@/lib/db';
 import { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Minus, ShoppingCart, X, Percent, Tag, CreditCard, Banknote, Check, ScanBarcode, Package as PackageIcon, ClipboardList, Save, Pencil, User, Hash, Trash2, Barcode, Printer } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, X, Percent, Tag, CreditCard, Banknote, Check, ScanBarcode, Package as PackageIcon, ClipboardList, Save, Pencil, User, Hash, Trash2, Barcode, Printer, Clock } from 'lucide-react';
 import Receipt from '@/components/Receipt';
 import KitchenTicket from '@/components/KitchenTicket';
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -24,7 +24,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { trackEvent } from '@/lib/analytics';
 import CustomerPicker from '@/components/CustomerPicker';
 import LockedPage from '@/components/LockedPage';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   saveOpenBillAtomic,
   cancelOpenBillAtomic,
@@ -32,6 +32,7 @@ import {
   CashierOpsError,
   type CartLine,
 } from '@/lib/cashier-ops';
+import { getOpenShift } from '@/lib/shift';
 
 interface CartItem {
   product: Product;
@@ -77,6 +78,10 @@ const LOCALES: Record<string, Locale> = {
 
 export default function Kasir() {
   const { currentUser, can } = useAuth();
+  const openShift = useLiveQuery(
+    () => getOpenShift(currentUser?.id ?? null),
+    [currentUser?.id],
+  );
   const location = useLocation();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('settings');
@@ -513,6 +518,28 @@ export default function Kasir() {
           {t('cashier.openBill')}{openBillsCount > 0 && ` (${openBillsCount})`}
         </Button>
       </div>
+
+      <Link
+        to="/shifts"
+        className={cn(
+          'mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ring-1 transition-colors',
+          openShift
+            ? 'bg-success/10 text-success ring-success/20'
+            : 'bg-muted/60 text-muted-foreground ring-border hover:bg-muted',
+        )}
+      >
+        <Clock className="w-3.5 h-3.5 shrink-0" />
+        <span className="flex-1 font-medium">
+          {openShift
+            ? t('cashier.shiftOpen', {
+                defaultValue: 'Shift aktif · {{name}}',
+                name: openShift.userName,
+              })
+            : t('cashier.shiftClosed', {
+                defaultValue: 'Shift belum dibuka · ketuk untuk buka',
+              })}
+        </span>
+      </Link>
 
       {/* Search */}
       <div className="flex gap-2 mb-3 px-1">

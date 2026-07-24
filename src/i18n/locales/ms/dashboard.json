@@ -5,9 +5,15 @@
   "stats": {
     "salesToday": "Jualan Hari Ini",
     "transactions": "{{count}} transaksi",
-    "profitToday": "Untung Hari Ini",
+    "profitToday": "Untung Kasar Hari Ini",
     "expensesToday": "Perbelanjaan Hari Ini",
-    "expenseNotes": "{{count}} catatan"
+    "expenseNotes": "{{count}} catatan",
+    "netProfitToday": "Untung Bersih Hari Ini",
+    "netProfitHint": "Untung kasar − perbelanjaan"
+  },
+  "dayClose": {
+    "title": "Tutup kedai / laporan harian",
+    "description": "Cetak closing, lihat untung bersih & kaedah bayaran"
   },
   "openBills": {
     "title": "Bil Terbuka",
