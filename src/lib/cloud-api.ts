@@ -10,10 +10,22 @@
 
 import { BRAND } from './brand';
 
-const BASE_URL = (
-  import.meta.env.VITE_AUTH_API_URL ||
-  (import.meta.env.DEV ? 'http://127.0.0.1:8787' : BRAND.apiOrigin)
-).replace(/\/$/, '');
+/** Resolve API base: never bake localhost into production builds. */
+function resolveCloudApiBase(): string {
+  const fromEnv = String(import.meta.env.VITE_AUTH_API_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+  const isLocal = (u: string) => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(u);
+
+  if (import.meta.env.DEV) {
+    return fromEnv || 'http://127.0.0.1:8787';
+  }
+  // Production (vite build): ignore localhost override from local .env
+  if (fromEnv && !isLocal(fromEnv)) return fromEnv;
+  return BRAND.apiOrigin;
+}
+
+const BASE_URL = resolveCloudApiBase();
 
 let tokenGetter: () => string | null = () => null;
 export function setCloudTokenGetter(fn: () => string | null) {
