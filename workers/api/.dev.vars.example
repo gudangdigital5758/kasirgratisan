@@ -11,9 +11,13 @@ RESEND_API_KEY=re_...
 RESEND_FROM=Profitku <noreply@profitku.my.id>
 FONNTE_TOKEN=
 
-# --- Ops ---
-# midtrans | xendit | mock
+# --- Ops / payment ---
+# mock | midtrans
 PAYMENT_PROVIDER=mock
+# Sandbox: SB-Mid-server-...  Production: Mid-server-...
+MIDTRANS_SERVER_KEY=
+# false = sandbox API, true = production API
+MIDTRANS_IS_PRODUCTION=false
 WEBHOOK_SECRET=generate-long-random-string
 
 # --- Admin ops (dashboard.profitku.my.id / localhost:5174) ---

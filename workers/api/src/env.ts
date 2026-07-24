@@ -17,8 +17,12 @@ export interface Env {
   FONNTE_TOKEN?: string;
   /** midtrans | xendit | mock */
   PAYMENT_PROVIDER?: string;
+  /** Midtrans Server Key (SB-... sandbox / Mid-server-... production) */
   MIDTRANS_SERVER_KEY?: string;
+  /** true | 1 | production → pakai API production Midtrans */
   MIDTRANS_IS_PRODUCTION?: string;
+  /** Client Key opsional (jika nanti embed snap.js di client) */
+  MIDTRANS_CLIENT_KEY?: string;
   XENDIT_SECRET_KEY?: string;
   WEBHOOK_SECRET?: string;
   /** OneSignal — App ID (boleh sama dengan VITE_ONESIGNAL_APP_ID di client) */

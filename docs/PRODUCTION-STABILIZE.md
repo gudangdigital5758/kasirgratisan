@@ -162,9 +162,19 @@ npm run admin:deploy
 
 ---
 
-## 6. Yang sengaja ditunda
+## 6. Payment Midtrans
 
-- Midtrans/Xendit production (masih mock OK)
+Lihat [MIDTRANS.md](./MIDTRANS.md).
+
+- [ ] Akun Midtrans sandbox + Server Key  
+- [ ] Secrets: `PAYMENT_PROVIDER=midtrans`, `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION=false`  
+- [ ] Webhook URL: `https://api.profitku.my.id/webhook/payment`  
+- [ ] Tes bayar sandbox → sub aktif  
+- [ ] Production keys + `MIDTRANS_IS_PRODUCTION=true`  
+
+## 7. Yang sengaja ditunda
+
+- Xendit (tidak dipakai fase ini)
 - Fonnte jika belum ada token
 - Play Store listing
 - Sync multi-device penuh

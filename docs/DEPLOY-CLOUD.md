@@ -103,9 +103,12 @@ npx wrangler secret put FONNTE_TOKEN
 npx wrangler secret put WEBHOOK_SECRET
 # random panjang, mis. openssl rand -hex 32
 
-# opsional
+# payment — mulai mock, lalu midtrans (lihat docs/MIDTRANS.md)
 npx wrangler secret put PAYMENT_PROVIDER
-# value: mock | midtrans | xendit
+# value: mock | midtrans
+npx wrangler secret put MIDTRANS_SERVER_KEY
+npx wrangler secret put MIDTRANS_IS_PRODUCTION
+# false = sandbox, true = production
 
 # OneSignal push (server) — App ID sama dengan VITE_ONESIGNAL_APP_ID
 npx wrangler secret put ONESIGNAL_APP_ID

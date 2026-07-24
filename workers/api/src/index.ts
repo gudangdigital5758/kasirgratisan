@@ -36,6 +36,16 @@ import { exchangeGoogleIdToken } from './lib/auth-google';
 import { CLOUD_PLAN_PRICE_IDR } from './data/seed-plans';
 import adminRoutes from './routes/admin';
 import { writeEvent } from './lib/admin';
+import {
+  createSnapTransaction,
+  getTransactionStatus,
+  isFailureStatus,
+  isPaidStatus,
+  isPendingStatus,
+  midtransConfigured,
+  verifyNotificationSignature,
+} from './lib/midtrans';
+import { fulfillCompletedPayment } from './lib/payments';
 
 type Variables = {
   userId: string | null;
@@ -126,6 +136,8 @@ app.get('/health', (c) =>
     resend: Boolean(c.env.RESEND_API_KEY),
     fonnte: Boolean(c.env.FONNTE_TOKEN),
     onesignal: Boolean(c.env.ONESIGNAL_APP_ID && c.env.ONESIGNAL_REST_API_KEY),
+    paymentProvider: (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase(),
+    midtrans: midtransConfigured(c.env),
     time: new Date().toISOString(),
   }),
 );
@@ -299,7 +311,7 @@ app.get('/api/user/profile', async (c) => {
   return c.json(profile);
 });
 
-// --- Checkout (mock / Midtrans-ready skeleton) ---
+// --- Checkout (mock | midtrans Snap) ---
 app.post('/api/payments/checkout', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
@@ -312,7 +324,6 @@ app.post('/api/payments/checkout', async (c) => {
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
 
   const plan = SEED_PLANS.find((p) => p.id === body.planId);
-  // Try Supabase for price if available
   let amount = plan?.price ?? 0;
   let planName = plan?.name ?? body.planId;
 
@@ -330,10 +341,8 @@ app.post('/api/payments/checkout', async (c) => {
   }
 
   const paymentId = crypto.randomUUID();
-  const provider = c.env.PAYMENT_PROVIDER || 'mock';
+  const provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
 
-  // Mock payment link — ganti dengan Midtrans Snap / Xendit Invoice
-  // redirectURL may be origin or full hub path; always land on /settings/cloud
   let cloudReturn = 'https://profitku.my.id/settings/cloud';
   try {
     const raw = (body.redirectURL || c.env.APP_ORIGIN || 'https://profitku.my.id').trim();
@@ -342,10 +351,38 @@ app.post('/api/payments/checkout', async (c) => {
   } catch {
     /* keep default */
   }
-  const paymentLink =
-    provider === 'mock'
-      ? `${cloudReturn}?mock_pay=${paymentId}&plan=${body.planId}`
-      : `${cloudReturn}?pending=${paymentId}`;
+  const finishUrl = `${cloudReturn}?pending=${paymentId}`;
+
+  let paymentLink = `${cloudReturn}?pending=${paymentId}`;
+  let snapToken: string | null = null;
+
+  if (provider === 'mock') {
+    paymentLink = `${cloudReturn}?mock_pay=${paymentId}&plan=${body.planId}`;
+  } else if (provider === 'midtrans') {
+    if (!midtransConfigured(c.env)) {
+      return c.json({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }, 503);
+    }
+    try {
+      const snap = await createSnapTransaction(c.env, {
+        orderId: paymentId,
+        amount,
+        planName,
+        customerEmail: c.get('userEmail'),
+        customerName: c.get('userEmail')?.split('@')[0] || 'Profitku',
+        finishUrl,
+      });
+      paymentLink = snap.redirectUrl;
+      snapToken = snap.token;
+    } catch (err) {
+      console.error('[checkout midtrans]', err);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal membuat transaksi Midtrans' },
+        502,
+      );
+    }
+  } else if (provider === 'xendit') {
+    return c.json({ error: 'Xendit belum diaktifkan — set PAYMENT_PROVIDER=midtrans|mock' }, 501);
+  }
 
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -357,7 +394,13 @@ app.post('/api/payments/checkout', async (c) => {
         status: 'PENDING',
         provider,
         payment_link: paymentLink,
-        raw: { mobile: body.mobile ?? null, redirectURL: body.redirectURL ?? null },
+        provider_ref: paymentId,
+        raw: {
+          mobile: body.mobile ?? null,
+          redirectURL: body.redirectURL ?? null,
+          snapToken,
+          finishUrl,
+        },
       });
     }
   } catch (err) {
@@ -367,11 +410,13 @@ app.post('/api/payments/checkout', async (c) => {
   return c.json({
     message: `Checkout ${planName}`,
     paymentLink,
+    snapToken,
     transaction: {
       id: paymentId,
       status: 'PENDING',
       planId: body.planId,
       amount,
+      provider,
     },
   });
 });
@@ -380,102 +425,105 @@ app.post('/api/payments/verify/:id', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
   const id = c.req.param('id');
+  const provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
 
-  // Mock: anggap completed + aktifkan langganan 30 hari jika payment ada
   try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      type Pay = { id: string; plan_id: string; status: string; user_id: string; amount: number };
-      const pays = await sbGet<Pay[]>(c.env, `payments?id=eq.${id}&user_id=eq.${userId}&select=*`);
-      const pay = pays[0];
-      if (!pay) return c.json({ error: 'Transaksi tidak ditemukan' }, 404);
-
-      if (pay.status !== 'COMPLETED') {
-        await sbPatch(c.env, `payments?id=eq.${id}`, { status: 'COMPLETED' });
-        const start = new Date();
-        const end = new Date(start);
-        end.setDate(end.getDate() + 30);
-        const startIso = start.toISOString();
-        const endIso = end.toISOString();
-        await sbPost(c.env, 'subscriptions', {
-          user_id: userId,
-          plan_id: pay.plan_id,
-          status: 'active',
-          current_period_start: startIso,
-          current_period_end: endIso,
-          provider: c.env.PAYMENT_PROVIDER || 'mock',
-          provider_ref: id,
-        });
-
-        type PayRaw = { raw?: { mobile?: string | null } | null; amount?: number; plan_id?: string };
-        const payFull = pay as PayRaw;
-        type PlanRow = { name: string };
-        let planName = 'Profitku Cloud';
-        try {
-          const plans = await sbGet<PlanRow[]>(c.env, `plans?id=eq.${pay.plan_id}&select=name`);
-          if (plans[0]?.name) planName = plans[0].name;
-        } catch {
-          /* seed name */
-        }
-
-        let phone: string | null = payFull.raw?.mobile ?? null;
-        try {
-          type Prof = { phone: string | null; email: string | null };
-          const profs = await sbGet<Prof[]>(c.env, `profiles?id=eq.${userId}&select=phone,email`);
-          if (!phone && profs[0]?.phone) phone = profs[0].phone;
-        } catch {
-          /* ignore */
-        }
-
-        await writeEvent(c.env, {
-          type: 'payment.verified',
-          message: `Payment completed for plan ${pay.plan_id}`,
-          subjectUserId: String(userId),
-          payload: { paymentId: id, planId: pay.plan_id, amount: pay.amount },
-        });
-
-        await notifySubscriptionActivated(c.env, {
-          userId: String(userId),
-          email: c.get('userEmail'),
-          phone,
-          planName,
-          amount: pay.amount ?? CLOUD_PLAN_PRICE_IDR,
-          periodStart: startIso,
-          periodEnd: endIso,
-          paymentId: id,
-        });
+    if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      // Tanpa DB: mock saja
+      if (provider !== 'mock') {
+        return c.json({ error: 'Database belum dikonfigurasi' }, 503);
       }
-
+      const start = new Date();
+      const end = new Date(start);
+      end.setDate(end.getDate() + 30);
+      await notifySubscriptionActivated(c.env, {
+        userId: String(userId),
+        email: c.get('userEmail'),
+        phone: null,
+        planName: 'Profitku Cloud',
+        amount: CLOUD_PLAN_PRICE_IDR,
+        periodStart: start.toISOString(),
+        periodEnd: end.toISOString(),
+        paymentId: id,
+      });
       return c.json({
-        message: 'Pembayaran terverifikasi',
+        message: 'Pembayaran terverifikasi (mock, no DB)',
         transaction: { id, status: 'COMPLETED' },
       });
     }
+
+    type Pay = { id: string; plan_id: string; status: string; user_id: string; amount: number };
+    const pays = await sbGet<Pay[]>(
+      c.env,
+      `payments?id=eq.${id}&user_id=eq.${userId}&select=id,plan_id,status,user_id,amount`,
+    );
+    const pay = pays[0];
+    if (!pay) return c.json({ error: 'Transaksi tidak ditemukan' }, 404);
+
+    if (pay.status === 'COMPLETED') {
+      return c.json({
+        message: 'Pembayaran sudah aktif',
+        transaction: { id, status: 'COMPLETED' },
+      });
+    }
+
+    if (provider === 'midtrans') {
+      if (!midtransConfigured(c.env)) {
+        return c.json({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }, 503);
+      }
+      const st = await getTransactionStatus(c.env, id);
+      if (isPaidStatus(st.transactionStatus, st.fraudStatus)) {
+        await fulfillCompletedPayment(c.env, {
+          paymentId: id,
+          userId: String(userId),
+          userEmail: c.get('userEmail'),
+          provider: 'midtrans',
+          providerRef: st.orderId,
+          midtransRaw: st.raw,
+        });
+        return c.json({
+          message: 'Pembayaran terverifikasi',
+          transaction: { id, status: 'COMPLETED' },
+          midtransStatus: st.transactionStatus,
+        });
+      }
+      if (isFailureStatus(st.transactionStatus)) {
+        await sbPatch(c.env, `payments?id=eq.${id}`, {
+          status: 'FAILED',
+          raw: { midtrans: st.raw },
+        });
+        return c.json({
+          message: 'Pembayaran gagal / dibatalkan',
+          transaction: { id, status: 'FAILED' },
+          midtransStatus: st.transactionStatus,
+        });
+      }
+      return c.json({
+        message: 'Menunggu pembayaran',
+        transaction: { id, status: 'PENDING' },
+        midtransStatus: st.transactionStatus,
+      });
+    }
+
+    // mock: auto complete
+    await fulfillCompletedPayment(c.env, {
+      paymentId: id,
+      userId: String(userId),
+      userEmail: c.get('userEmail'),
+      provider: 'mock',
+      providerRef: id,
+    });
+    return c.json({
+      message: 'Pembayaran terverifikasi',
+      transaction: { id, status: 'COMPLETED' },
+    });
   } catch (err) {
     console.warn('[verify]', err);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'Verifikasi gagal' },
+      500,
+    );
   }
-
-  // Tanpa Supabase: mock success + kirim notif best-effort
-  const start = new Date();
-  const end = new Date(start);
-  end.setDate(end.getDate() + 30);
-  const email = c.get('userEmail');
-  if (email || true) {
-    await notifySubscriptionActivated(c.env, {
-      userId: String(userId),
-      email,
-      phone: null,
-      planName: 'Profitku Cloud',
-      amount: CLOUD_PLAN_PRICE_IDR,
-      periodStart: start.toISOString(),
-      periodEnd: end.toISOString(),
-      paymentId: id,
-    });
-  }
-
-  return c.json({
-    message: 'Pembayaran terverifikasi (mock)',
-    transaction: { id, status: 'COMPLETED' },
-  });
 });
 
 app.get('/api/payments/history', async (c) => {
@@ -860,17 +908,94 @@ app.post('/webhook/user-type', async (c) => {
   return c.json({ ok: true });
 });
 
-// Payment provider webhook (Midtrans/Xendit) — skeleton
+/**
+ * Midtrans payment notification (HTTP Notification).
+ * Dashboard: Settings → Configuration → Payment Notification URL
+ *   https://api.profitku.my.id/webhook/payment
+ *
+ * Tidak memakai WEBHOOK_SECRET header — verifikasi via signature_key SHA512.
+ */
 app.post('/webhook/payment', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const orderId = String(body.order_id || '');
+  const statusCode = String(body.status_code || '');
+  const grossAmount = String(body.gross_amount || '');
+  const signatureKey = String(body.signature_key || '');
+  const transactionStatus = String(body.transaction_status || '');
+  const fraudStatus = body.fraud_status ? String(body.fraud_status) : undefined;
+
+  console.log('[payment-webhook]', orderId, transactionStatus, fraudStatus);
+
+  if (!orderId) return c.json({ error: 'order_id missing' }, 400);
+
+  const provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+  if (provider === 'midtrans' || signatureKey) {
+    if (!midtransConfigured(c.env)) {
+      console.warn('[payment-webhook] midtrans not configured');
+      return c.json({ error: 'midtrans_not_configured' }, 503);
+    }
+    const ok = await verifyNotificationSignature(c.env, {
+      orderId,
+      statusCode,
+      grossAmount,
+      signatureKey,
+    });
+    if (!ok) {
+      console.warn('[payment-webhook] invalid signature', orderId);
+      return c.json({ error: 'invalid signature' }, 401);
+    }
+
+    try {
+      type Pay = { id: string; user_id: string; status: string };
+      const pays = await sbGet<Pay[]>(
+        c.env,
+        `payments?id=eq.${orderId}&select=id,user_id,status&limit=1`,
+      );
+      const pay = pays[0];
+      if (!pay) {
+        console.warn('[payment-webhook] payment not found', orderId);
+        return c.json({ ok: true, skipped: 'unknown_order' });
+      }
+
+      if (isPaidStatus(transactionStatus, fraudStatus)) {
+        await fulfillCompletedPayment(c.env, {
+          paymentId: orderId,
+          userId: pay.user_id,
+          provider: 'midtrans',
+          providerRef: String(body.transaction_id || orderId),
+          midtransRaw: body,
+        });
+        return c.json({ ok: true, status: 'COMPLETED' });
+      }
+
+      if (isFailureStatus(transactionStatus)) {
+        if (pay.status !== 'COMPLETED') {
+          await sbPatch(c.env, `payments?id=eq.${orderId}`, {
+            status: 'FAILED',
+            raw: { midtrans: body },
+          });
+        }
+        return c.json({ ok: true, status: 'FAILED' });
+      }
+
+      if (isPendingStatus(transactionStatus)) {
+        return c.json({ ok: true, status: 'PENDING' });
+      }
+
+      return c.json({ ok: true, status: transactionStatus });
+    } catch (err) {
+      console.error('[payment-webhook] fulfill', err);
+      return c.json({ error: 'processing_failed' }, 500);
+    }
+  }
+
+  // Non-midtrans: optional shared secret
   const secret = c.env.WEBHOOK_SECRET;
   if (secret) {
     const hdr = c.req.header('x-webhook-secret') || c.req.header('x-callback-token');
     if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
   }
-  const body = await c.req.json().catch(() => ({}));
-  console.log('[payment-webhook]', body);
-  // TODO: map status → update payments + subscriptions + notify
-  return c.json({ ok: true });
+  return c.json({ ok: true, ignored: true });
 });
 
 // Test notify (lindungi di production)
