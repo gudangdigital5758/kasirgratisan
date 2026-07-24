@@ -5,7 +5,7 @@
  */
 
 import type { Env } from '../env';
-import { sendEmail, sendWhatsApp } from './notify';
+import { sendEmail, sendPush, sendWhatsApp } from './notify';
 import { sbGet, sbPost } from './supabase';
 
 const APP = 'https://profitku.my.id';
@@ -30,7 +30,7 @@ export async function logNotification(
   env: Env,
   opts: {
     userId?: string | null;
-    channel: 'email' | 'whatsapp';
+    channel: 'email' | 'whatsapp' | 'push';
     recipient: string;
     template: string;
     status: string;
@@ -123,6 +123,26 @@ export async function notifySubscriptionActivated(
       payload: { paymentId: opts.paymentId },
     });
   }
+
+  // Push (OneSignal) — External ID = Supabase user id
+  if (opts.userId) {
+    const res = await sendPush(env, {
+      externalUserId: opts.userId,
+      title: 'Profitku Cloud aktif',
+      body: `${opts.planName} aktif s/d ${formatDateId(opts.periodEnd)}. Backup cloud siap dipakai.`,
+      url: `${APP}/settings/cloud`,
+      data: { type: 'subscription_activated', paymentId: opts.paymentId },
+    });
+    await logNotification(env, {
+      userId: opts.userId,
+      channel: 'push',
+      recipient: opts.userId,
+      template: 'push_subscription_activated',
+      status: res.ok ? 'sent' : `failed:${res.error}`,
+      providerRef: res.id,
+      payload: { paymentId: opts.paymentId },
+    });
+  }
 }
 
 export async function notifyDunning(
@@ -186,6 +206,24 @@ export async function notifyDunning(
       recipient: opts.phone,
       template: templateWa,
       status: res.ok ? 'sent' : `failed:${res.error}`,
+    });
+  }
+
+  if (opts.userId) {
+    const res = await sendPush(env, {
+      externalUserId: opts.userId,
+      title: opts.daysLeft === 3 ? 'Langganan berakhir 3 hari lagi' : 'Langganan berakhir besok',
+      body: `${opts.planName} aktif s/d ${endLabel}. Perpanjang agar backup cloud tetap aman.`,
+      url: `${APP}/settings/cloud`,
+      data: { type: 'dunning', daysLeft: String(opts.daysLeft) },
+    });
+    await logNotification(env, {
+      userId: opts.userId,
+      channel: 'push',
+      recipient: opts.userId,
+      template: opts.daysLeft === 3 ? 'push_dunning_h3' : 'push_dunning_h1',
+      status: res.ok ? 'sent' : `failed:${res.error}`,
+      providerRef: res.id,
     });
   }
 }

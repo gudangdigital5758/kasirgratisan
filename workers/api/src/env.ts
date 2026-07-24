@@ -21,6 +21,10 @@ export interface Env {
   MIDTRANS_IS_PRODUCTION?: string;
   XENDIT_SECRET_KEY?: string;
   WEBHOOK_SECRET?: string;
+  /** OneSignal — App ID (boleh sama dengan VITE_ONESIGNAL_APP_ID di client) */
+  ONESIGNAL_APP_ID?: string;
+  /** OneSignal REST API Key (server only — jangan expose ke VITE_*) */
+  ONESIGNAL_REST_API_KEY?: string;
   /** R2 binding (opsional) */
   BACKUP_BUCKET?: R2Bucket;
 }

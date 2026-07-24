@@ -1,7 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle } from 'lucide-react';
+import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle, Bell } from 'lucide-react';
+import {
+  isPushSupported,
+  getPermissionState,
+  requestPushPermission,
+  checkPushPermissionNative,
+} from '@/lib/onesignal';
 
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { FEATURES, getUnseenFeatures } from '@/lib/whats-new';
@@ -63,6 +69,32 @@ export default function Pengaturan() {
 
   // Analytics opt-out (default: tracking on)
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
+
+  // Push notification status (OneSignal)
+  const [pushState, setPushState] = useState<'unsupported' | 'off' | 'default' | 'granted' | 'denied'>('unsupported');
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      if (!isPushSupported()) {
+        if (!cancelled) setPushState('unsupported');
+        return;
+      }
+      if (isNative) {
+        const ok = await checkPushPermissionNative();
+        if (!cancelled) setPushState(ok ? 'granted' : 'default');
+        return;
+      }
+      const p = getPermissionState();
+      if (!cancelled) {
+        if (p === 'unsupported') setPushState('unsupported');
+        else setPushState(p);
+      }
+    };
+    void refresh();
+    return () => {
+      cancelled = true;
+    };
+  }, [isNative, cloudLoggedIn]);
 
   // Cashier layout mode settings (default: 'grid')
   const [cashierLayoutMode, setCashierLayoutModeState] = useState<'grid' | 'rows'>(() => {
@@ -811,6 +843,55 @@ export default function Pengaturan() {
           </p>
         </CardContent>
       </Card>
+      )}
+
+      {/* Notifikasi push (OneSignal) */}
+      {isPushSupported() && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <Bell className="w-4 h-4" /> {t('pushSettings.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {t('pushSettings.description')}
+            </p>
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
+              <div>
+                <p className="text-sm font-medium">{t('pushSettings.statusLabel')}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {pushState === 'granted' && t('pushSettings.status.granted')}
+                  {pushState === 'denied' && t('pushSettings.status.denied')}
+                  {pushState === 'default' && t('pushSettings.status.default')}
+                  {pushState === 'off' && t('pushSettings.status.off')}
+                </p>
+              </div>
+              {(pushState === 'default' || pushState === 'denied') && (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs shrink-0"
+                  onClick={() => {
+                    if (pushState === 'denied' && !isNative) {
+                      toast.info(t('pushSettings.openBrowserSettings'));
+                      return;
+                    }
+                    requestPushPermission();
+                    setTimeout(() => {
+                      if (!isNative) setPushState(getPermissionState() === 'granted' ? 'granted' : getPermissionState() as 'default' | 'denied');
+                      else void checkPushPermissionNative().then((ok) => setPushState(ok ? 'granted' : 'default'));
+                    }, 800);
+                  }}
+                >
+                  {t('pushSettings.enable')}
+                </Button>
+              )}
+            </div>
+            {!cloudLoggedIn && (
+              <p className="text-[10px] text-muted-foreground">{t('pushSettings.needCloudLogin')}</p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Privasi & Analitik */}

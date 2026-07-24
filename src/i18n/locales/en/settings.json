@@ -1381,6 +1381,20 @@
     "later": "Maybe Later",
     "hint": "You can turn it off anytime from browser settings."
   },
+  "pushSettings": {
+    "title": "Push notifications",
+    "description": "Get Cloud subscription reminders and important updates via phone/browser notifications (OneSignal).",
+    "statusLabel": "Permission status",
+    "status": {
+      "granted": "On — device can receive push",
+      "denied": "Blocked — enable in browser/phone settings",
+      "default": "Not allowed yet",
+      "off": "Off"
+    },
+    "enable": "Enable",
+    "openBrowserSettings": "Permission was denied. Open site settings in your browser and allow Notifications.",
+    "needCloudLogin": "Sign in with Google (Profitku Cloud) so notifications link to your account."
+  },
   "customerPicker": {
     "placeholder": "Customer name",
     "addLabel": "Add customer \"{{name}}\"",

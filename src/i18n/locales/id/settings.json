@@ -1380,6 +1380,20 @@
     "later": "Nanti saja",
     "hint": "Kamu bisa mematikannya kapan saja dari pengaturan browser."
   },
+  "pushSettings": {
+    "title": "Notifikasi push",
+    "description": "Terima pengingat langganan Cloud & info penting lewat notifikasi HP/browser (OneSignal).",
+    "statusLabel": "Status izin",
+    "status": {
+      "granted": "Aktif — perangkat siap terima push",
+      "denied": "Ditolak — aktifkan di pengaturan browser/HP",
+      "default": "Belum diizinkan",
+      "off": "Tidak aktif"
+    },
+    "enable": "Aktifkan",
+    "openBrowserSettings": "Izin sudah ditolak. Buka pengaturan situs di browser, lalu izinkan Notifikasi.",
+    "needCloudLogin": "Login Google (Profitku Cloud) agar notifikasi terhubung ke akun Anda."
+  },
   "customerPicker": {
     "placeholder": "Nama pelanggan",
     "addLabel": "Tambah pelanggan \"{{name}}\"",

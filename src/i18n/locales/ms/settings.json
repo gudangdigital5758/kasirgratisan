@@ -933,6 +933,20 @@
     "later": "Nanti",
     "hint": "Anda boleh mematikannya bila-bila masa dari tetapan pelayar."
   },
+  "pushSettings": {
+    "title": "Notifikasi push",
+    "description": "Terima peringatan langganan Cloud & maklumat penting melalui notifikasi telefon/pelayar (OneSignal).",
+    "statusLabel": "Status kebenaran",
+    "status": {
+      "granted": "Aktif — peranti sedia terima push",
+      "denied": "Ditolak — aktifkan di tetapan pelayar/telefon",
+      "default": "Belum dibenarkan",
+      "off": "Tidak aktif"
+    },
+    "enable": "Aktifkan",
+    "openBrowserSettings": "Kebenaran ditolak. Buka tetapan laman di pelayar, kemudian benarkan Notifikasi.",
+    "needCloudLogin": "Log masuk Google (Profitku Cloud) supaya notifikasi dipautkan ke akaun anda."
+  },
   "customerPicker": {
     "placeholder": "Nama pelanggan",
     "addLabel": "Tambah pelanggan \"{{name}}\"",

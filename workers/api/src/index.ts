@@ -18,7 +18,7 @@ import { cors } from 'hono/cors';
 import type { Env } from './env';
 import { SEED_PLANS } from './data/seed-plans';
 import { getUserFromJwt, sbGet, sbPost, sbPatch, SupabaseError } from './lib/supabase';
-import { sendEmail, sendWhatsApp } from './lib/notify';
+import { sendEmail, sendPush, sendWhatsApp } from './lib/notify';
 import {
   deleteBackupMeta,
   deleteBackupObject,
@@ -125,6 +125,7 @@ app.get('/health', (c) =>
     r2: r2Configured(c.env),
     resend: Boolean(c.env.RESEND_API_KEY),
     fonnte: Boolean(c.env.FONNTE_TOKEN),
+    onesignal: Boolean(c.env.ONESIGNAL_APP_ID && c.env.ONESIGNAL_REST_API_KEY),
     time: new Date().toISOString(),
   }),
 );
@@ -877,7 +878,12 @@ app.post('/api/dev/notify-test', async (c) => {
   if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
     return c.json({ error: 'Hanya tersedia di mode mock' }, 403);
   }
-  const body = (await c.req.json().catch(() => ({}))) as { email?: string; phone?: string };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    email?: string;
+    phone?: string;
+    /** Supabase user id — External ID OneSignal */
+    userId?: string;
+  };
   const results: Record<string, unknown> = {};
   if (body.email) {
     results.email = await sendEmail(c.env, {
@@ -890,6 +896,15 @@ app.post('/api/dev/notify-test', async (c) => {
     results.wa = await sendWhatsApp(c.env, {
       target: body.phone,
       message: 'Tes notifikasi WhatsApp Profitku (Fonnte).',
+    });
+  }
+  if (body.userId) {
+    results.push = await sendPush(c.env, {
+      externalUserId: body.userId,
+      title: 'Tes Profitku',
+      body: 'Push OneSignal OK — notifikasi sampai di perangkat.',
+      url: 'https://profitku.my.id/settings/cloud',
+      data: { type: 'dev_test' },
     });
   }
   return c.json({ results });
