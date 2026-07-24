@@ -80,6 +80,63 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+
+  vouchers: () => request<{ vouchers: VoucherRow[] }>('/admin/api/vouchers'),
+
+  voucher: (id: string) =>
+    request<{
+      voucher: VoucherRow;
+      redemptions: Array<Record<string, unknown>>;
+    }>(`/admin/api/vouchers/${id}`),
+
+  createVoucher: (body: {
+    code: string;
+    type: 'percent' | 'free_days' | 'lifetime';
+    value: number;
+    planId?: string | null;
+    maxRedemptions?: number | null;
+    maxPerUser?: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+    isActive?: boolean;
+    note?: string | null;
+  }) =>
+    request<{ ok: boolean; voucher: VoucherRow }>('/admin/api/vouchers', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  patchVoucher: (
+    id: string,
+    body: {
+      isActive?: boolean;
+      maxRedemptions?: number | null;
+      maxPerUser?: number;
+      startsAt?: string | null;
+      endsAt?: string | null;
+      note?: string | null;
+    },
+  ) =>
+    request<{ ok: boolean; voucher: VoucherRow }>(`/admin/api/vouchers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+};
+
+export type VoucherRow = {
+  id: string;
+  code: string;
+  type: string;
+  value: number;
+  plan_id: string | null;
+  max_redemptions: number | null;
+  max_per_user: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  note: string | null;
+  created_at: string;
+  redemptionCount?: number;
 };
 
 export type MemberRow = {

@@ -40,7 +40,17 @@ import LockedPage from '@/components/LockedPage';
 import { isNativePlatform } from '@/lib/printer';
 import { nativeGoogleSignIn } from '@/lib/google-auth';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
-import { fetchPlans, checkoutPlan, verifyPayment, fetchStores, uploadBackup, type Plan, type CloudStore } from '@/lib/cloud-api';
+import {
+  fetchPlans,
+  checkoutPlan,
+  verifyPayment,
+  fetchStores,
+  uploadBackup,
+  previewVoucher,
+  type Plan,
+  type CloudStore,
+  type VoucherPreviewResult,
+} from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { BRAND } from '@/lib/brand';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
@@ -74,6 +84,9 @@ export default function CloudHub() {
   const [loadingStores, setLoadingStores] = useState(false);
   const [hasLoadedStores, setHasLoadedStores] = useState(false);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
+  const [voucherInput, setVoucherInput] = useState('');
+  const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewResult | null>(null);
+  const [voucherBusy, setVoucherBusy] = useState(false);
 
   const storeCount = hasLoadedStores ? stores.length : null;
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
@@ -186,16 +199,58 @@ export default function CloudHub() {
     }
   };
 
+  const handleApplyVoucher = async () => {
+    const code = voucherInput.trim();
+    if (!code) {
+      toast.error(t('cloudBackup.voucher.enterCode'));
+      return;
+    }
+    const planId = cloudPlans[0]?.id || BRAND.cloudPlanId;
+    setVoucherBusy(true);
+    try {
+      const result = await previewVoucher(code, planId);
+      setVoucherPreview(result);
+      if (!result.valid) {
+        toast.error(result.error || t('cloudBackup.voucher.invalid'));
+      } else {
+        toast.success(result.message || t('cloudBackup.voucher.applied'));
+      }
+    } catch (err) {
+      setVoucherPreview(null);
+      toast.error(err instanceof Error ? err.message : t('cloudBackup.voucher.invalid'));
+    } finally {
+      setVoucherBusy(false);
+    }
+  };
+
+  const clearVoucher = () => {
+    setVoucherInput('');
+    setVoucherPreview(null);
+  };
+
   const handleSubscribe = async (planId: string) => {
     setBusy(`checkout:${planId}`);
     try {
+      const voucherCode =
+        voucherPreview?.valid && voucherPreview.code
+          ? voucherPreview.code
+          : voucherInput.trim() || undefined;
       // Play Billing ditunda — selalu checkout web (Midtrans/Xendit/mock via API).
+      // Amount 0 (voucher gratis/lifetime) di-fulfill server tanpa Snap.
       const result = await checkoutPlan(planId, {
         redirectURL: `${window.location.origin}${CLOUD_ROUTES.hub}`,
+        voucherCode,
       });
+      if (result.completed || result.transaction.status === 'COMPLETED') {
+        await refreshProfile();
+        clearVoucher();
+        setShowPlanPicker(false);
+        toast.success(result.message || t('cloudBackup.toast.paymentSuccess'));
+        return;
+      }
       setPaymentLink(result.paymentLink);
       setPendingTxId(result.transaction.id);
-      window.open(result.paymentLink, '_blank');
+      if (result.paymentLink) window.open(result.paymentLink, '_blank');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.checkoutFailed'));
     } finally {
@@ -229,8 +284,10 @@ export default function CloudHub() {
   };
 
   const subscription = profile?.syncSubscription ?? profile?.subscription ?? null;
+  const isLifetime = !!subscription?.isLifetime;
   const subEndDate = subscription?.endDate ? new Date(subscription.endDate) : null;
-  const subEndValid = subEndDate && !Number.isNaN(subEndDate.getTime()) ? subEndDate : null;
+  const subEndValid =
+    !isLifetime && subEndDate && !Number.isNaN(subEndDate.getTime()) ? subEndDate : null;
   const isExpired =
     isLoggedIn &&
     !isSyncSubscribed &&
@@ -260,11 +317,13 @@ export default function CloudHub() {
             stripClass: 'bg-success/10 text-success ring-success/20',
             dotClass: 'bg-success',
             label: t('cloud.hub.status.active'),
-            detail: subEndValid
-              ? t('cloud.hub.status.activeUntil', {
-                  date: format(subEndValid, 'd MMM yyyy', { locale: dateLocale }),
-                })
-              : t('cloud.hub.status.activeNoDate'),
+            detail: isLifetime
+              ? t('cloud.hub.status.lifetime')
+              : subEndValid
+                ? t('cloud.hub.status.activeUntil', {
+                    date: format(subEndValid, 'd MMM yyyy', { locale: dateLocale }),
+                  })
+                : t('cloud.hub.status.activeNoDate'),
           }
         : isExpired
           ? {
@@ -562,6 +621,54 @@ export default function CloudHub() {
                 </Card>
               )}
 
+              {/* Voucher promo — berlaku untuk langganan & perpanjang */}
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4 space-y-2.5">
+                  <p className="text-sm font-semibold">{t('cloudBackup.voucher.title')}</p>
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    {t('cloudBackup.voucher.hint')}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={voucherInput}
+                      onChange={(e) => {
+                        setVoucherInput(e.target.value.toUpperCase());
+                        if (voucherPreview) setVoucherPreview(null);
+                      }}
+                      placeholder={t('cloudBackup.voucher.placeholder')}
+                      className="flex-1 h-10 rounded-xl border border-input bg-background px-3 text-sm font-mono tracking-wide uppercase"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 shrink-0"
+                      disabled={voucherBusy || !voucherInput.trim()}
+                      onClick={() => void handleApplyVoucher()}
+                    >
+                      {voucherBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cloudBackup.voucher.apply')}
+                    </Button>
+                  </div>
+                  {voucherPreview?.valid && (
+                    <div className="rounded-lg bg-success/10 text-success text-xs px-3 py-2 flex items-start justify-between gap-2">
+                      <span className="leading-snug">{voucherPreview.message}</span>
+                      <button
+                        type="button"
+                        className="text-[10px] underline shrink-0 opacity-80"
+                        onClick={clearVoucher}
+                      >
+                        {t('cloudBackup.voucher.clear')}
+                      </button>
+                    </div>
+                  )}
+                  {voucherPreview && !voucherPreview.valid && voucherPreview.error && (
+                    <p className="text-[11px] text-destructive">{voucherPreview.error}</p>
+                  )}
+                </CardContent>
+              </Card>
+
               <SubscriptionSection
                 title={t('cloudBackup.subscription.singleTitle', { defaultValue: 'Profitku Cloud' })}
                 icon={<RefreshCw className="w-4 h-4" />}
@@ -575,6 +682,7 @@ export default function CloudHub() {
                 onSubscribe={handleSubscribe}
                 backupSizeBytes={backupSizeBytes}
                 storageUsage={profile?.storageUsage ?? null}
+                voucherPreview={voucherPreview?.valid ? voucherPreview : null}
               />
 
 
@@ -692,11 +800,13 @@ interface SubscriptionSectionProps {
   onSubscribe: (planId: string) => void;
   backupSizeBytes: number | null;
   storageUsage: import('@/lib/cloud-api').StorageUsage | null;
+  voucherPreview?: VoucherPreviewResult | null;
 }
 
 function SubscriptionSection({
   title, icon, description, plans, subscription, isActive,
   showPlans, onTogglePlans, busy, onSubscribe, backupSizeBytes, storageUsage,
+  voucherPreview,
 }: SubscriptionSectionProps) {
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? id;
@@ -708,9 +818,23 @@ function SubscriptionSection({
   const usage = storageUsage;
   const usagePct = usage && usage.limitMb > 0 ? Math.min(100, (usage.usedMb / usage.limitMb) * 100) : 0;
   const isStorage = !!usage;
+  const isLifetime = !!subscription?.isLifetime;
 
-  const buttonLabel = (planId: string) =>
-    !isActive ? t('cloudBackup.subscription.subscribe') : planId === currentPlanId ? t('cloudBackup.subscription.renew') : t('cloudBackup.subscription.choose');
+  const displayPrice = (plan: Plan) => {
+    if (voucherPreview?.valid && typeof voucherPreview.amountAfter === 'number') {
+      return voucherPreview.amountAfter;
+    }
+    return plan.price;
+  };
+
+  const buttonLabel = (planId: string) => {
+    if (voucherPreview?.valid && (voucherPreview.isLifetime || voucherPreview.amountAfter === 0)) {
+      return t('cloudBackup.voucher.activateFree');
+    }
+    if (!isActive) return t('cloudBackup.subscription.subscribe');
+    if (planId === currentPlanId) return t('cloudBackup.subscription.renew');
+    return t('cloudBackup.subscription.choose');
+  };
 
   const plansList = (
     <div className="space-y-2">
@@ -723,6 +847,11 @@ function SubscriptionSection({
             : null;
           const isCurrent = isActive && plan.id === currentPlanId;
           const storeLimit = plan.maxStores;
+          const price = displayPrice(plan);
+          const discounted =
+            voucherPreview?.valid &&
+            typeof voucherPreview.amountBefore === 'number' &&
+            price < voucherPreview.amountBefore;
           return (
             <div key={plan.id} className={`flex items-center justify-between rounded-xl border p-3 ${isCurrent ? 'border-primary/40 bg-primary/5' : ''}`}>
               <div>
@@ -731,7 +860,15 @@ function SubscriptionSection({
                   {isCurrent && <span className="ml-1.5 text-[10px] font-medium text-primary">{t('cloudBackup.subscription.activePlan')}</span>}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {rp(plan.price)} {t('cloudBackup.hero.perMonth')}
+                  {discounted ? (
+                    <>
+                      <span className="line-through opacity-60 mr-1">{rp(voucherPreview!.amountBefore!)}</span>
+                      <span className="text-success font-semibold">{rp(price)}</span>
+                    </>
+                  ) : (
+                    <>{rp(price)}</>
+                  )}{' '}
+                  {t('cloudBackup.hero.perMonth')}
                   {isStorage && <> · {plan.storageLimitMb} MB</>}
                   {!isStorage && storeLimit != null && (
                     <> · {storeLimit >= 999999 ? t('cloudBackup.subscription.unlimitedStores') : t('cloudBackup.subscription.store', { count: storeLimit })}</>
@@ -775,12 +912,18 @@ function SubscriptionSection({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-success" />
-                <span className="text-xs font-semibold">{subscription.plan.name}</span>
+                <span className="text-xs font-semibold">{subscription.plan?.name ?? 'Profitku Cloud'}</span>
               </div>
-              {subscription.endDate && (
-                <span className="text-[10px] text-muted-foreground">
-                  {t('cloudBackup.subscription.until', { date: format(new Date(subscription.endDate), 'dd MMM yyyy', { locale: dateLocale }) })}
+              {isLifetime ? (
+                <span className="text-[10px] text-success font-medium">
+                  {t('cloud.hub.status.lifetime')}
                 </span>
+              ) : (
+                subscription.endDate && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {t('cloudBackup.subscription.until', { date: format(new Date(subscription.endDate), 'dd MMM yyyy', { locale: dateLocale }) })}
+                  </span>
+                )
               )}
             </div>
             {usage && (

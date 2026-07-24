@@ -222,6 +222,11 @@ th {
   align-items: center;
 }
 
+.ok {
+  color: var(--ok);
+  font-size: 0.9rem;
+}
+
 .err {
   color: var(--danger);
   font-size: 0.85rem;

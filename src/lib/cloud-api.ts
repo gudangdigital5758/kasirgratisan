@@ -52,6 +52,8 @@ export interface Subscription {
   endDate: string;
   status: string; // ACTIVE | EXPIRED | ...
   hasActiveSubscription: boolean;
+  /** Cloud seumur hidup (voucher lifetime) */
+  isLifetime?: boolean;
 }
 
 export interface CloudUser {
@@ -148,8 +150,32 @@ function fallbackPagination<T>(items: T[], params?: PageParams): Pagination {
 
 export interface CheckoutResult {
   message: string;
-  paymentLink: string;
-  transaction: { id: string; status: string; planId: string; amount: number };
+  paymentLink: string | null;
+  completed?: boolean;
+  snapToken?: string | null;
+  transaction: {
+    id: string;
+    status: string;
+    planId: string;
+    amount: number;
+    provider?: string;
+    voucherCode?: string | null;
+  };
+}
+
+export interface VoucherPreviewResult {
+  valid: boolean;
+  error?: string;
+  code?: string;
+  voucherId?: string;
+  type?: 'percent' | 'free_days' | 'lifetime';
+  value?: number;
+  amountBefore?: number;
+  amountAfter?: number;
+  discountIdr?: number;
+  grantDays?: number | null;
+  isLifetime?: boolean;
+  message?: string;
 }
 
 export interface VerifyResult {
@@ -260,11 +286,25 @@ export async function deleteBackup(id: string): Promise<void> {
   if (!res.ok) await parseError(res);
 }
 
-export async function checkoutPlan(planId: string, opts?: { mobile?: string; redirectURL?: string }): Promise<CheckoutResult> {
+export async function checkoutPlan(
+  planId: string,
+  opts?: { mobile?: string; redirectURL?: string; voucherCode?: string },
+): Promise<CheckoutResult> {
   const res = await fetch(`${BASE_URL}/api/payments/checkout`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ planId, ...opts }),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+/** Preview efek kode voucher (harga dihitung server). */
+export async function previewVoucher(code: string, planId: string): Promise<VoucherPreviewResult> {
+  const res = await fetch(`${BASE_URL}/api/vouchers/preview`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, planId }),
   });
   if (!res.ok) await parseError(res);
   return res.json();

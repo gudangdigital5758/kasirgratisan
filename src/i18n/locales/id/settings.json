@@ -267,6 +267,7 @@
         "active": "Aktif",
         "activeUntil": "Berlaku s/d {{date}}",
         "activeNoDate": "Langganan cloud aktif",
+        "lifetime": "Cloud gratis seumur hidup",
         "inactive": "Belum berlangganan",
         "inactiveDetail": "Satu paket {{price}}/bulan",
         "expired": "Kedaluwarsa",
@@ -410,6 +411,17 @@
       "selectStoreFirst": "Pilih toko terlebih dahulu di menu Kelola Toko.",
       "syncSuccess": "Sinkronisasi ke cloud berhasil",
       "syncFailed": "Gagal sinkronisasi ke cloud"
+    },
+    "voucher": {
+      "title": "Kode promo / voucher",
+      "hint": "Masukkan kode dari admin (diskon %, hari gratis, atau seumur hidup). Harga final dihitung server.",
+      "placeholder": "KODEPROMO",
+      "apply": "Terapkan",
+      "clear": "Hapus",
+      "enterCode": "Isi kode voucher dulu",
+      "invalid": "Kode voucher tidak valid",
+      "applied": "Kode voucher diterapkan",
+      "activateFree": "Aktifkan gratis"
     },
     "paymentDialog": {
       "title": "Menunggu Pembayaran",

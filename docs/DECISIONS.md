@@ -150,6 +150,26 @@ Operasi kasir sensitif (save open bill, cancel, checkout) lewat `src/lib/cashier
 
 ---
 
+## 2026-07-24 — Voucher promo langganan Cloud
+
+**Status:** Accepted
+
+Kode voucher **hanya** untuk langganan Profitku Cloud (`cloud_monthly`), bukan diskon kasir POS.
+
+| Field | Keputusan |
+|-------|-----------|
+| Tipe v1 | `percent` (1–100), `free_days` (hari gratis), `lifetime` (seumur hidup) |
+| Harga | Dihitung di Worker; client tidak dipercaya untuk amount |
+| Amount 0 | Skip Midtrans; fulfill langsung (`provider=voucher`) |
+| User aktif | Boleh klaim → perpanjang dari `max(now, period_end)` |
+| Lifetime | `subscriptions.is_lifetime` + `period_end` far-future; cek akses: lifetime OR period_end > now |
+| Buat kode | Admin dashboard (`/vouchers`) + API `/admin/api/vouchers` |
+| Klaim user | Cloud Hub input kode → preview → checkout dengan `voucherCode` |
+
+**Implications:** Migrasi `20260724180000_vouchers.sql`. Jangan stack multi-kode di satu checkout. Admin boleh disable kode; klaim lifetime yang sudah jalan tetap sampai dicabut manual (v1.1).
+
+---
+
 ## Template decision baru
 
 ```markdown

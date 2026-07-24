@@ -238,6 +238,7 @@
         "active": "Aktif",
         "activeUntil": "Sah hingga {{date}}",
         "activeNoDate": "Langganan cloud aktif",
+        "lifetime": "Cloud percuma seumur hidup",
         "inactive": "Belum melanggan",
         "inactiveDetail": "Satu pakej {{price}}/bulan",
         "expired": "Tamat tempoh",
@@ -381,6 +382,17 @@
       "selectStoreFirst": "Pilih kedai terlebih dahulu di menu Urus Kedai.",
       "syncSuccess": "Penyelarasan ke cloud berjaya",
       "syncFailed": "Gagal menyelaraskan ke cloud"
+    },
+    "voucher": {
+      "title": "Kod promo / baucar",
+      "hint": "Masukkan kod dari admin (diskaun %, hari percuma, atau seumur hidup). Harga akhir dikira di pelayan.",
+      "placeholder": "KODPROMO",
+      "apply": "Guna",
+      "clear": "Buang",
+      "enterCode": "Isi kod baucar dahulu",
+      "invalid": "Kod baucar tidak sah",
+      "applied": "Kod baucar diguna",
+      "activateFree": "Aktifkan percuma"
     },
     "paymentDialog": {
       "title": "Menunggu Pembayaran",

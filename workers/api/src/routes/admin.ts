@@ -51,12 +51,21 @@ admin.get('/overview', async (c) => {
     type Pay = { id: string; amount: number; status: string };
     type Bak = { id: string; file_size: number };
 
-    const [profiles, activeSubs, payments, backups24h] = await Promise.all([
-      sbGet<Prof[]>(c.env, 'profiles?select=id'),
-      sbGet<Sub[]>(
+    let activeSubs: Sub[] = [];
+    try {
+      activeSubs = await sbGet<Sub[]>(
+        c.env,
+        `subscriptions?status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${now})&select=id,status,current_period_end`,
+      );
+    } catch {
+      activeSubs = await sbGet<Sub[]>(
         c.env,
         `subscriptions?status=in.(active,trialing)&current_period_end=gt.${now}&select=id,status,current_period_end`,
-      ),
+      );
+    }
+
+    const [profiles, payments, backups24h] = await Promise.all([
+      sbGet<Prof[]>(c.env, 'profiles?select=id'),
       sbGet<Pay[]>(c.env, 'payments?status=eq.COMPLETED&select=id,amount,status&order=created_at.desc&limit=500'),
       sbGet<Bak[]>(
         c.env,
@@ -115,10 +124,18 @@ admin.get('/members', async (c) => {
       current_period_end: string;
       plan_id: string;
     };
-    const subs = await sbGet<Sub[]>(
-      c.env,
-      `subscriptions?user_id=in.(${ids.join(',')})&status=in.(active,trialing)&current_period_end=gt.${now}&select=user_id,status,current_period_end,plan_id`,
-    );
+    let subs: Sub[] = [];
+    try {
+      subs = await sbGet<Sub[]>(
+        c.env,
+        `subscriptions?user_id=in.(${ids.join(',')})&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${now})&select=user_id,status,current_period_end,plan_id`,
+      );
+    } catch {
+      subs = await sbGet<Sub[]>(
+        c.env,
+        `subscriptions?user_id=in.(${ids.join(',')})&status=in.(active,trialing)&current_period_end=gt.${now}&select=user_id,status,current_period_end,plan_id`,
+      );
+    }
     const subByUser = new Map(subs.map((s) => [s.user_id, s]));
 
     const members = profiles.map((p) => {
@@ -419,6 +436,211 @@ admin.patch('/settings', async (c) => {
     return c.json({ ok: true, updated: updates });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Gagal simpan settings' }, 500);
+  }
+});
+
+// --- Vouchers ---
+
+function normalizeCode(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s+/g, '');
+}
+
+admin.get('/vouchers', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+
+  try {
+    type V = {
+      id: string;
+      code: string;
+      type: string;
+      value: number;
+      plan_id: string | null;
+      max_redemptions: number | null;
+      max_per_user: number;
+      starts_at: string | null;
+      ends_at: string | null;
+      is_active: boolean;
+      note: string | null;
+      created_at: string;
+    };
+    const vouchers = await sbGet<V[]>(
+      c.env,
+      'vouchers?order=created_at.desc&limit=100&select=id,code,type,value,plan_id,max_redemptions,max_per_user,starts_at,ends_at,is_active,note,created_at',
+    );
+
+    const withCounts = await Promise.all(
+      vouchers.map(async (v) => {
+        let redemptions = 0;
+        try {
+          const rows = await sbGet<{ id: string }[]>(
+            c.env,
+            `voucher_redemptions?voucher_id=eq.${v.id}&select=id&limit=1000`,
+          );
+          redemptions = rows.length;
+        } catch {
+          /* ignore */
+        }
+        return { ...v, redemptionCount: redemptions };
+      }),
+    );
+
+    return c.json({ vouchers: withCounts });
+  } catch (err) {
+    return c.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Gagal memuat vouchers — jalankan migrasi 20260724180000_vouchers',
+      },
+      500,
+    );
+  }
+});
+
+admin.get('/vouchers/:id', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  const id = c.req.param('id');
+
+  try {
+    const vouchers = await sbGet<Record<string, unknown>[]>(
+      c.env,
+      `vouchers?id=eq.${id}&select=*&limit=1`,
+    );
+    const voucher = vouchers[0];
+    if (!voucher) return c.json({ error: 'Voucher tidak ditemukan' }, 404);
+
+    const redemptions = await sbGet<Record<string, unknown>[]>(
+      c.env,
+      `voucher_redemptions?voucher_id=eq.${id}&order=redeemed_at.desc&limit=50&select=id,user_id,payment_id,amount_before,amount_after,effect,redeemed_at`,
+    );
+
+    return c.json({ voucher, redemptions });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat voucher' }, 500);
+  }
+});
+
+admin.post('/vouchers', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canMutateBilling(a.role)) {
+    return c.json({ error: 'Role tidak boleh membuat voucher' }, 403);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    code?: string;
+    type?: string;
+    value?: number;
+    planId?: string | null;
+    maxRedemptions?: number | null;
+    maxPerUser?: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+    isActive?: boolean;
+    note?: string | null;
+  };
+
+  const code = normalizeCode(body.code || '');
+  const type = (body.type || '').toLowerCase();
+  if (code.length < 2) return c.json({ error: 'Kode minimal 2 karakter' }, 400);
+  if (!['percent', 'free_days', 'lifetime'].includes(type)) {
+    return c.json({ error: 'type harus percent | free_days | lifetime' }, 400);
+  }
+
+  let value = Math.floor(Number(body.value) || 0);
+  if (type === 'percent' && (value < 1 || value > 100)) {
+    return c.json({ error: 'percent value 1–100' }, 400);
+  }
+  if (type === 'free_days' && (value < 1 || value > 3650)) {
+    return c.json({ error: 'free_days value 1–3650' }, 400);
+  }
+  if (type === 'lifetime') value = 0;
+
+  try {
+    const rows = await sbPost<Record<string, unknown>[]>(c.env, 'vouchers', {
+      code,
+      type,
+      value,
+      plan_id: body.planId || 'cloud_monthly',
+      max_redemptions: body.maxRedemptions == null || body.maxRedemptions === undefined
+        ? null
+        : Math.max(1, Math.floor(Number(body.maxRedemptions))),
+      max_per_user: Math.max(1, Math.floor(Number(body.maxPerUser) || 1)),
+      starts_at: body.startsAt || null,
+      ends_at: body.endsAt || null,
+      is_active: body.isActive !== false,
+      note: body.note || null,
+      created_by: a.userId,
+    });
+
+    const voucher = Array.isArray(rows) ? rows[0] : rows;
+
+    await writeAudit(c.env, a, 'voucher.create', 'voucher', String((voucher as { id?: string })?.id || code), {
+      code,
+      type,
+      value,
+    });
+    await writeEvent(c.env, {
+      type: 'admin.voucher.create',
+      message: `Admin created voucher ${code} (${type})`,
+      actorUserId: a.userId,
+      payload: { code, type, value, actorEmail: a.email },
+    });
+
+    return c.json({ ok: true, voucher }, 201);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Gagal membuat voucher';
+    if (msg.includes('23505') || msg.toLowerCase().includes('duplicate')) {
+      return c.json({ error: 'Kode voucher sudah ada' }, 409);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+admin.patch('/vouchers/:id', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canMutateBilling(a.role)) {
+    return c.json({ error: 'Role tidak boleh mengubah voucher' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = (await c.req.json().catch(() => ({}))) as {
+    isActive?: boolean;
+    maxRedemptions?: number | null;
+    maxPerUser?: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+    note?: string | null;
+  };
+
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (body.isActive !== undefined) patch.is_active = !!body.isActive;
+  if (body.maxRedemptions !== undefined) {
+    patch.max_redemptions =
+      body.maxRedemptions == null ? null : Math.max(1, Math.floor(Number(body.maxRedemptions)));
+  }
+  if (body.maxPerUser !== undefined) {
+    patch.max_per_user = Math.max(1, Math.floor(Number(body.maxPerUser) || 1));
+  }
+  if (body.startsAt !== undefined) patch.starts_at = body.startsAt;
+  if (body.endsAt !== undefined) patch.ends_at = body.endsAt;
+  if (body.note !== undefined) patch.note = body.note;
+
+  try {
+    const rows = await sbPatch<Record<string, unknown>[]>(c.env, `vouchers?id=eq.${id}`, patch);
+    const voucher = Array.isArray(rows) ? rows[0] : rows;
+    if (!voucher) return c.json({ error: 'Voucher tidak ditemukan' }, 404);
+
+    await writeAudit(c.env, a, 'voucher.update', 'voucher', id, patch);
+    return c.json({ ok: true, voucher });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal update voucher' }, 500);
   }
 });
 

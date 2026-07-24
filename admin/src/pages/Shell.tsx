@@ -5,6 +5,7 @@ const links = [
   { to: '/', end: true, label: 'Overview' },
   { to: '/members', label: 'Members' },
   { to: '/payments', label: 'Payments' },
+  { to: '/vouchers', label: 'Vouchers' },
   { to: '/events', label: 'Events / Live log' },
   { to: '/settings', label: 'Platform' },
 ];

@@ -46,6 +46,11 @@ import {
   verifyNotificationSignature,
 } from './lib/midtrans';
 import { fulfillCompletedPayment } from './lib/payments';
+import {
+  normalizeVoucherCode,
+  resolveListPrice,
+  validateVoucherForUser,
+} from './lib/vouchers';
 
 type Variables = {
   userId: string | null;
@@ -223,6 +228,7 @@ app.get('/api/user/profile', async (c) => {
         has_sync: boolean;
         sync_expiry: string | null;
         max_stores: number | null;
+        is_lifetime?: boolean | null;
       };
       const ents = await sbGet<Ent[]>(c.env, `user_entitlements?user_id=eq.${userId}&select=*`);
       const ent = ents[0];
@@ -246,6 +252,7 @@ app.get('/api/user/profile', async (c) => {
         status: string;
         current_period_start: string;
         current_period_end: string;
+        is_lifetime?: boolean;
         plans: {
           id: string;
           name: string;
@@ -256,10 +263,19 @@ app.get('/api/user/profile', async (c) => {
         } | null;
       };
 
-      const subs = await sbGet<SubRow[]>(
-        c.env,
-        `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&current_period_end=gt.${new Date().toISOString()}&select=id,plan_id,status,current_period_start,current_period_end,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
-      );
+      const nowIso = new Date().toISOString();
+      let subs: SubRow[] = [];
+      try {
+        subs = await sbGet<SubRow[]>(
+          c.env,
+          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${nowIso})&select=id,plan_id,status,current_period_start,current_period_end,is_lifetime,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
+        );
+      } catch {
+        subs = await sbGet<SubRow[]>(
+          c.env,
+          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&current_period_end=gt.${nowIso}&select=id,plan_id,status,current_period_start,current_period_end,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
+        );
+      }
 
       for (const s of subs) {
         const plan = s.plans
@@ -280,9 +296,14 @@ app.get('/api/user/profile', async (c) => {
           endDate: s.current_period_end,
           status: s.status === 'active' || s.status === 'trialing' ? 'ACTIVE' : s.status.toUpperCase(),
           hasActiveSubscription: true,
+          isLifetime: !!s.is_lifetime || !!ent?.is_lifetime,
         };
         if (plan?.category === 'SYNC') profile.syncSubscription = mapped;
         else if (plan?.category === 'STORAGE') profile.subscription = mapped;
+        // cloud_monthly = SYNC; juga map ke subscription generik bila kosong
+        if (plan?.category === 'SYNC' && !profile.subscription) {
+          profile.subscription = mapped;
+        }
       }
 
       type BackupRow = {
@@ -311,7 +332,32 @@ app.get('/api/user/profile', async (c) => {
   return c.json(profile);
 });
 
-// --- Checkout (mock | midtrans Snap) ---
+// --- Voucher preview (auth) ---
+app.post('/api/vouchers/preview', async (c) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+
+  const body = (await c.req.json().catch(() => ({}))) as { code?: string; planId?: string };
+  const planId = body.planId || 'cloud_monthly';
+  const code = body.code || '';
+  if (!code.trim()) return c.json({ valid: false, error: 'Kode voucher wajib diisi' }, 400);
+
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ valid: false, error: 'Database belum dikonfigurasi' }, 503);
+  }
+
+  const { amount: listPrice } = await resolveListPrice(c.env, planId);
+  const result = await validateVoucherForUser(c.env, {
+    code,
+    userId: String(userId),
+    planId,
+    listPrice,
+  });
+  if (!result.valid) return c.json(result, 200);
+  return c.json(result);
+});
+
+// --- Checkout (mock | midtrans Snap | voucher gratis) ---
 app.post('/api/payments/checkout', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
@@ -320,28 +366,64 @@ app.post('/api/payments/checkout', async (c) => {
     planId?: string;
     mobile?: string;
     redirectURL?: string;
+    voucherCode?: string;
   };
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
 
   const plan = SEED_PLANS.find((p) => p.id === body.planId);
   let amount = plan?.price ?? 0;
   let planName = plan?.name ?? body.planId;
+  let amountBefore = amount;
 
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      type P = { id: string; name: string; price_idr: number };
-      const rows = await sbGet<P[]>(c.env, `plans?id=eq.${body.planId}&select=id,name,price_idr`);
-      if (rows[0]) {
-        amount = rows[0].price_idr;
-        planName = rows[0].name;
-      }
+      const priced = await resolveListPrice(c.env, body.planId);
+      amount = priced.amount;
+      planName = priced.planName;
+      amountBefore = amount;
     }
   } catch {
     /* seed price */
   }
 
+  let voucherMeta: {
+    voucherId: string;
+    voucherCode: string;
+    voucherType: string;
+    voucherValue: number;
+    amountBefore: number;
+    grantDays: number | null;
+    isLifetime: boolean;
+  } | null = null;
+
+  const rawCode = (body.voucherCode || '').trim();
+  if (rawCode) {
+    if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return c.json({ error: 'Voucher membutuhkan database' }, 503);
+    }
+    const preview = await validateVoucherForUser(c.env, {
+      code: rawCode,
+      userId: String(userId),
+      planId: body.planId,
+      listPrice: amountBefore,
+    });
+    if (!preview.valid) {
+      return c.json({ error: preview.error }, 400);
+    }
+    amount = preview.amountAfter;
+    voucherMeta = {
+      voucherId: preview.voucherId,
+      voucherCode: preview.code,
+      voucherType: preview.type,
+      voucherValue: preview.value,
+      amountBefore: preview.amountBefore,
+      grantDays: preview.grantDays,
+      isLifetime: preview.isLifetime,
+    };
+  }
+
   const paymentId = crypto.randomUUID();
-  const provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+  let provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
 
   let cloudReturn = 'https://profitku.my.id/settings/cloud';
   try {
@@ -353,8 +435,67 @@ app.post('/api/payments/checkout', async (c) => {
   }
   const finishUrl = `${cloudReturn}?pending=${paymentId}`;
 
-  let paymentLink = `${cloudReturn}?pending=${paymentId}`;
+  let paymentLink: string | null = `${cloudReturn}?pending=${paymentId}`;
   let snapToken: string | null = null;
+  let completedImmediately = false;
+
+  // Amount 0: skip gateway, fulfill langsung (voucher free / 100% / lifetime)
+  if (amount <= 0) {
+    provider = voucherMeta ? 'voucher' : 'comp';
+    paymentLink = null;
+    try {
+      if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+        await sbPost(c.env, 'payments', {
+          id: paymentId,
+          user_id: userId,
+          plan_id: body.planId,
+          amount: 0,
+          status: 'PENDING',
+          provider,
+          payment_link: null,
+          provider_ref: paymentId,
+          raw: {
+            mobile: body.mobile ?? null,
+            redirectURL: body.redirectURL ?? null,
+            ...(voucherMeta || {}),
+          },
+        });
+        await fulfillCompletedPayment(c.env, {
+          paymentId,
+          userId: String(userId),
+          userEmail: c.get('userEmail'),
+          provider,
+          providerRef: voucherMeta?.voucherCode || paymentId,
+        });
+        completedImmediately = true;
+      } else {
+        return c.json({ error: 'Database belum dikonfigurasi untuk voucher gratis' }, 503);
+      }
+    } catch (err) {
+      console.error('[checkout free]', err);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal mengaktifkan langganan gratis' },
+        500,
+      );
+    }
+
+    return c.json({
+      message: voucherMeta?.isLifetime
+        ? 'Cloud seumur hidup diaktifkan'
+        : `Checkout ${planName} (gratis)`,
+      paymentLink: null,
+      snapToken: null,
+      completed: true,
+      transaction: {
+        id: paymentId,
+        status: 'COMPLETED',
+        planId: body.planId,
+        amount: 0,
+        provider,
+        voucherCode: voucherMeta?.voucherCode ?? null,
+      },
+    });
+  }
 
   if (provider === 'mock') {
     paymentLink = `${cloudReturn}?mock_pay=${paymentId}&plan=${body.planId}`;
@@ -366,7 +507,9 @@ app.post('/api/payments/checkout', async (c) => {
       const snap = await createSnapTransaction(c.env, {
         orderId: paymentId,
         amount,
-        planName,
+        planName: voucherMeta
+          ? `${planName} (${normalizeVoucherCode(voucherMeta.voucherCode)})`
+          : planName,
         customerEmail: c.get('userEmail'),
         customerName: c.get('userEmail')?.split('@')[0] || 'Profitku',
         finishUrl,
@@ -400,6 +543,7 @@ app.post('/api/payments/checkout', async (c) => {
           redirectURL: body.redirectURL ?? null,
           snapToken,
           finishUrl,
+          ...(voucherMeta || {}),
         },
       });
     }
@@ -411,12 +555,14 @@ app.post('/api/payments/checkout', async (c) => {
     message: `Checkout ${planName}`,
     paymentLink,
     snapToken,
+    completed: completedImmediately,
     transaction: {
       id: paymentId,
       status: 'PENDING',
       planId: body.planId,
       amount,
       provider,
+      voucherCode: voucherMeta?.voucherCode ?? null,
     },
   });
 });

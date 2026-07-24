@@ -85,8 +85,9 @@ Deploy Pages: build `npm run build`, output `dist/`, custom domain `profitku.my.
 
 Tidak ada multi-tier. Seed: `supabase/seed.sql` + fallback Worker `SEED_PLANS`.
 
-Checkout saat ini: **mode mock** (verifikasi langsung mengaktifkan 30 hari).  
-Integrasi Midtrans/Xendit: lengkapi `POST /api/payments/checkout` + `POST /webhook/payment`.
+Checkout: Midtrans Snap (atau mock) via `POST /api/payments/checkout` + `POST /webhook/payment`.  
+**Voucher promo** (`percent` | `free_days` | `lifetime`): validasi server, amount 0 skip gateway.  
+Admin: `dashboard…/vouchers`. Migrasi: `20260724180000_vouchers.sql`. Decision: `docs/DECISIONS.md`.
 
 ## Google Play
 

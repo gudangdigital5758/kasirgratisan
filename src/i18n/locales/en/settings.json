@@ -267,6 +267,7 @@
         "active": "Active",
         "activeUntil": "Valid until {{date}}",
         "activeNoDate": "Cloud subscription active",
+        "lifetime": "Lifetime free cloud",
         "inactive": "Not subscribed",
         "inactiveDetail": "One plan {{price}}/month",
         "expired": "Expired",
@@ -410,6 +411,17 @@
       "selectStoreFirst": "Select a store first in the Manage Store menu.",
       "syncSuccess": "Cloud sync successful",
       "syncFailed": "Failed to sync to cloud"
+    },
+    "voucher": {
+      "title": "Promo / voucher code",
+      "hint": "Enter a code from admin (% off, free days, or lifetime). Final price is calculated on the server.",
+      "placeholder": "PROMOCODE",
+      "apply": "Apply",
+      "clear": "Clear",
+      "enterCode": "Enter a voucher code first",
+      "invalid": "Invalid voucher code",
+      "applied": "Voucher applied",
+      "activateFree": "Activate free"
     },
     "paymentDialog": {
       "title": "Waiting for Payment",
