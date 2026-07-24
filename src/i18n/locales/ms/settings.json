@@ -385,7 +385,6 @@
     },
     "voucher": {
       "title": "Kod promo / baucar",
-      "hint": "Masukkan kod dari admin (diskaun %, hari percuma, atau seumur hidup). Harga akhir dikira di pelayan.",
       "placeholder": "KODPROMO",
       "apply": "Guna",
       "clear": "Buang",

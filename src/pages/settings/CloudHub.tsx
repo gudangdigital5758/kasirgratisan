@@ -625,9 +625,6 @@ export default function CloudHub() {
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-4 space-y-2.5">
                   <p className="text-sm font-semibold">{t('cloudBackup.voucher.title')}</p>
-                  <p className="text-[11px] text-muted-foreground leading-snug">
-                    {t('cloudBackup.voucher.hint')}
-                  </p>
                   <div className="flex gap-2">
                     <input
                       type="text"

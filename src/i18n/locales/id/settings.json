@@ -414,7 +414,6 @@
     },
     "voucher": {
       "title": "Kode promo / voucher",
-      "hint": "Masukkan kode dari admin (diskon %, hari gratis, atau seumur hidup). Harga final dihitung server.",
       "placeholder": "KODEPROMO",
       "apply": "Terapkan",
       "clear": "Hapus",

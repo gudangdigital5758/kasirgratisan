@@ -414,7 +414,6 @@
     },
     "voucher": {
       "title": "Promo / voucher code",
-      "hint": "Enter a code from admin (% off, free days, or lifetime). Final price is calculated on the server.",
       "placeholder": "PROMOCODE",
       "apply": "Apply",
       "clear": "Clear",
