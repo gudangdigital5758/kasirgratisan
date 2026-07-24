@@ -40,11 +40,50 @@ Jalankan API lokal: dari root `npm run api:dev` (port 8787).
 | Events | Poll platform_events + notification_log + audit |
 | Platform | Feature flags + health (bukan secrets) |
 
-## Deploy
+## Deploy (go-live)
 
-- Build: `npm run build` di folder `admin/` → output `admin/dist`
-- Host di Cloudflare Pages custom domain `dashboard.profitku.my.id`
-- CORS: Worker sudah include `ADMIN_ORIGIN` / localhost:5174
+### Otomatis dari root repo
+
+```bash
+# 1) Pastikan root .env punya VITE_SUPABASE_* + VITE_GOOGLE_CLIENT_ID
+# 2) Worker secrets: ADMIN_EMAILS, ADMIN_ORIGIN=https://dashboard.profitku.my.id
+# 3) Build + deploy Cloudflare Pages project "profitku-admin"
+npm run admin:deploy
+```
+
+Setelah deploy pertama, di Cloudflare Dashboard:
+
+1. **Workers & Pages** → project `profitku-admin`
+2. **Custom domains** → `dashboard.profitku.my.id`
+3. Google Cloud OAuth → Authorized JavaScript origins tambah:
+   - `https://dashboard.profitku.my.id`
+4. Supabase Auth → URL Configuration / redirect jika dipakai
+
+### Manual
+
+```bash
+cd admin
+# buat .env.production (VITE_API_URL=https://api.profitku.my.id + supabase + google)
+npm run build:prod
+npx wrangler pages deploy dist --project-name=profitku-admin
+```
+
+SPA fallback: `public/_redirects` → `/* /index.html 200`
+
+### CORS / API
+
+Worker secrets:
+
+```bash
+cd workers/api
+npx wrangler secret put ADMIN_ORIGIN
+# https://dashboard.profitku.my.id
+
+npx wrangler secret put ADMIN_EMAILS
+# email@gmail.com
+```
+
+CORS di Worker juga mengizinkan `ADMIN_ORIGIN` + localhost:5174.
 
 ## Boundary
 

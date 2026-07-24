@@ -1,0 +1,4 @@
+# Cloudflare Pages — Profitku Admin (dashboard.profitku.my.id)
+name = "profitku-admin"
+compatibility_date = "2025-06-01"
+pages_build_output_dir = "dist"

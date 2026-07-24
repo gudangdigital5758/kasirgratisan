@@ -17,7 +17,10 @@
     "api:dev": "npm run dev --prefix workers/api",
     "api:deploy": "npm run deploy --prefix workers/api",
     "admin:dev": "npm run dev --prefix admin",
+    "admin:env": "node scripts/admin-env-from-root.mjs",
     "admin:build": "npm run build --prefix admin",
+    "admin:build:prod": "node scripts/admin-env-from-root.mjs && npm run build:prod --prefix admin",
+    "admin:deploy": "node scripts/admin-env-from-root.mjs && npm run deploy --prefix admin",
     "cloud:check": "node scripts/cloud-check.mjs",
     "cloud:secrets-help": "node scripts/cloud-secrets-help.mjs",
     "cloud:deploy-api": "npm run deploy --prefix workers/api"

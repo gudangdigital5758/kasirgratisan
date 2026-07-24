@@ -115,21 +115,19 @@ Google OAuth **Authorized JavaScript origins** harus include `https://profitku.m
 
 ---
 
-## 4. Admin SPA (jika dipakai ops)
+## 4. Admin SPA (ops) — go-live
+
+Panduan: [ADMIN-GO-LIVE.md](./ADMIN-GO-LIVE.md)
 
 ```bash
-cd admin
-# .env production:
-# VITE_API_URL=https://api.profitku.my.id
-# VITE_SUPABASE_* + VITE_GOOGLE_CLIENT_ID
-npm run build
-# deploy admin/dist → dashboard.profitku.my.id
+# root: generate admin/.env.production + build + deploy Pages
+npm run admin:deploy
 ```
 
-Worker:
-
-- `ADMIN_ORIGIN=https://dashboard.profitku.my.id`
-- `ADMIN_EMAILS=` email staff
+- Project: **profitku-admin** → `https://profitku-admin.pages.dev`
+- Custom domain: tambah `dashboard.profitku.my.id` di Cloudflare Pages UI
+- Worker secrets: `ADMIN_ORIGIN=https://dashboard.profitku.my.id`, `ADMIN_EMAILS=…`
+- Google OAuth JS origins: + `https://dashboard.profitku.my.id` (+ pages.dev jika tes)
 
 ---
 
