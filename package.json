@@ -16,6 +16,8 @@
     "cap:run": "node scripts/bump-version.js && vite build && cap sync android && cap run android",
     "api:dev": "npm run dev --prefix workers/api",
     "api:deploy": "npm run deploy --prefix workers/api",
+    "admin:dev": "npm run dev --prefix admin",
+    "admin:build": "npm run build --prefix admin",
     "cloud:check": "node scripts/cloud-check.mjs",
     "cloud:secrets-help": "node scripts/cloud-secrets-help.mjs",
     "cloud:deploy-api": "npm run deploy --prefix workers/api"

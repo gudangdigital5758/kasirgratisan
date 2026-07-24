@@ -39,8 +39,9 @@ Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perang
 | `src/lib/brand.ts` | Nama, domain, harga paket, flag Play |
 | `src/lib/sync.ts` | Background push dirty records (subset; fase lanjut) |
 | `src/i18n/` | id / en / ms |
-| `workers/api/` | API edge production |
-| `supabase/migrations/` | Schema cloud + RLS |
+| `workers/api/` | API edge production (`/api/*` user, `/admin/api/*` staff) |
+| `admin/` | Ops SPA → `dashboard.profitku.my.id` (bukan POS) |
+| `supabase/migrations/` | Schema cloud + RLS + admin_ops |
 | `android/` | Capacitor wrapper (`com.profitku.app`) |
 
 ## Alur penting

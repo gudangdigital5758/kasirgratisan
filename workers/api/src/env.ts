@@ -1,5 +1,12 @@
 export interface Env {
   APP_ORIGIN: string;
+  /** Origin admin SPA (dashboard.profitku.my.id) — CORS */
+  ADMIN_ORIGIN?: string;
+  /**
+   * Comma-separated staff emails (Google/Supabase) yang boleh akses /admin/api/*
+   * Contoh: you@gmail.com,ops@profitku.my.id
+   */
+  ADMIN_EMAILS?: string;
   SUPABASE_URL?: string;
   /** Service role — hanya di Worker, jangan expose ke client */
   SUPABASE_SERVICE_ROLE_KEY?: string;

@@ -15,7 +15,7 @@
 |------|---------|
 | `profitku.my.id` | Cloudflare Pages (app Vite PWA) |
 | `api.profitku.my.id` | Cloudflare Worker (`workers/api`) |
-| `dashboard.profitku.my.id` | (fase berikut) admin/dashboard |
+| `dashboard.profitku.my.id` | Admin ops SPA (`admin/`) — staff only |
 | `market.profitku.my.id` | (fase berikut) katalog toko publik |
 
 ## Struktur repo

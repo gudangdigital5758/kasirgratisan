@@ -34,6 +34,8 @@ import {
 import { notifySubscriptionActivated, runDunningCron } from './lib/lifecycle';
 import { exchangeGoogleIdToken } from './lib/auth-google';
 import { CLOUD_PLAN_PRICE_IDR } from './data/seed-plans';
+import adminRoutes from './routes/admin';
+import { writeEvent } from './lib/admin';
 
 type Variables = {
   userId: string | null;
@@ -45,15 +47,30 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 app.use('*', async (c, next) => {
   const origin = c.env.APP_ORIGIN || 'https://profitku.my.id';
+  const adminOrigin = c.env.ADMIN_ORIGIN || 'https://dashboard.profitku.my.id';
   return cors({
-    origin: [origin, 'http://localhost:8080', 'http://localhost:5173', 'capacitor://localhost', 'http://localhost'],
+    origin: [
+      origin,
+      adminOrigin,
+      'http://localhost:8080',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5174',
+      'capacitor://localhost',
+      'http://localhost',
+    ],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
   })(c, next);
 });
 
-app.use('/api/*', async (c, next) => {
+/** Auth middleware shared by /api/* and /admin/api/* */
+async function bearerAuth(c: {
+  req: { header: (n: string) => string | undefined };
+  env: Env;
+  set: (k: 'userId' | 'userEmail' | 'bearer', v: string | null) => void;
+}, next: () => Promise<void>) {
   const auth = c.req.header('Authorization');
   const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null;
   c.set('bearer', token);
@@ -67,8 +84,6 @@ app.use('/api/*', async (c, next) => {
       c.set('userEmail', user.email ?? null);
     }
   } else if (token) {
-    // Mode dev / migrasi: decode payload JWT tanpa verifikasi (HANYA jika Supabase belum di-set).
-    // Production WAJIB set SUPABASE_* agar token divalidasi.
     try {
       const payload = JSON.parse(atob(token.split('.')[1] || '')) as {
         sub?: string;
@@ -84,7 +99,13 @@ app.use('/api/*', async (c, next) => {
   }
 
   await next();
-});
+}
+
+app.use('/api/*', bearerAuth);
+app.use('/admin/api/*', bearerAuth);
+
+/** Staff admin console API */
+app.route('/admin/api', adminRoutes);
 
 function requireUser(c: {
   get: (k: 'userId' | 'userEmail' | 'bearer') => string | null;
@@ -403,6 +424,13 @@ app.post('/api/payments/verify/:id', async (c) => {
         } catch {
           /* ignore */
         }
+
+        await writeEvent(c.env, {
+          type: 'payment.verified',
+          message: `Payment completed for plan ${pay.plan_id}`,
+          subjectUserId: String(userId),
+          payload: { paymentId: id, planId: pay.plan_id, amount: pay.amount },
+        });
 
         await notifySubscriptionActivated(c.env, {
           userId: String(userId),
