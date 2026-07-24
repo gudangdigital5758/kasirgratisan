@@ -64,6 +64,11 @@ const hasSbUrl = flag(
 );
 const hasSbAnon = flag(Boolean(env.VITE_SUPABASE_ANON_KEY), 'VITE_SUPABASE_ANON_KEY');
 const hasGoogle = flag(Boolean(env.VITE_GOOGLE_CLIENT_ID), 'VITE_GOOGLE_CLIENT_ID');
+const hasOneSignalClient = flag(
+  Boolean(env.VITE_ONESIGNAL_APP_ID),
+  'VITE_ONESIGNAL_APP_ID (opsional — push client)',
+  env.VITE_ONESIGNAL_APP_ID ? 'set' : 'kosong = push dimatikan di browser',
+);
 
 const devVarsPath = resolve(root, 'workers/api/.dev.vars');
 console.log('\nWorker local .dev.vars:');
@@ -74,6 +79,8 @@ if (existsSync(devVarsPath)) {
   flag(Boolean(dv.SUPABASE_SERVICE_ROLE_KEY), 'SUPABASE_SERVICE_ROLE_KEY');
   flag(Boolean(dv.RESEND_API_KEY), 'RESEND_API_KEY (opsional)');
   flag(Boolean(dv.FONNTE_TOKEN), 'FONNTE_TOKEN (opsional)');
+  flag(Boolean(dv.ONESIGNAL_APP_ID && dv.ONESIGNAL_REST_API_KEY), 'ONESIGNAL_* (opsional push server)');
+  flag(Boolean(dv.ADMIN_EMAILS), 'ADMIN_EMAILS (opsional admin)');
 } else {
   console.log('  [MISS] workers/api/.dev.vars — copy dari .dev.vars.example untuk dev lokal');
 }
@@ -94,29 +101,39 @@ try {
   } else {
     healthOk = true;
     console.log('  [OK ] reachable');
-    console.log(`       service=${body.service ?? '?'} supabase=${body.supabase} r2=${body.r2} resend=${body.resend} fonnte=${body.fonnte}`);
+    console.log(
+      `       service=${body.service ?? '?'} supabase=${body.supabase} r2=${body.r2} resend=${body.resend} fonnte=${body.fonnte} onesignal=${body.onesignal}`,
+    );
     if (body.supabase !== true) console.log('       → set Worker secrets SUPABASE_*');
     if (body.r2 !== true) console.log('       → enable R2 binding BACKUP_BUCKET + deploy');
     if (body.resend !== true) console.log('       → optional: RESEND_API_KEY');
     if (body.fonnte !== true) console.log('       → optional: FONNTE_TOKEN');
+    if (body.onesignal !== true) console.log('       → optional: ONESIGNAL_APP_ID + ONESIGNAL_REST_API_KEY');
   }
 } catch (err) {
   console.log(`  [FAIL] ${err instanceof Error ? err.message : err}`);
   console.log('       → jalankan: npm run api:dev   atau deploy Worker dulu');
 }
 
-console.log('\nFiles:');
-flag(existsSync(resolve(root, 'supabase/migrations/20260723000000_init_profitku.sql')), 'migration SQL');
+console.log('\nFiles / migrations:');
+flag(existsSync(resolve(root, 'supabase/migrations/20260723000000_init_profitku.sql')), 'migration init');
+flag(existsSync(resolve(root, 'supabase/migrations/20260724000000_admin_ops.sql')), 'migration admin_ops');
+flag(
+  existsSync(resolve(root, 'supabase/migrations/20260724120000_notification_push_channel.sql')),
+  'migration push channel',
+);
 flag(existsSync(resolve(root, 'supabase/seed.sql')), 'seed.sql');
 flag(existsSync(resolve(root, 'workers/api/wrangler.toml')), 'wrangler.toml');
+flag(existsSync(resolve(root, 'admin/package.json')), 'admin SPA package');
 
 const readyClient = hasApi && hasSbUrl && hasSbAnon && hasGoogle;
 const readyApi = healthOk;
 
 console.log('\n---');
 if (readyClient && readyApi) {
-  console.log('Status: client env + API reachable. Lanjut smoke test di browser.');
+  console.log('Status: client env + API reachable.');
+  console.log('Lanjut: docs/PRODUCTION-STABILIZE.md (smoke browser + migrasi SQL jika belum).');
   process.exit(0);
 }
-console.log('Status: belum lengkap. Ikuti docs/DEPLOY-CLOUD.md');
+console.log('Status: belum lengkap. Ikuti docs/DEPLOY-CLOUD.md + docs/PRODUCTION-STABILIZE.md');
 process.exit(1);

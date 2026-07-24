@@ -16,6 +16,14 @@ FONNTE_TOKEN=
 PAYMENT_PROVIDER=mock
 WEBHOOK_SECRET=generate-long-random-string
 
+# --- Admin ops (dashboard.profitku.my.id / localhost:5174) ---
+ADMIN_EMAILS=you@gmail.com
+ADMIN_ORIGIN=http://localhost:5174
+
+# --- OneSignal push (sama App ID dengan VITE_ONESIGNAL_APP_ID di root .env) ---
+ONESIGNAL_APP_ID=
+ONESIGNAL_REST_API_KEY=
+
 # APP_ORIGIN sudah di wrangler.toml [vars] untuk prod;
 # override lokal jika perlu:
 # APP_ORIGIN=http://localhost:8080

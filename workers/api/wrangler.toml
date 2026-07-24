@@ -10,6 +10,7 @@ workers_dev = true
 APP_ORIGIN = "https://profitku.my.id"
 # Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY
 #          RESEND_API_KEY | RESEND_FROM | FONNTE_TOKEN | WEBHOOK_SECRET
+#          ONESIGNAL_APP_ID | ONESIGNAL_REST_API_KEY | ADMIN_EMAILS | ADMIN_ORIGIN
 
 # R2 backup (bucket dibuat: profitku-backups)
 [[r2_buckets]]

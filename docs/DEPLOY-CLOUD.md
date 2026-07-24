@@ -106,6 +106,16 @@ npx wrangler secret put WEBHOOK_SECRET
 # opsional
 npx wrangler secret put PAYMENT_PROVIDER
 # value: mock | midtrans | xendit
+
+# OneSignal push (server) — App ID sama dengan VITE_ONESIGNAL_APP_ID
+npx wrangler secret put ONESIGNAL_APP_ID
+npx wrangler secret put ONESIGNAL_REST_API_KEY
+
+# Admin ops SPA
+npx wrangler secret put ADMIN_EMAILS
+# value: you@gmail.com,ops@...
+npx wrangler secret put ADMIN_ORIGIN
+# value: https://dashboard.profitku.my.id
 ```
 
 **Lokal** (jangan commit):
@@ -122,6 +132,8 @@ Lihat secret yang sudah terpasang (nama saja):
 ```bash
 npx wrangler secret list
 ```
+
+Stabilisasi production (checklist smoke + migrasi admin/push): [PRODUCTION-STABILIZE.md](./PRODUCTION-STABILIZE.md).
 
 ---
 
@@ -159,11 +171,12 @@ Harapan JSON (setelah secrets + R2):
   "supabase": true,
   "r2": true,
   "resend": true,
-  "fonnte": true
+  "fonnte": true,
+  "onesignal": true
 }
 ```
 
-`false` = secret/binding belum terpasang.
+`false` = secret/binding belum terpasang. `fonnte` / `onesignal` boleh false jika channel itu belum dipakai.
 
 ---
 
