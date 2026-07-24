@@ -27,5 +27,15 @@
   "lowStock": {
     "title": "Stok Menipis",
     "remaining": "Sisa {{stock}} {{unit}}"
+  },
+  "cloudChip": {
+    "title": "Profitku Cloud",
+    "loggedOut": "Login untuk backup cloud · Rp 25.000/bln",
+    "inactive": "Belum aktif · aktifkan di pengaturan",
+    "selectStore": "Langganan aktif · pilih toko cloud",
+    "needsSetup": "Nyalakan auto-backup di Cloud",
+    "active": "Cloud aktif",
+    "lastSync": "Terakhir sync: {{time}}",
+    "neverSynced": "Belum pernah sync ke cloud"
   }
 }

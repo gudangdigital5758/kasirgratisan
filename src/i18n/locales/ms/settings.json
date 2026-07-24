@@ -2,6 +2,16 @@
   "title": "Tetapan",
   "storeFallback": "Kedai Saya",
   "notSet": "Belum ditetapkan",
+  "sections": {
+    "cloudData": "Cloud & Data",
+    "transactionsAndStock": "Transaksi & Stok",
+    "people": "Pelanggan & Pembekal",
+    "storeAndStaff": "Kedai & Kakitangan"
+  },
+  "localBackup": {
+    "title": "Sandaran & pulihkan (tempatan)",
+    "description": "Eksport/import JSON pada peranti ini"
+  },
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Rasmi!",
     "description": "Untuk prestasi terbaik, sokongan pencetak Bluetooth, dan ciri luar talian yang lebih stabil, sila muat turun aplikasi Profitku di Google Play Store.",

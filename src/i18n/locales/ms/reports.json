@@ -22,6 +22,21 @@
     "sales": "Jualan",
     "profit": "Untung"
   },
+  "hub": {
+    "title": "Lihat juga",
+    "history": {
+      "title": "Sejarah transaksi",
+      "description": "Semua resit & cetak semula"
+    },
+    "stockReport": {
+      "title": "Laporan stok",
+      "description": "Pergerakan stok mengikut tempoh"
+    },
+    "expenses": {
+      "title": "Perbelanjaan",
+      "description": "Kos operasi bukan stok"
+    }
+  },
   "dailySales": {
     "title": "Jumlah Jualan Harian",
     "grossSales": "Jumlah Jualan Kasar",

@@ -2,6 +2,16 @@
   "title": "Settings",
   "storeFallback": "My Store",
   "notSet": "Not set",
+  "sections": {
+    "cloudData": "Cloud & Data",
+    "transactionsAndStock": "Transactions & Stock",
+    "people": "Customers & Suppliers",
+    "storeAndStaff": "Store & Staff"
+  },
+  "localBackup": {
+    "title": "Backup & restore (local)",
+    "description": "Export/import JSON on this device"
+  },
   "playStoreAlert": {
     "title": "Use the Official Android App!",
     "description": "For the best performance, Bluetooth printer support, and more stable offline features, please download the Profitku app on the Google Play Store.",

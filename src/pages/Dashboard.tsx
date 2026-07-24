@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged, type TransactionItemRecord } from '@/lib/db';
 import { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Package, BarChart3, TrendingUp, AlertTriangle, Receipt, ChevronRight, ClipboardList, Wallet } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, TrendingUp, AlertTriangle, Receipt, ChevronRight, ClipboardList, Wallet, Cloud } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -11,14 +11,18 @@ import BackupReminder, { shouldShowBackupReminder, exportBackupData } from '@/co
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { getUnseenFeatures } from '@/lib/whats-new';
 import { useAuth } from '@/hooks/use-auth';
+import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import type { PermissionKey } from '@/lib/db';
 import { useTranslation } from 'react-i18next';
+import { CLOUD_ROUTES } from '@/lib/cloud-routes';
+import { cn } from '@/lib/utils';
 
 const LOCALES: Record<string, Locale> = { id, en: enUS, ms };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
 
 export default function Dashboard() {
   const { can } = useAuth();
+  const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
   const { t, i18n } = useTranslation('dashboard');
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -98,6 +102,32 @@ export default function Dashboard() {
 
   const showBackup = !backupDismissed && storeSettings && shouldShowBackupReminder(storeSettings.lastBackupAt) && can('manage_backup');
 
+  const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
+  const cloudStoreLinked = !!storeSettings?.cloudStoreId;
+  const cloudChip = !(cloudLoggedIn && cloudSubscribed)
+    ? {
+        tone: 'bg-muted/80 ring-border',
+        iconTone: 'bg-muted text-muted-foreground',
+        desc: cloudLoggedIn ? t('cloudChip.inactive') : t('cloudChip.loggedOut'),
+      }
+    : !cloudStoreLinked
+      ? {
+          tone: 'bg-warning/10 ring-warning/20',
+          iconTone: 'bg-warning/15 text-warning',
+          desc: t('cloudChip.selectStore'),
+        }
+      : !cloudAutoOn
+        ? {
+            tone: 'bg-warning/10 ring-warning/20',
+            iconTone: 'bg-warning/15 text-warning',
+            desc: t('cloudChip.needsSetup'),
+          }
+        : {
+            tone: 'bg-success/10 ring-success/20',
+            iconTone: 'bg-success/15 text-success',
+            desc: t('cloudChip.active'),
+          };
+
   const quickActions: { to: string; icon: typeof ShoppingCart; label: string; color: string; perm?: PermissionKey }[] = [
     { to: '/cashier', icon: ShoppingCart, label: t('quickActions.cashier'), color: 'bg-primary/10 text-primary', perm: 'create_transaction' },
     { to: '/products', icon: Package, label: t('quickActions.products'), color: 'bg-accent/10 text-accent' },
@@ -120,6 +150,33 @@ export default function Dashboard() {
           onDismiss={() => setBackupDismissed(true)}
           onBackup={exportBackupData}
         />
+      )}
+
+      {/* Cloud status chip → hub */}
+      {can('manage_backup') && (
+        <Link to={CLOUD_ROUTES.hub}>
+          <Card className={cn('border-0 shadow-sm ring-1 hover:shadow-md transition-shadow cursor-pointer', cloudChip.tone)}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', cloudChip.iconTone)}>
+                <Cloud className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('cloudChip.title')}</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">{cloudChip.desc}</p>
+                {cloudLoggedIn && cloudSubscribed && (
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                    {storeSettings?.lastCloudBackupAt
+                      ? t('cloudChip.lastSync', {
+                          time: new Date(storeSettings.lastCloudBackupAt).toLocaleString(numberLocale),
+                        })
+                      : t('cloudChip.neverSynced')}
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
       )}
 
       {/* Stats */}

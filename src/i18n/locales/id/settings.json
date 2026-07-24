@@ -2,6 +2,16 @@
   "title": "Pengaturan",
   "storeFallback": "Toko Saya",
   "notSet": "Belum diatur",
+  "sections": {
+    "cloudData": "Cloud & Data",
+    "transactionsAndStock": "Transaksi & Stok",
+    "people": "Pelanggan & Supplier",
+    "storeAndStaff": "Toko & Karyawan"
+  },
+  "localBackup": {
+    "title": "Backup & pulihkan (lokal)",
+    "description": "Export/import JSON di perangkat ini"
+  },
   "playStoreAlert": {
     "title": "Gunakan Aplikasi Android Resmi!",
     "description": "Untuk performa terbaik, dukungan printer Bluetooth, dan fitur offline yang lebih stabil, silakan unduh aplikasi Profitku di Google Play Store.",

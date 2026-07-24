@@ -22,6 +22,21 @@
     "sales": "Penjualan",
     "profit": "Profit"
   },
+  "hub": {
+    "title": "Lihat juga",
+    "history": {
+      "title": "Riwayat transaksi",
+      "description": "Semua struk & cetak ulang"
+    },
+    "stockReport": {
+      "title": "Laporan stok",
+      "description": "Pergerakan stok per periode"
+    },
+    "expenses": {
+      "title": "Pengeluaran",
+      "description": "Biaya operasional non-stok"
+    }
+  },
   "dailySales": {
     "title": "Total Penjualan Harian",
     "grossSales": "Total Omzet",

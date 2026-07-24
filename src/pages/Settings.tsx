@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle } from 'lucide-react';
+
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { FEATURES, getUnseenFeatures } from '@/lib/whats-new';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -335,36 +336,53 @@ export default function Pengaturan() {
 
       {/* Play Store alert ditunda — BRAND.playStoreEnabled === false (fokus PWA). */}
 
-      {/* Cloud Sync — featured, status-aware */}
+      {/* 1. Cloud & Data */}
       {can('manage_backup') && (
-        <Link to="/settings/cloud" className="block mt-2">
-          <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${cloudStatus.iconWrap}`}>
-                <Cloud className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold">{t('cloud.hub.title')}</p>
-                  <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
-                    {cloudStatus.badgeText}
-                  </span>
+        <div className="space-y-2 mt-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.cloudData')}</h2>
+          <Link to="/settings/cloud" className="block">
+            <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${cloudStatus.iconWrap}`}>
+                  <Cloud className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                  {cloudStatus.desc}
-                </p>
-                {cloudLoggedIn && cloudSubscribed && (
-                  <p className="text-[10px] text-muted-foreground/80 mt-1">
-                    {storeSettings?.lastCloudBackupAt
-                      ? t('cloudSync.lastSync', { time: new Date(storeSettings.lastCloudBackupAt).toLocaleString('id-ID') })
-                      : t('cloudSync.neverSynced')}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold">{t('cloud.hub.title')}</p>
+                    <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
+                      {cloudStatus.badgeText}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                    {cloudStatus.desc}
                   </p>
-                )}
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            </CardContent>
-          </Card>
-        </Link>
+                  {cloudLoggedIn && cloudSubscribed && (
+                    <p className="text-[10px] text-muted-foreground/80 mt-1">
+                      {storeSettings?.lastCloudBackupAt
+                        ? t('cloudSync.lastSync', { time: new Date(storeSettings.lastCloudBackupAt).toLocaleString('id-ID') })
+                        : t('cloudSync.neverSynced')}
+                    </p>
+                  )}
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/settings/backup" className="block">
+            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
+                  <HardDrive className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{t('localBackup.title')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('localBackup.description')}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       )}
 
       {/* Install as App — hidden when already installed */}
@@ -404,82 +422,9 @@ export default function Pengaturan() {
         </Card>
       )}
 
-      {/* Karyawan & Akses (current user / multi-user activation) */}
-      {multiUserEnabled && currentUser ? (
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${currentUser.role === 'owner' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}>
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{currentUser.name}</p>
-              <p className="text-[10px] text-muted-foreground">
-                @{currentUser.username} · {currentUser.role === 'owner' ? t('employees.owner') : t('employees.staff')}
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive" onClick={() => setLogoutOpen(true)}>
-              <LogOut className="w-3.5 h-3.5" />
-              {t('employees.logout')}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Karyawan & Akses links/activation */}
-      {isOwner && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground">{t('employees.sectionTitle')}</h2>
-          {!multiUserEnabled ? (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <UsersIcon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">{t('employees.activate.title')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('employees.activate.description')}</p>
-                </div>
-                <Button size="sm" className="h-8 text-xs" onClick={openActivateDialog}>
-                  {t('employees.activate.button')}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <Link to="/users">
-                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">{t('employees.manage.title')}</p>
-                      <p className="text-[10px] text-muted-foreground">{t('employees.manage.description', { count: usersCount ?? 0 })}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{t('employees.active.title')}</p>
-                    <p className="text-[10px] text-muted-foreground">{t('employees.active.description')}</p>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setDisableOpen(true)}>
-                    {t('employees.active.disable')}
-                  </Button>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Transaksi & Stok */}
+      {/* 2. Transaksi & Stok */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">{t('transactionsAndStock.sectionTitle')}</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.transactionsAndStock')}</h2>
         <Link to="/history">
           <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
             <CardContent className="p-3 flex items-center gap-3">
@@ -489,42 +434,6 @@ export default function Pengaturan() {
             </CardContent>
           </Card>
         </Link>
-        {can('manage_supplier') && (
-          <Link to="/supplier">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Truck className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.supplier.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.supplier.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        )}
-        {can('manage_customers') && (
-          <Link to="/customers">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.customers.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.customers.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        )}
-        {can('manage_customers') && storeSettings?.allowDebt && (
-          <Link to="/debts">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><HandCoins className="w-4 h-4" /></div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{t('transactionsAndStock.debts.title')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.debts.description', { count: activeDebts?.length ?? 0 })}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        )}
         {can('manage_stock_inout') && (
           <>
             <Link to="/stock-in">
@@ -541,6 +450,15 @@ export default function Pengaturan() {
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center"><ArrowUpFromLine className="w-4 h-4" /></div>
                   <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.stockOut.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.stockOut.description')}</p></div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/settings/stock-opname" className="block">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><ClipboardCheck className="w-4 h-4" /></div>
+                  <div className="flex-1"><p className="text-sm font-semibold">{t('stockOpname.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.stockOpname.description')}</p></div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </CardContent>
               </Card>
@@ -571,9 +489,121 @@ export default function Pengaturan() {
         )}
       </div>
 
-      {/* Master Data & Preferensi */}
+      {/* 3. Pelanggan & Supplier */}
+      {(can('manage_supplier') || can('manage_customers')) && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.people')}</h2>
+          {can('manage_customers') && (
+            <Link to="/customers">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
+                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.customers.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.customers.description')}</p></div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+          {can('manage_customers') && storeSettings?.allowDebt && (
+            <Link to="/debts">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><HandCoins className="w-4 h-4" /></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">{t('transactionsAndStock.debts.title')}</p>
+                    <p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.debts.description', { count: activeDebts?.length ?? 0 })}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+          {can('manage_supplier') && (
+            <Link to="/supplier">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Truck className="w-4 h-4" /></div>
+                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.supplier.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.supplier.description')}</p></div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* 4. Toko & Karyawan */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">{t('masterData.sectionTitle')}</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.storeAndStaff')}</h2>
+
+        {multiUserEnabled && currentUser ? (
+          <Card className="border-0 shadow-sm mb-2">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${currentUser.role === 'owner' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}>
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  @{currentUser.username} · {currentUser.role === 'owner' ? t('employees.owner') : t('employees.staff')}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive" onClick={() => setLogoutOpen(true)}>
+                <LogOut className="w-3.5 h-3.5" />
+                {t('employees.logout')}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {isOwner && (
+          !multiUserEnabled ? (
+            <Card className="border-0 shadow-sm mb-2">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <UsersIcon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{t('employees.activate.title')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('employees.activate.description')}</p>
+                </div>
+                <Button size="sm" className="h-8 text-xs" onClick={openActivateDialog}>
+                  {t('employees.activate.button')}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Link to="/users">
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">{t('employees.manage.title')}</p>
+                      <p className="text-[10px] text-muted-foreground">{t('employees.manage.description', { count: usersCount ?? 0 })}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
+              <Card className="border-0 shadow-sm mb-2">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{t('employees.active.title')}</p>
+                    <p className="text-[10px] text-muted-foreground">{t('employees.active.description')}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setDisableOpen(true)}>
+                    {t('employees.active.disable')}
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          )
+        )}
+
 
         {can('manage_store_settings') && (
           <Card className="border-0 shadow-sm mb-2">
@@ -646,18 +676,6 @@ export default function Pengaturan() {
           </Link>
         )}
 
-        {can('manage_stock_inout') && (
-          <Link to="/settings/stock-opname" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><ClipboardCheck className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('stockOpname.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.stockOpname.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        )}
-
         {can('manage_store_settings') && (
           <Link to="/settings/theme" className="block">
             <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
@@ -692,18 +710,6 @@ export default function Pengaturan() {
             </Select>
           </CardContent>
         </Card>
-
-        {can('manage_backup') && (
-          <Link to="/settings/backup" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center"><Download className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.backup.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.backup.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        )}
 
         <Link to="/settings/report-issue" className="block">
           <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">

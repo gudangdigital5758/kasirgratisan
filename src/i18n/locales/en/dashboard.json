@@ -27,5 +27,15 @@
   "lowStock": {
     "title": "Low Stock",
     "remaining": "{{stock}} {{unit}} left"
+  },
+  "cloudChip": {
+    "title": "Profitku Cloud",
+    "loggedOut": "Sign in for cloud backup · Rp 25,000/mo",
+    "inactive": "Not active · enable in settings",
+    "selectStore": "Subscribed · pick a cloud store",
+    "needsSetup": "Turn on auto-backup in Cloud",
+    "active": "Cloud active",
+    "lastSync": "Last sync: {{time}}",
+    "neverSynced": "Never synced to cloud"
   }
 }

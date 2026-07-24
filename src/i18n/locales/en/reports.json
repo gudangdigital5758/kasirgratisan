@@ -22,6 +22,21 @@
     "sales": "Sales",
     "profit": "Profit"
   },
+  "hub": {
+    "title": "See also",
+    "history": {
+      "title": "Transaction history",
+      "description": "All receipts & reprints"
+    },
+    "stockReport": {
+      "title": "Stock report",
+      "description": "Stock movements by period"
+    },
+    "expenses": {
+      "title": "Expenses",
+      "description": "Non-stock operating costs"
+    }
+  },
   "dailySales": {
     "title": "Daily Sales Total",
     "grossSales": "Gross Sales",

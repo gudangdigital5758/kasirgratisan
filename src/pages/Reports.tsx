@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, ShoppingCart, Package, DollarSign, ArrowDown, ArrowUp, Minus, Wallet, CreditCard, Download, Printer } from 'lucide-react';
+import { BarChart3, TrendingUp, ShoppingCart, Package, DollarSign, ArrowDown, ArrowUp, Minus, Wallet, CreditCard, Download, Printer, ChevronRight, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
 import ExportReportDialog from '@/components/reports/ExportReportDialog';
@@ -324,6 +325,55 @@ export default function Laporan() {
             <p className="text-[10px] text-muted-foreground">{t('summary.profit')}</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Hub links: history / stock / expenses */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('hub.title')}</h2>
+        <Link to="/history">
+          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <History className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('hub.history.title')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('hub.history.description')}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/stock-report">
+          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
+                <Package className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('hub.stockReport.title')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('hub.stockReport.description')}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+        {(can('manage_expenses') || can('view_expenses')) && (
+          <Link to="/expenses">
+            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{t('hub.expenses.title')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('hub.expenses.description')}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       {period === 'daily' && (
