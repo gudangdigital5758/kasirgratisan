@@ -621,51 +621,6 @@ export default function CloudHub() {
                 </Card>
               )}
 
-              {/* Voucher promo — berlaku untuk langganan & perpanjang */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4 space-y-2.5">
-                  <p className="text-sm font-semibold">{t('cloudBackup.voucher.title')}</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={voucherInput}
-                      onChange={(e) => {
-                        setVoucherInput(e.target.value.toUpperCase());
-                        if (voucherPreview) setVoucherPreview(null);
-                      }}
-                      placeholder={t('cloudBackup.voucher.placeholder')}
-                      className="flex-1 h-10 rounded-xl border border-input bg-background px-3 text-sm font-mono tracking-wide uppercase"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 shrink-0"
-                      disabled={voucherBusy || !voucherInput.trim()}
-                      onClick={() => void handleApplyVoucher()}
-                    >
-                      {voucherBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cloudBackup.voucher.apply')}
-                    </Button>
-                  </div>
-                  {voucherPreview?.valid && (
-                    <div className="rounded-lg bg-success/10 text-success text-xs px-3 py-2 flex items-start justify-between gap-2">
-                      <span className="leading-snug">{voucherPreview.message}</span>
-                      <button
-                        type="button"
-                        className="text-[10px] underline shrink-0 opacity-80"
-                        onClick={clearVoucher}
-                      >
-                        {t('cloudBackup.voucher.clear')}
-                      </button>
-                    </div>
-                  )}
-                  {voucherPreview && !voucherPreview.valid && voucherPreview.error && (
-                    <p className="text-[11px] text-destructive">{voucherPreview.error}</p>
-                  )}
-                </CardContent>
-              </Card>
-
               <SubscriptionSection
                 title={t('cloudBackup.subscription.singleTitle', { defaultValue: 'Profitku Cloud' })}
                 icon={<RefreshCw className="w-4 h-4" />}
@@ -679,7 +634,15 @@ export default function CloudHub() {
                 onSubscribe={handleSubscribe}
                 backupSizeBytes={backupSizeBytes}
                 storageUsage={profile?.storageUsage ?? null}
-                voucherPreview={voucherPreview?.valid ? voucherPreview : null}
+                voucherPreview={voucherPreview}
+                voucherInput={voucherInput}
+                voucherBusy={voucherBusy}
+                onVoucherInputChange={(v) => {
+                  setVoucherInput(v.toUpperCase());
+                  if (voucherPreview) setVoucherPreview(null);
+                }}
+                onApplyVoucher={() => void handleApplyVoucher()}
+                onClearVoucher={clearVoucher}
               />
 
 
@@ -798,12 +761,22 @@ interface SubscriptionSectionProps {
   backupSizeBytes: number | null;
   storageUsage: import('@/lib/cloud-api').StorageUsage | null;
   voucherPreview?: VoucherPreviewResult | null;
+  voucherInput: string;
+  voucherBusy: boolean;
+  onVoucherInputChange: (value: string) => void;
+  onApplyVoucher: () => void;
+  onClearVoucher: () => void;
 }
 
 function SubscriptionSection({
   title, icon, description, plans, subscription, isActive,
   showPlans, onTogglePlans, busy, onSubscribe, backupSizeBytes, storageUsage,
   voucherPreview,
+  voucherInput,
+  voucherBusy,
+  onVoucherInputChange,
+  onApplyVoucher,
+  onClearVoucher,
 }: SubscriptionSectionProps) {
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? id;
@@ -817,21 +790,64 @@ function SubscriptionSection({
   const isStorage = !!usage;
   const isLifetime = !!subscription?.isLifetime;
 
+  const validVoucher = voucherPreview?.valid ? voucherPreview : null;
+
   const displayPrice = (plan: Plan) => {
-    if (voucherPreview?.valid && typeof voucherPreview.amountAfter === 'number') {
-      return voucherPreview.amountAfter;
+    if (validVoucher && typeof validVoucher.amountAfter === 'number') {
+      return validVoucher.amountAfter;
     }
     return plan.price;
   };
 
   const buttonLabel = (planId: string) => {
-    if (voucherPreview?.valid && (voucherPreview.isLifetime || voucherPreview.amountAfter === 0)) {
+    if (validVoucher && (validVoucher.isLifetime || validVoucher.amountAfter === 0)) {
       return t('cloudBackup.voucher.activateFree');
     }
     if (!isActive) return t('cloudBackup.subscription.subscribe');
     if (planId === currentPlanId) return t('cloudBackup.subscription.renew');
     return t('cloudBackup.subscription.choose');
   };
+
+  const voucherBlock = (
+    <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+      <p className="text-xs font-semibold text-foreground">{t('cloudBackup.voucher.title')}</p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={voucherInput}
+          onChange={(e) => onVoucherInputChange(e.target.value)}
+          placeholder={t('cloudBackup.voucher.placeholder')}
+          className="flex-1 h-10 rounded-xl border border-input bg-background px-3 text-sm font-mono tracking-wide uppercase"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 shrink-0"
+          disabled={voucherBusy || !voucherInput.trim()}
+          onClick={onApplyVoucher}
+        >
+          {voucherBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cloudBackup.voucher.apply')}
+        </Button>
+      </div>
+      {validVoucher && (
+        <div className="rounded-lg bg-success/10 text-success text-xs px-3 py-2 flex items-start justify-between gap-2">
+          <span className="leading-snug">{validVoucher.message}</span>
+          <button
+            type="button"
+            className="text-[10px] underline shrink-0 opacity-80"
+            onClick={onClearVoucher}
+          >
+            {t('cloudBackup.voucher.clear')}
+          </button>
+        </div>
+      )}
+      {voucherPreview && !voucherPreview.valid && voucherPreview.error && (
+        <p className="text-[11px] text-destructive">{voucherPreview.error}</p>
+      )}
+    </div>
+  );
 
   const plansList = (
     <div className="space-y-2">
@@ -846,9 +862,9 @@ function SubscriptionSection({
           const storeLimit = plan.maxStores;
           const price = displayPrice(plan);
           const discounted =
-            voucherPreview?.valid &&
-            typeof voucherPreview.amountBefore === 'number' &&
-            price < voucherPreview.amountBefore;
+            !!validVoucher &&
+            typeof validVoucher.amountBefore === 'number' &&
+            price < validVoucher.amountBefore;
           return (
             <div key={plan.id} className={`flex items-center justify-between rounded-xl border p-3 ${isCurrent ? 'border-primary/40 bg-primary/5' : ''}`}>
               <div>
@@ -859,7 +875,7 @@ function SubscriptionSection({
                 <p className="text-[11px] text-muted-foreground">
                   {discounted ? (
                     <>
-                      <span className="line-through opacity-60 mr-1">{rp(voucherPreview!.amountBefore!)}</span>
+                      <span className="line-through opacity-60 mr-1">{rp(validVoucher!.amountBefore!)}</span>
                       <span className="text-success font-semibold">{rp(price)}</span>
                     </>
                   ) : (
@@ -941,7 +957,11 @@ function SubscriptionSection({
                 disabled={!currentPlanId || busy === `checkout:${currentPlanId}`}
                 onClick={() => currentPlanId && onSubscribe(currentPlanId)}
               >
-                {busy === `checkout:${currentPlanId}` ? <Loader2 className="w-4 h-4 animate-spin" /> : t('cloudBackup.subscription.renew')}
+                {busy === `checkout:${currentPlanId}`
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : validVoucher && (validVoucher.isLifetime || validVoucher.amountAfter === 0)
+                    ? t('cloudBackup.voucher.activateFree')
+                    : t('cloudBackup.subscription.renew')}
               </Button>
               {plans.length > 1 && (
                 <Button size="sm" variant="outline" className="flex-1 h-9" onClick={onTogglePlans}>
@@ -949,6 +969,7 @@ function SubscriptionSection({
                 </Button>
               )}
             </div>
+            {voucherBlock}
             {showPlans && plans.length > 1 && (
               <div className="pt-1 space-y-3 border-t">
                 <p className="text-xs text-muted-foreground pt-2">
@@ -962,6 +983,7 @@ function SubscriptionSection({
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">{description}</p>
             {plansList}
+            {voucherBlock}
           </div>
         )}
       </CardContent>
