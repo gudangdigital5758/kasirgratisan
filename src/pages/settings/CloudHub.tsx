@@ -652,15 +652,6 @@ export default function CloudHub() {
           <div className="space-y-4">
             {isSyncSubscribed && (
               <>
-                <ExternalMenuCard
-                  href={BRAND.dashboardOrigin}
-                  icon={<BarChart3 className="w-4 h-4" />}
-                  title={t('cloudBackup.menu.dashboard.title')}
-                  subtitle={t('cloudBackup.menu.dashboard.subtitle', {
-                    dashboard: BRAND.dashboardOrigin.replace(/^https?:\/\//, ''),
-                  })}
-                />
-
                 <MenuCard
                   to={CLOUD_ROUTES.onlineStore}
                   icon={<Globe className="w-4 h-4" />}
