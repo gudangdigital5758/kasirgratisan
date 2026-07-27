@@ -145,6 +145,8 @@ Tanpa `VITE_SUPABASE_*`, app jatuh ke **legacy** (Google JWT di `localStorage`) 
 # bucket_name = "profitku-backups"
 ```
 
+**Retention policy:** Backup files disimpan maksimal **30 hari**. Setelah itu dihapus otomatis via cron job daily (01:00 UTC). User wajib re-backup secara rutin jika butuh recovery window lebih panjang.
+
 ### Setup Resend / Fonnte
 
 ```bash
@@ -157,6 +159,9 @@ npx wrangler secret put WEBHOOK_SECRET  # cron dunning + payment webhook
 
 Cron dunning: `0 1 * * *` UTC (lihat `wrangler.toml` triggers).  
 Manual: `POST /api/cron/dunning` header `x-cron-secret`.
+
+**Backup retention:** Cron job juga cleanup backup > 30 hari otomatis (retention policy).  
+Manual: `POST /api/cron/cleanup-backups` header `x-cron-secret`.
 
 ## Android / Play Store
 

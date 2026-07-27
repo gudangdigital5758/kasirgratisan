@@ -170,6 +170,30 @@ Kode voucher **hanya** untuk langganan Profitku Cloud (`cloud_monthly`), bukan d
 
 ---
 
+## 2026-07-27 — Backup cloud retention 30 hari
+
+**Status:** Accepted
+
+File backup di R2 disimpan maksimal **30 hari**. Setelah itu dihapus otomatis via cron job daily.
+
+**Why:** 
+- Cost efficiency: Hindari storage cost terus naik (terutama untuk user lifetime free)
+- Recovery window cukup: 30 hari reasonable untuk restore data
+- Predictable cost: ~$0.03/user/month maksimal
+
+**Implementation:**
+- Cron job daily 01:00 UTC (`scheduled` handler Worker)
+- Function `cleanupExpiredBackups()` query backup `created_at < (now - 30 days)`
+- Delete dari R2 + Supabase metadata
+- Manual endpoint: `POST /api/cron/cleanup-backups` (admin/debug)
+
+**Implications:** 
+- User harus rutin backup (jangan andalkan backup lama > 30 hari)
+- UI bisa tampilkan warning "Backup expired otomatis setelah 30 hari"
+- Cost predictable: max 2 GB × user count × $0.015/GB = manageable
+
+---
+
 ## Template decision baru
 
 ```markdown

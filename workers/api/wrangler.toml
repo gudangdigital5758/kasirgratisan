@@ -18,6 +18,8 @@ APP_ORIGIN = "https://profitku.my.id"
 binding = "BACKUP_BUCKET"
 bucket_name = "profitku-backups"
 
-# Dunning H-3 / H-1 setiap hari 01:00 UTC (~08:00 WIB)
+# Cron jobs setiap hari 01:00 UTC (~08:00 WIB)
+# - Dunning H-3/H-1 subscription expiry reminder
+# - Cleanup backup files > 30 hari (retention policy)
 [triggers]
 crons = ["0 1 * * *"]

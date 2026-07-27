@@ -30,6 +30,7 @@ import {
   putBackupObject,
   r2Configured,
   sumBackupBytes,
+  cleanupExpiredBackups,
 } from './lib/backups';
 import { notifySubscriptionActivated, runDunningCron } from './lib/lifecycle';
 import { exchangeGoogleIdToken } from './lib/auth-google';
@@ -1028,6 +1029,19 @@ app.post('/api/cron/dunning', async (c) => {
   return c.json({ ok: true, ...result });
 });
 
+/** Cron manual / admin: cleanup backup expired */
+app.post('/api/cron/cleanup-backups', async (c) => {
+  const secret = c.env.WEBHOOK_SECRET;
+  if (secret) {
+    const hdr = c.req.header('x-cron-secret') || c.req.header('x-webhook-secret');
+    if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
+  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
+    return c.json({ error: 'WEBHOOK_SECRET wajib di production' }, 403);
+  }
+  const result = await cleanupExpiredBackups(c.env, 30);
+  return c.json({ ok: true, ...result });
+});
+
 // Webhooks internal
 app.get('/webhook/latest-version', (c) => {
   // Fire-and-forget ping dari client — cukup 204
@@ -1192,9 +1206,16 @@ export default {
   fetch: app.fetch.bind(app),
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
-      runDunningCron(env).then((r) => {
-        console.log('[cron dunning]', r);
-      }),
+      Promise.all([
+        // Dunning H-3/H-1 untuk subscription expiry
+        runDunningCron(env).then((r) => {
+          console.log('[cron dunning]', r);
+        }),
+        // Cleanup backup files > 30 hari
+        cleanupExpiredBackups(env, 30).then((r) => {
+          console.log('[cron cleanup-backups]', `deleted: ${r.deleted}, errors: ${r.errors}, cutoff: ${r.cutoffDate}`);
+        }),
+      ]),
     );
   },
 };

@@ -88,3 +88,56 @@ export async function sumBackupBytes(env: Env, userId: string): Promise<number> 
   const list = await listBackupMeta(env, userId, 500);
   return list.reduce((s, b) => s + (Number(b.file_size) || 0), 0);
 }
+
+/**
+ * Cleanup backup files older than retention days.
+ * Dipanggil via cron job daily untuk hapus backup expired.
+ * 
+ * @param env Worker environment
+ * @param retentionDays Retention window (default: 30 hari)
+ * @returns Number of backups deleted
+ */
+export async function cleanupExpiredBackups(env: Env, retentionDays = 30): Promise<{
+  deleted: number;
+  errors: number;
+  cutoffDate: string;
+}> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { deleted: 0, errors: 0, cutoffDate: '' };
+  }
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - retentionDays);
+  const cutoffIso = cutoff.toISOString();
+
+  let deleted = 0;
+  let errors = 0;
+
+  try {
+    // Query backups older than retention window
+    const expired = await sbGet<BackupMeta[]>(
+      env,
+      `backups?created_at=lt.${cutoffIso}&select=*&limit=1000`,
+    );
+
+    console.log(`[cleanup] Found ${expired.length} expired backups (older than ${retentionDays} days)`);
+
+    for (const backup of expired) {
+      try {
+        // Delete from R2
+        await deleteBackupObject(env, backup.file_key);
+        // Delete metadata from Supabase
+        await deleteBackupMeta(env, backup.id, backup.user_id);
+        deleted++;
+      } catch (err) {
+        console.error(`[cleanup] Failed to delete backup ${backup.id}:`, err);
+        errors++;
+      }
+    }
+  } catch (err) {
+    console.error('[cleanup] Query failed:', err);
+    errors++;
+  }
+
+  return { deleted, errors, cutoffDate: cutoffIso };
+}
