@@ -945,7 +945,7 @@ function SubscriptionSection({
               <Button
                 size="sm"
                 className="flex-1 h-9"
-                disabled={!currentPlanId || busy === `checkout:${currentPlanId}`}
+                disabled={isLifetime || !currentPlanId || busy === `checkout:${currentPlanId}`}
                 onClick={() => currentPlanId && onSubscribe(currentPlanId)}
               >
                 {busy === `checkout:${currentPlanId}`
