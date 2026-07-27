@@ -197,6 +197,19 @@
     "telegram": "💬 Sertai Grup Telegram",
     "storageUsed": "Storan Digunakan"
   },
+  "storage": {
+    "local": {
+      "title": "Storan Tempatan (Browser)",
+      "description": "Data POS luar talian pada peranti ini. PERCUMA tanpa had masa.",
+      "warning": "Amaran: Storan tempatan telah mencapai {{percent}}% daripada kuota pelayar. Pertimbangkan untuk backup ke cloud atau eksport data."
+    },
+    "cloud": {
+      "title": "Storan Cloud (R2 Backups)",
+      "description": "Fail backup di Profitku Cloud. Kuota {{limit}} MB, retensi 30 hari.",
+      "warning": "Amaran: Storan cloud telah mencapai {{percent}}% daripada kuota. Padam backup lama atau naik taraf pakej.",
+      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk auto-backup dan kuota 2 GB."
+    }
+  },
   "storeDialog": {
     "title": "Info Kedai",
     "logoLabel": "Logo Kedai",

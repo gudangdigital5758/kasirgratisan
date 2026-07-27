@@ -47,7 +47,7 @@ export default function Pengaturan() {
   const activeDebts = useLiveQuery(() => db.debts.where('status').anyOf('unpaid', 'partial').toArray());
 
   const { multiUserEnabled, currentUser, isOwner, can, logout } = useAuth();
-  const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
+  const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed, profile } = useCloudAuth();
 
   // PWA install
   const { canInstall, isInstalled, isIOS, install } = usePWAInstall();
@@ -969,23 +969,102 @@ export default function Pengaturan() {
                {t('about.telegram')}
              </a>
            </div>
-           {storageUsage && (
-             <div className="pt-2 border-t">
-               <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1.5">
-                 <HardDrive className="w-3.5 h-3.5" />
-                 <span>{t('about.storageUsed')}</span>
+
+           {/* Split Storage Display: Local + Cloud */}
+           <div className="pt-3 border-t space-y-3">
+             {/* Local Storage (IndexedDB) */}
+             {storageUsage && (
+               <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
+                 <div className="flex items-center gap-2 mb-2">
+                   <div className="w-7 h-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                     <Smartphone className="w-3.5 h-3.5" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-semibold text-foreground">{t('storage.local.title')}</p>
+                     <p className="text-[10px] text-muted-foreground leading-tight">{t('storage.local.description')}</p>
+                   </div>
+                 </div>
+                 <div className="space-y-1">
+                   <div className="flex items-baseline justify-between text-[11px]">
+                     <span className="text-muted-foreground">{t('about.storageUsed')}</span>
+                     <span className="font-semibold">
+                       {formatBytes(storageUsage.usage)} / {formatBytes(storageUsage.quota)}
+                     </span>
+                   </div>
+                   <div className="w-full h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                     <div
+                       className="h-full bg-sky-500 rounded-full transition-all"
+                       style={{ width: `${Math.min(100, (storageUsage.usage / storageUsage.quota) * 100)}%` }}
+                     />
+                   </div>
+                   {storageUsage.usage / storageUsage.quota > 0.8 && (
+                     <div className="flex items-start gap-1.5 mt-2 p-2 rounded bg-warning/10 border border-warning/20">
+                       <AlertTriangle className="w-3 h-3 text-warning shrink-0 mt-0.5" />
+                       <p className="text-[9px] text-warning leading-snug">
+                         {t('storage.local.warning', { percent: Math.round((storageUsage.usage / storageUsage.quota) * 100) })}
+                       </p>
+                     </div>
+                   )}
+                 </div>
                </div>
-               <p className="text-xs font-semibold">
-                 {formatBytes(storageUsage.usage)} / {formatBytes(storageUsage.quota)}
-               </p>
-               <div className="w-full h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
-                 <div
-                   className="h-full bg-primary rounded-full transition-all"
-                   style={{ width: `${Math.min(100, (storageUsage.usage / storageUsage.quota) * 100)}%` }}
-                 />
+             )}
+
+             {/* Cloud Storage (R2 Backups) — only show if cloud subscribed */}
+             {cloudLoggedIn && cloudSubscribed && profile?.storageUsage && (
+               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                 <div className="flex items-center gap-2 mb-2">
+                   <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                     <Cloud className="w-3.5 h-3.5" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-semibold text-foreground">{t('storage.cloud.title')}</p>
+                     <p className="text-[10px] text-muted-foreground leading-tight">
+                       {t('storage.cloud.description', { limit: profile.storageUsage.limitMb })}
+                     </p>
+                   </div>
+                 </div>
+                 <div className="space-y-1">
+                   <div className="flex items-baseline justify-between text-[11px]">
+                     <span className="text-muted-foreground">{t('about.storageUsed')}</span>
+                     <span className="font-semibold">
+                       {profile.storageUsage.usedMb.toFixed(1)} MB / {profile.storageUsage.limitMb} MB
+                     </span>
+                   </div>
+                   <div className="w-full h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                     <div
+                       className="h-full bg-primary rounded-full transition-all"
+                       style={{ width: `${Math.min(100, (profile.storageUsage.usedMb / profile.storageUsage.limitMb) * 100)}%` }}
+                     />
+                   </div>
+                   {profile.storageUsage.usedMb / profile.storageUsage.limitMb > 0.8 && (
+                     <div className="flex items-start gap-1.5 mt-2 p-2 rounded bg-warning/10 border border-warning/20">
+                       <AlertTriangle className="w-3 h-3 text-warning shrink-0 mt-0.5" />
+                       <p className="text-[9px] text-warning leading-snug">
+                         {t('storage.cloud.warning', { percent: Math.round((profile.storageUsage.usedMb / profile.storageUsage.limitMb) * 100) })}
+                       </p>
+                     </div>
+                   )}
+                 </div>
                </div>
-             </div>
-           )}
+             )}
+
+             {/* Cloud Not Active — show info card */}
+             {!cloudSubscribed && (
+               <div className="rounded-lg border border-muted bg-muted/30 p-3">
+                 <div className="flex items-center gap-2 mb-1.5">
+                   <div className="w-7 h-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                     <Cloud className="w-3.5 h-3.5" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-semibold text-foreground">{t('storage.cloud.title')}</p>
+                   </div>
+                 </div>
+                 <p className="text-[10px] text-muted-foreground leading-snug">
+                   {t('storage.cloud.needSubscription')}
+                 </p>
+               </div>
+             )}
+           </div>
         </CardContent>
       </Card>
 

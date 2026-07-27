@@ -226,6 +226,19 @@
     "telegram": "💬 Gabung Grup Telegram",
     "storageUsed": "Penyimpanan Terpakai"
   },
+  "storage": {
+    "local": {
+      "title": "Penyimpanan Lokal (Browser)",
+      "description": "Data POS offline di perangkat ini. GRATIS tanpa batas waktu.",
+      "warning": "Peringatan: Penyimpanan lokal sudah mencapai {{percent}}% dari kuota browser. Pertimbangkan untuk backup ke cloud atau ekspor data."
+    },
+    "cloud": {
+      "title": "Penyimpanan Cloud (R2 Backups)",
+      "description": "File backup di Profitku Cloud. Kuota {{limit}} MB, retensi 30 hari.",
+      "warning": "Peringatan: Penyimpanan cloud sudah mencapai {{percent}}% dari kuota. Hapus backup lama atau upgrade paket.",
+      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk backup otomatis dan kuota 2 GB."
+    }
+  },
   "storeDialog": {
     "title": "Info Toko",
     "logoLabel": "Logo Toko",
