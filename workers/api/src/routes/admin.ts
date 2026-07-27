@@ -730,4 +730,94 @@ admin.delete('/vouchers/:id', async (c) => {
   }
 });
 
+// --- App Settings ---
+
+admin.put('/app-settings/:key', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canWrite(a.role)) {
+    return c.json({ error: 'Role tidak boleh mengubah app settings' }, 403);
+  }
+
+  const key = c.req.param('key');
+  // Whitelist key yang boleh diubah dari admin
+  const allowed = ['action_buttons'];
+  if (!allowed.includes(key)) {
+    return c.json({ error: `Key '${key}' tidak diizinkan untuk diubah` }, 400);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    value?: unknown;
+  };
+
+  if (body.value === undefined) {
+    return c.json({ error: 'Field value wajib ada' }, 400);
+  }
+
+  // Validasi structure untuk action_buttons
+  if (key === 'action_buttons') {
+    const val = body.value;
+    if (!val || typeof val !== 'object' || Array.isArray(val)) {
+      return c.json({ error: 'value harus berupa object' }, 400);
+    }
+    const buttons = val as Record<string, unknown>;
+    const requiredButtons = ['whatsNew', 'requestFeature', 'donate', 'telegram'];
+    for (const btn of requiredButtons) {
+      const cfg = buttons[btn];
+      if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
+        return c.json({ error: `Button '${btn}' tidak valid` }, 400);
+      }
+      const b = cfg as Record<string, unknown>;
+      if (typeof b.enabled !== 'boolean') {
+        return c.json({ error: `Button '${btn}' field enabled harus boolean` }, 400);
+      }
+      if (typeof b.url !== 'string') {
+        return c.json({ error: `Button '${btn}' field url harus string` }, 400);
+      }
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  try {
+    const rows = await sbPatch<{ key: string; value: unknown; updated_at: string }[]>(
+      c.env,
+      `app_settings?key=eq.${key}`,
+      {
+        value: body.value,
+        updated_at: now,
+        updated_by: a.userId,
+      },
+    );
+
+    const setting = Array.isArray(rows) ? rows[0] : rows;
+    if (!setting) {
+      return c.json({ error: `Setting key '${key}' tidak ditemukan di database` }, 404);
+    }
+
+    await writeAudit(c.env, a, 'app_settings.update', 'app_settings', key, {
+      value: body.value,
+    }, c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'));
+
+    await writeEvent(c.env, {
+      type: 'admin.app_settings.update',
+      message: `Admin updated app_settings key=${key}`,
+      actorUserId: a.userId,
+      payload: { key, actorEmail: a.email },
+    });
+
+    return c.json({
+      ok: true,
+      setting: {
+        key: setting.key,
+        value: setting.value,
+        updatedAt: setting.updated_at,
+      },
+    });
+  } catch (err) {
+    console.error('[admin app-settings update]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal update app settings' }, 500);
+  }
+});
+
 export default admin;

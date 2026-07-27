@@ -549,4 +549,25 @@ export async function syncStoreData(storeId: string, payload: SyncPayload): Prom
   return res.json();
 }
 
+// === App Settings (public, no auth) ===
+export interface AppSetting {
+  key: string;
+  value: Record<string, unknown>;
+  description?: string | null;
+  updatedAt: string;
+}
+
+export async function fetchAppSetting(key: string): Promise<AppSetting | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/app-settings/${key}`);
+    if (res.status === 404) return null;
+    if (!res.ok) await parseError(res);
+    return res.json();
+  } catch (err) {
+    console.warn(`[fetchAppSetting:${key}]`, err);
+    return null;
+  }
+}
+
 export { CloudApiError };
+

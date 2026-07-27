@@ -194,6 +194,34 @@ app.get('/api/plans', async (c) => {
   return c.json({ plans: SEED_PLANS });
 });
 
+// --- App Settings (public read) ---
+app.get('/api/app-settings/:key', async (c) => {
+  const key = c.req.param('key');
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) {
+      type Row = {
+        key: string;
+        value: Record<string, unknown>;
+        description: string | null;
+        updated_at: string;
+      };
+      const rows = await sbGet<Row[]>(c.env, `app_settings?key=eq.${key}&select=*&limit=1`);
+      if (rows.length > 0) {
+        const row = rows[0];
+        return c.json({
+          key: row.key,
+          value: row.value,
+          description: row.description,
+          updatedAt: row.updated_at,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn(`[app-settings:${key}]`, err);
+  }
+  return c.json({ error: 'Setting not found' }, 404);
+});
+
 // --- Profile / entitlements ---
 app.get('/api/user/profile', async (c) => {
   const userId = requireUser(c);

@@ -32,6 +32,7 @@ import { Printer } from 'lucide-react';
 import { APP_VERSION } from '@/lib/app-version';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { fetchAppSetting, type AppSetting } from '@/lib/cloud-api';
 
 export default function Pengaturan() {
   const { t } = useTranslation('settings');
@@ -69,6 +70,14 @@ export default function Pengaturan() {
 
   // Analytics opt-out (default: tracking on)
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
+
+  // Action buttons config from API
+  const [actionButtonsConfig, setActionButtonsConfig] = useState<AppSetting | null>(null);
+  useEffect(() => {
+    fetchAppSetting('action_buttons')
+      .then((setting) => setActionButtonsConfig(setting))
+      .catch((err) => console.warn('[action_buttons]', err));
+  }, []);
 
   // Push notification status (OneSignal)
   const [pushState, setPushState] = useState<'unsupported' | 'off' | 'default' | 'granted' | 'denied'>('unsupported');
@@ -929,46 +938,63 @@ export default function Pengaturan() {
            <p className="text-xs text-muted-foreground">{t('about.tagline')}</p>
            <p className="text-[10px] text-muted-foreground">{t('about.version', { version: APP_VERSION })}</p>
 
-           {/* Links */}
-           <div className="flex flex-col gap-2 pt-2">
-             <button
-               type="button"
-               onClick={() => setWhatsNewOpen(true)}
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-primary/30 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
-             >
-               <Sparkles className="w-3.5 h-3.5" />
-               {t('about.whatsNew')}
-               {unseenFeatures.length > 0 && (
-                 <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                   {unseenFeatures.length}
-                 </span>
+           {/* Dynamic Action Buttons from API */}
+           {actionButtonsConfig?.value && (
+             <div className="flex flex-col gap-2 pt-2">
+               {/* What's New Button */}
+               {actionButtonsConfig.value.whatsNew && (actionButtonsConfig.value.whatsNew as { enabled?: boolean }).enabled && (
+                 <button
+                   type="button"
+                   onClick={() => setWhatsNewOpen(true)}
+                   className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-primary/30 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+                 >
+                   <Sparkles className="w-3.5 h-3.5" />
+                   {t('about.whatsNew')}
+                   {unseenFeatures.length > 0 && (
+                     <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                       {unseenFeatures.length}
+                     </span>
+                   )}
+                 </button>
                )}
-             </button>
-             <a
-               href="https://t.me/profitku"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors"
-             >
-               {t('about.requestFeature')}
-             </a>
-             <a
-               href="mailto:support@profitku.my.id"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-warning/30 bg-warning/5 text-xs font-semibold text-warning hover:bg-warning/10 transition-colors"
-             >
-               {t('about.donate')}
-             </a>
-             <a
-               href="https://t.me/profitku"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-sky-500/30 bg-sky-500/5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
-             >
-               {t('about.telegram')}
-             </a>
-           </div>
+
+               {/* Request Feature Button */}
+               {actionButtonsConfig.value.requestFeature && (actionButtonsConfig.value.requestFeature as { enabled?: boolean; url?: string }).enabled && (
+                 <a
+                   href={(actionButtonsConfig.value.requestFeature as { url?: string }).url || 'https://t.me/profitku'}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors"
+                 >
+                   {t('about.requestFeature')}
+                 </a>
+               )}
+
+               {/* Donate Button */}
+               {actionButtonsConfig.value.donate && (actionButtonsConfig.value.donate as { enabled?: boolean; url?: string }).enabled && (
+                 <a
+                   href={(actionButtonsConfig.value.donate as { url?: string }).url || 'mailto:support@profitku.my.id'}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-warning/30 bg-warning/5 text-xs font-semibold text-warning hover:bg-warning/10 transition-colors"
+                 >
+                   {t('about.donate')}
+                 </a>
+               )}
+
+               {/* Telegram Button */}
+               {actionButtonsConfig.value.telegram && (actionButtonsConfig.value.telegram as { enabled?: boolean; url?: string }).enabled && (
+                 <a
+                   href={(actionButtonsConfig.value.telegram as { url?: string }).url || 'https://t.me/profitku'}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-sky-500/30 bg-sky-500/5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                 >
+                   {t('about.telegram')}
+                 </a>
+               )}
+             </div>
+           )}
 
            {/* Split Storage Display: Local + Cloud */}
            <div className="pt-3 border-t space-y-3">
