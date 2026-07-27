@@ -81,6 +81,15 @@ export const adminApi = {
       body: JSON.stringify(body),
     }),
 
+  updateAppSetting: (key: string, value: unknown) =>
+    request<{
+      ok: boolean;
+      setting: { key: string; value: unknown; updatedAt: string };
+    }>(`/admin/api/app-settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+
   vouchers: () => request<{ vouchers: VoucherRow[] }>('/admin/api/vouchers'),
 
   voucher: (id: string) =>

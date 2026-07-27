@@ -86,19 +86,7 @@ export default function SettingsPage() {
     setMsg(null);
     setErr(null);
     try {
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.profitku.my.id'}/admin/api/app-settings/action_buttons`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ value: actionButtons }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Gagal simpan' }));
-        throw new Error(err.error || 'Gagal simpan');
-      }
+      await adminApi.updateAppSetting('action_buttons', actionButtons);
       setMsg('Action buttons tersimpan');
       await loadActionButtons();
     } catch (e) {
