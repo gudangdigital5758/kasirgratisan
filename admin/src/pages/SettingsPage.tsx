@@ -196,7 +196,11 @@ export default function SettingsPage() {
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
-                requestFeature: { ...prev.requestFeature, url: e.target.value },
+                requestFeature: { 
+                  enabled: prev.requestFeature?.enabled ?? true, 
+                  ...prev.requestFeature, 
+                  url: e.target.value 
+                },
               }))
             }
             style={{
@@ -234,7 +238,11 @@ export default function SettingsPage() {
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
-                donate: { ...prev.donate, url: e.target.value },
+                donate: { 
+                  enabled: prev.donate?.enabled ?? true, 
+                  ...prev.donate, 
+                  url: e.target.value 
+                },
               }))
             }
             style={{
@@ -272,7 +280,11 @@ export default function SettingsPage() {
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
-                telegram: { ...prev.telegram, url: e.target.value },
+                telegram: { 
+                  enabled: prev.telegram?.enabled ?? true, 
+                  ...prev.telegram, 
+                  url: e.target.value 
+                },
               }))
             }
             style={{
