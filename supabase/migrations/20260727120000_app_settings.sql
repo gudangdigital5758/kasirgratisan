@@ -20,17 +20,13 @@ CREATE POLICY "Public read access"
   FOR SELECT
   USING (true);
 
--- Policy: Only admin can insert/update/delete
-CREATE POLICY "Admin only write"
+-- Policy: Only service_role can insert/update/delete (admin access via Worker service_role key)
+-- Note: Client-side updates not allowed; use admin API endpoint instead
+CREATE POLICY "Service role only write"
   ON public.app_settings
   FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.admins
-      WHERE admins.user_id = auth.uid()
-        AND admins.is_active = true
-    )
-  );
+  USING (auth.jwt() ->> 'role' = 'service_role')
+  WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
 
 -- Insert default settings for action buttons
 INSERT INTO public.app_settings (key, value, description) VALUES
