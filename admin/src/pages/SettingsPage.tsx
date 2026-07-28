@@ -61,6 +61,29 @@ export default function SettingsPage() {
     }
   };
 
+  // Normalize payload before save: whatsNew doesn't need url
+  const normalizeActionButtons = (buttons: ActionButtonsValue): ActionButtonsValue => {
+    const normalized = { ...buttons };
+    
+    // whatsNew only needs enabled flag (opens modal, not external link)
+    if (normalized.whatsNew) {
+      const { enabled } = normalized.whatsNew;
+      normalized.whatsNew = { enabled, url: '' };
+    }
+    
+    // Other buttons need url as string
+    ['requestFeature', 'donate', 'telegram'].forEach((key) => {
+      const btn = normalized[key as keyof ActionButtonsValue];
+      if (btn && typeof btn === 'object') {
+        if (typeof (btn as { url?: string }).url !== 'string') {
+          (btn as { url: string }).url = '';
+        }
+      }
+    });
+    
+    return normalized;
+  };
+
   useEffect(() => {
     document.title = 'Platform · Profitku Admin';
     load();
@@ -86,7 +109,8 @@ export default function SettingsPage() {
     setMsg(null);
     setErr(null);
     try {
-      await adminApi.updateAppSetting('action_buttons', actionButtons);
+      const normalized = normalizeActionButtons(actionButtons);
+      await adminApi.updateAppSetting('action_buttons', normalized);
       setMsg('Action buttons tersimpan');
       await loadActionButtons();
     } catch (e) {

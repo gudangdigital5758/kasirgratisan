@@ -762,6 +762,8 @@ admin.put('/app-settings/:key', async (c) => {
     }
     const buttons = val as Record<string, unknown>;
     const requiredButtons = ['whatsNew', 'requestFeature', 'donate', 'telegram'];
+    const linkButtons = ['requestFeature', 'donate', 'telegram'];
+    
     for (const btn of requiredButtons) {
       const cfg = buttons[btn];
       if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
@@ -771,7 +773,8 @@ admin.put('/app-settings/:key', async (c) => {
       if (typeof b.enabled !== 'boolean') {
         return c.json({ error: `Button '${btn}' field enabled harus boolean` }, 400);
       }
-      if (typeof b.url !== 'string') {
+      // Only link buttons require url field
+      if (linkButtons.includes(btn) && typeof b.url !== 'string') {
         return c.json({ error: `Button '${btn}' field url harus string` }, 400);
       }
     }

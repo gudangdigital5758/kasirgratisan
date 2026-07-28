@@ -51,9 +51,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Set async token getter that always fetches fresh session
   useEffect(() => {
-    setAdminTokenGetter(() => session?.access_token ?? null);
-  }, [session]);
+    if (!supabase) {
+      setAdminTokenGetter(() => null);
+      return;
+    }
+    setAdminTokenGetter(async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    });
+  }, [supabase]);
 
   const refreshMe = useCallback(async () => {
     if (!session?.access_token) {

@@ -1,19 +1,29 @@
 import { API_URL } from './config';
 
-let tokenGetter: () => string | null = () => null;
+let tokenGetter: () => string | null | Promise<string | null> = () => null;
 
-export function setAdminTokenGetter(fn: () => string | null) {
+export function setAdminTokenGetter(fn: () => string | null | Promise<string | null>) {
   tokenGetter = fn;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = tokenGetter();
+async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  let token = await Promise.resolve(tokenGetter());
   const headers = new Headers(init.headers || {});
   headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   const data = await res.json().catch(() => ({}));
+  
+  // Retry once on 401 if token getter can refresh
+  if (!res.ok && res.status === 401 && retry) {
+    token = await Promise.resolve(tokenGetter());
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+      return request<T>(path, { ...init, headers }, false);
+    }
+  }
+  
   if (!res.ok) {
     const msg = (data as { error?: string }).error || `HTTP ${res.status}`;
     throw new Error(msg);

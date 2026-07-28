@@ -41,8 +41,13 @@ Lihat: [`SETUP-CI-CD.md`](./SETUP-CI-CD.md) untuk panduan lengkap.
 - ✅ Type check sebelum deploy API
 - ✅ Deployment summary di Actions
 
-## 🔗 Links
+## 📚 Documentation
+
+- [`SETUP-CI-CD.md`](./SETUP-CI-CD.md) - Setup GitHub Actions & Secrets (comprehensive guide)
+- [`SECRETS-TEMPLATE.md`](./SECRETS-TEMPLATE.md) - GitHub Secrets copy-paste template
+- [`MIGRATION-GUIDE.md`](./MIGRATION-GUIDE.md) - Pindah repo antar akun GitHub
+
+## � Links
 
 - [GitHub Actions Docs](https://docs.github.com/en/actions)
 - [Cloudflare Wrangler Action](https://github.com/cloudflare/wrangler-action)
-- [Setup Guide](./SETUP-CI-CD.md)
