@@ -93,9 +93,6 @@ jobs:
         run: npm ci
         working-directory: ./admin
 
-      - name: Generate admin version metadata
-        run: |
-          node -e "require('fs').writeFileSync('admin/public/version.json', JSON.stringify({ commitHash: process.env.GITHUB_SHA, buildDate: new Date().toISOString() }, null, 2) + '\n')"
       - name: Build admin
         run: npm run build:prod
         working-directory: ./admin
