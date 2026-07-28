@@ -61,14 +61,13 @@ export default function SettingsPage() {
     }
   };
 
-  // Normalize payload before save: whatsNew doesn't need url
+  // Normalize payload before save: preserve existing fields, ensure url for link buttons
   const normalizeActionButtons = (buttons: ActionButtonsValue): ActionButtonsValue => {
     const normalized = { ...buttons };
     
-    // whatsNew only needs enabled flag (opens modal, not external link)
+    // whatsNew: preserve all fields (label, etc), only ensure enabled is set
     if (normalized.whatsNew) {
-      const { enabled } = normalized.whatsNew;
-      normalized.whatsNew = { enabled, url: '' };
+      normalized.whatsNew = { ...normalized.whatsNew };
     }
     
     // Other buttons need url as string

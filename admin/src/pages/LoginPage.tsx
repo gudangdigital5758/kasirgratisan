@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { useAdminAuth } from '../lib/auth';
 import { GOOGLE_CLIENT_ID } from '../lib/config';
 
@@ -34,20 +34,22 @@ export default function LoginPage() {
         {error && <p className="err">{error}</p>}
 
         {supabaseReady && googleReady && GOOGLE_CLIENT_ID && (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <GoogleLogin
-              onSuccess={async (res) => {
-                if (!res.credential) return;
-                try {
-                  await loginWithGoogleIdToken(res.credential);
-                } catch (e) {
-                  alert(e instanceof Error ? e.message : 'Login gagal');
-                }
-              }}
-              onError={() => alert('Google login gagal')}
-              useOneTap={false}
-            />
-          </div>
+          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <GoogleLogin
+                onSuccess={async (res) => {
+                  if (!res.credential) return;
+                  try {
+                    await loginWithGoogleIdToken(res.credential);
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : 'Login gagal');
+                  }
+                }}
+                onError={() => alert('Google login gagal')}
+                useOneTap={false}
+              />
+            </div>
+          </GoogleOAuthProvider>
         )}
 
         <p className="muted" style={{ fontSize: '0.75rem' }}>
