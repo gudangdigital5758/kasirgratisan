@@ -33,6 +33,7 @@ import { APP_VERSION } from '@/lib/app-version';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { fetchAppSetting, type AppSetting } from '@/lib/cloud-api';
+import { BRAND } from '@/lib/brand';
 
 export default function Pengaturan() {
   const { t } = useTranslation('settings');
@@ -315,6 +316,7 @@ export default function Pengaturan() {
   // Status kartu Cloud Sync di Settings.
   const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
   const cloudStoreLinked = !!storeSettings?.cloudStoreId;
+  const cloudStorageLimitMb = profile?.storageUsage.limitMb || BRAND.cloudStorageMb;
   const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
     ? {
         theme: 'bg-destructive/10 ring-destructive/20',
@@ -1045,7 +1047,7 @@ export default function Pengaturan() {
                    <div className="flex-1 min-w-0">
                      <p className="text-xs font-semibold text-foreground">{t('storage.cloud.title')}</p>
                      <p className="text-[10px] text-muted-foreground leading-tight">
-                       {t('storage.cloud.description', { limit: profile.storageUsage.limitMb })}
+                        {t('storage.cloud.description', { limit: cloudStorageLimitMb })}
                      </p>
                    </div>
                  </div>
@@ -1053,20 +1055,20 @@ export default function Pengaturan() {
                    <div className="flex items-baseline justify-between text-[11px]">
                      <span className="text-muted-foreground">{t('about.storageUsed')}</span>
                      <span className="font-semibold">
-                       {profile.storageUsage.usedMb.toFixed(1)} MB / {profile.storageUsage.limitMb} MB
+                        {profile.storageUsage.usedMb.toFixed(1)} MB / {cloudStorageLimitMb} MB
                      </span>
                    </div>
                    <div className="w-full h-1.5 bg-muted/60 rounded-full overflow-hidden">
                      <div
                        className="h-full bg-primary rounded-full transition-all"
-                       style={{ width: `${Math.min(100, (profile.storageUsage.usedMb / profile.storageUsage.limitMb) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (profile.storageUsage.usedMb / cloudStorageLimitMb) * 100)}%` }}
                      />
                    </div>
-                   {profile.storageUsage.usedMb / profile.storageUsage.limitMb > 0.8 && (
+                    {profile.storageUsage.usedMb / cloudStorageLimitMb > 0.8 && (
                      <div className="flex items-start gap-1.5 mt-2 p-2 rounded bg-warning/10 border border-warning/20">
                        <AlertTriangle className="w-3 h-3 text-warning shrink-0 mt-0.5" />
                        <p className="text-[9px] text-warning leading-snug">
-                         {t('storage.cloud.warning', { percent: Math.round((profile.storageUsage.usedMb / profile.storageUsage.limitMb) * 100) })}
+                          {t('storage.cloud.warning', { percent: Math.round((profile.storageUsage.usedMb / cloudStorageLimitMb) * 100) })}
                        </p>
                      </div>
                    )}

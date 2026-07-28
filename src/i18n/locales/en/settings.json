@@ -228,13 +228,13 @@
   },
   "storage": {
     "local": {
-      "title": "Local Storage (Browser)",
+      "title": "Local Storage",
       "description": "Offline POS data on this device. FREE with no time limit.",
       "warning": "Warning: Local storage has reached {{percent}}% of browser quota. Consider backing up to cloud or exporting data."
     },
     "cloud": {
-      "title": "Cloud Storage (R2 Backups)",
-      "description": "Backup files in Profitku Cloud. {{limit}} MB quota, 30-day retention.",
+      "title": "Cloud Storage",
+      "description": "Backup files in Profitku Cloud. {{limit}} MB quota, stored for 30 days.",
       "warning": "Warning: Cloud storage has reached {{percent}}% of quota. Delete old backups or upgrade plan.",
       "needSubscription": "Profitku Cloud not active. Subscribe Rp 25,000/month for auto-backup and 2 GB quota."
     }
