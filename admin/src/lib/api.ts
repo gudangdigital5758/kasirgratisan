@@ -1,45 +1,69 @@
 import { API_URL } from './config';
+import { supabase } from './supabase';
 
-let tokenGetter: () => string | null | Promise<string | null> = () => null;
+export type AdminMe = {
+  userId: string;
+  email: string;
+  role: string;
+  canWrite: boolean;
+  canMutateBilling: boolean;
+};
 
-export function setAdminTokenGetter(fn: () => string | null | Promise<string | null>) {
-  tokenGetter = fn;
-}
+type AuthAdapter = {
+  getToken: (forceRefresh: boolean) => Promise<string | null>;
+  onUnauthorized: () => Promise<void>;
+};
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
-  let token = await Promise.resolve(tokenGetter());
-  const headers = new Headers(init.headers || {});
-  headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+type RequestOptions = {
+  baseUrl?: string;
+  fetcher?: typeof fetch;
+};
 
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
-  const data = await res.json().catch(() => ({}));
-  
-  // Retry once on 401 if token getter can refresh
-  if (!res.ok && res.status === 401 && retry) {
-    token = await Promise.resolve(tokenGetter());
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-      return request<T>(path, { ...init, headers }, false);
+const browserAuth: AuthAdapter = {
+  async getToken(forceRefresh) {
+    if (!supabase) return null;
+    const result = forceRefresh
+      ? await supabase.auth.refreshSession()
+      : await supabase.auth.getSession();
+    return result.data.session?.access_token ?? null;
+  },
+  async onUnauthorized() {
+    await supabase?.auth.signOut({ scope: 'local' });
+  },
+};
+
+export function createAdminRequest(auth: AuthAdapter, options: RequestOptions = {}) {
+  const baseUrl = options.baseUrl ?? API_URL;
+  const fetcher = options.fetcher ?? fetch;
+
+  return async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+    const token = await auth.getToken(!retry);
+    const headers = new Headers(init.headers || {});
+    headers.set('Content-Type', 'application/json');
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    const res = await fetcher(`${baseUrl}${path}`, { ...init, headers });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok && res.status === 401 && retry) {
+      return request<T>(path, init, false);
     }
-  }
-  
-  if (!res.ok) {
-    const msg = (data as { error?: string }).error || `HTTP ${res.status}`;
-    throw new Error(msg);
-  }
-  return data as T;
+    if (!res.ok && res.status === 401) {
+      await auth.onUnauthorized();
+    }
+
+    if (!res.ok) {
+      const msg = (data as { error?: string }).error || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data as T;
+  };
 }
+
+export const request = createAdminRequest(browserAuth);
 
 export const adminApi = {
-  me: () =>
-    request<{
-      userId: string;
-      email: string;
-      role: string;
-      canWrite: boolean;
-      canMutateBilling: boolean;
-    }>('/admin/api/me'),
+  me: () => request<AdminMe>('/admin/api/me'),
 
   overview: () =>
     request<{
@@ -83,7 +107,16 @@ export const adminApi = {
       settings: Record<string, unknown>;
       health: Record<string, unknown>;
       secretsNote: string;
+      capabilities: {
+        canWritePlatformSettings: boolean;
+        canWriteAppSettings: boolean;
+      };
     }>('/admin/api/settings'),
+
+  appSetting: (key: string) =>
+    request<{ key: string; value: unknown; updatedAt: string }>(
+      `/api/app-settings/${encodeURIComponent(key)}`,
+    ),
 
   patchSettings: (body: Record<string, unknown>) =>
     request<{ ok: boolean; updated: string[] }>('/admin/api/settings', {
@@ -95,7 +128,7 @@ export const adminApi = {
     request<{
       ok: boolean;
       setting: { key: string; value: unknown; updatedAt: string };
-    }>(`/admin/api/app-settings/${key}`, {
+    }>(`/admin/api/app-settings/${encodeURIComponent(key)}`, {
       method: 'PUT',
       body: JSON.stringify({ value }),
     }),

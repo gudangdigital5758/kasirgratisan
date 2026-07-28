@@ -3,21 +3,13 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
-import { GOOGLE_CLIENT_ID, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
-import { adminApi, setAdminTokenGetter } from './api';
-
-type AdminMe = {
-  userId: string;
-  email: string;
-  role: string;
-  canWrite: boolean;
-  canMutateBilling: boolean;
-};
+import type { Session } from '@supabase/supabase-js';
+import { GOOGLE_CLIENT_ID } from './config';
+import { adminApi, type AdminMe } from './api';
+import { supabase } from './supabase';
 
 type AuthState = {
   session: Session | null;
@@ -33,35 +25,11 @@ type AuthState = {
 
 const AuthCtx = createContext<AuthState | null>(null);
 
-function makeClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: true,
-      storageKey: 'profitku_admin_supabase_auth',
-      autoRefreshToken: true,
-    },
-  });
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => makeClient(), []);
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<AdminMe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Set async token getter that always fetches fresh session
-  useEffect(() => {
-    if (!supabase) {
-      setAdminTokenGetter(() => null);
-      return;
-    }
-    setAdminTokenGetter(async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session?.access_token ?? null;
-    });
-  }, [supabase]);
 
   const refreshMe = useCallback(async () => {
     if (!session?.access_token) {
@@ -91,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
     });
     return () => sub.subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     if (session) {
@@ -111,14 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (err) throw err;
       setSession(data.session);
     },
-    [supabase],
+    [],
   );
 
   const logout = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
     setSession(null);
     setMe(null);
-  }, [supabase]);
+  }, []);
 
   const value: AuthState = {
     session,

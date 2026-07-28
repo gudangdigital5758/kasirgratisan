@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../lib/api';
-import { useAdminAuth } from '../lib/auth';
 
 interface ActionButtonConfig {
   enabled: boolean;
@@ -20,9 +19,12 @@ interface ActionButtonsValue {
 }
 
 export default function SettingsPage() {
-  const { me } = useAdminAuth();
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [health, setHealth] = useState<Record<string, unknown>>({});
+  const [capabilities, setCapabilities] = useState({
+    canWritePlatformSettings: false,
+    canWriteAppSettings: false,
+  });
   const [note, setNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -40,8 +42,15 @@ export default function SettingsPage() {
     adminApi
       .settings()
       .then((r) => {
+        setErr(null);
         setSettings(r.settings || {});
         setHealth(r.health || {});
+        setCapabilities(
+          r.capabilities || {
+            canWritePlatformSettings: false,
+            canWriteAppSettings: false,
+          },
+        );
         setNote(r.secretsNote || '');
       })
       .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal'));
@@ -49,15 +58,12 @@ export default function SettingsPage() {
 
   const loadActionButtons = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.profitku.my.id'}/api/app-settings/action_buttons`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.value) {
-          setActionButtons(data.value as ActionButtonsValue);
-        }
+      const data = await adminApi.appSetting('action_buttons');
+      if (data.value) {
+        setActionButtons(data.value as ActionButtonsValue);
       }
     } catch (e) {
-      console.warn('[load action_buttons]', e);
+      setErr(e instanceof Error ? e.message : 'Gagal memuat action buttons');
     }
   };
 
@@ -93,6 +99,7 @@ export default function SettingsPage() {
   const dunning = settings.dunning_enabled !== false;
 
   const save = async (patch: Record<string, unknown>) => {
+    if (!capabilities.canWritePlatformSettings) return;
     setMsg(null);
     try {
       await adminApi.patchSettings(patch);
@@ -104,6 +111,7 @@ export default function SettingsPage() {
   };
 
   const saveActionButtons = async () => {
+    if (!capabilities.canWriteAppSettings) return;
     setActionButtonsLoading(true);
     setMsg(null);
     setErr(null);
@@ -143,7 +151,7 @@ export default function SettingsPage() {
           <input
             type="checkbox"
             checked={maintenance}
-            disabled={me?.role === 'readonly'}
+            disabled={!capabilities.canWritePlatformSettings}
             onChange={(e) => void save({ maintenance_mode: e.target.checked })}
           />
           Maintenance mode
@@ -152,7 +160,7 @@ export default function SettingsPage() {
           <input
             type="checkbox"
             checked={dunning}
-            disabled={me?.role === 'readonly'}
+            disabled={!capabilities.canWritePlatformSettings}
             onChange={(e) => void save({ dunning_enabled: e.target.checked })}
           />
           Dunning enabled
@@ -171,7 +179,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={actionButtons.whatsNew?.enabled ?? true}
-              disabled={me?.role === 'readonly'}
+              disabled={!capabilities.canWriteAppSettings}
               onChange={(e) =>
                 setActionButtons((prev) => ({
                   ...prev,
@@ -189,7 +197,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={actionButtons.requestFeature?.enabled ?? true}
-              disabled={me?.role === 'readonly'}
+              disabled={!capabilities.canWriteAppSettings}
               onChange={(e) =>
                 setActionButtons((prev) => ({
                   ...prev,
@@ -203,7 +211,7 @@ export default function SettingsPage() {
             type="url"
             placeholder="URL (e.g. https://t.me/profitku)"
             value={actionButtons.requestFeature?.url || ''}
-            disabled={me?.role === 'readonly'}
+            disabled={!capabilities.canWriteAppSettings}
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
@@ -231,7 +239,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={actionButtons.donate?.enabled ?? true}
-              disabled={me?.role === 'readonly'}
+              disabled={!capabilities.canWriteAppSettings}
               onChange={(e) =>
                 setActionButtons((prev) => ({
                   ...prev,
@@ -245,7 +253,7 @@ export default function SettingsPage() {
             type="url"
             placeholder="URL (e.g. mailto:support@profitku.my.id)"
             value={actionButtons.donate?.url || ''}
-            disabled={me?.role === 'readonly'}
+            disabled={!capabilities.canWriteAppSettings}
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
@@ -273,7 +281,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={actionButtons.telegram?.enabled ?? true}
-              disabled={me?.role === 'readonly'}
+              disabled={!capabilities.canWriteAppSettings}
               onChange={(e) =>
                 setActionButtons((prev) => ({
                   ...prev,
@@ -287,7 +295,7 @@ export default function SettingsPage() {
             type="url"
             placeholder="URL (e.g. https://t.me/profitku)"
             value={actionButtons.telegram?.url || ''}
-            disabled={me?.role === 'readonly'}
+            disabled={!capabilities.canWriteAppSettings}
             onChange={(e) =>
               setActionButtons((prev) => ({
                 ...prev,
@@ -309,7 +317,7 @@ export default function SettingsPage() {
           />
         </div>
 
-        {me?.role !== 'readonly' && (
+        {capabilities.canWriteAppSettings && (
           <button
             onClick={() => void saveActionButtons()}
             disabled={actionButtonsLoading}

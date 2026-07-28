@@ -13,6 +13,7 @@ jobs:
       app: ${{ steps.filter.outputs.app }}
       admin: ${{ steps.filter.outputs.admin }}
       api: ${{ steps.filter.outputs.api }}
+      admin_stack: ${{ steps.filter.outputs.admin_stack }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,6 +35,9 @@ jobs:
             admin:
               - 'admin/**'
             api:
+              - 'workers/api/**'
+            admin_stack:
+              - 'admin/**'
               - 'workers/api/**'
 
   deploy-app:
@@ -73,8 +77,11 @@ jobs:
 
   deploy-admin:
     name: Deploy Admin Dashboard
-    needs: detect-changes
-    if: needs.detect-changes.outputs.admin == 'true'
+    needs: [detect-changes, deploy-api]
+    if: >-
+      always() &&
+      needs.detect-changes.outputs.admin_stack == 'true' &&
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -102,6 +109,7 @@ jobs:
           VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           EOF
 
+          node -e "require('fs').writeFileSync('admin/public/version.json', JSON.stringify({ commitHash: process.env.GITHUB_SHA, buildDate: new Date().toISOString() }, null, 2) + '\n')"
       - name: Build admin
         run: npm run build:prod
         working-directory: ./admin
@@ -111,7 +119,22 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy admin/dist --project-name=profitku-admin
+          wranglerVersion: "4.54.0"
+          command: pages deploy dist --project-name=profitku-admin --branch=main
+          workingDirectory: "admin"
+
+      - name: Verify Admin Deployment
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            DEPLOYED_SHA=$(curl --fail --silent --show-error "https://dashboard.profitku.my.id/version.json?sha=${GITHUB_SHA}" | node -e "let body=''; process.stdin.on('data', chunk => body += chunk).on('end', () => console.log(JSON.parse(body).commitHash || ''))" || true)
+            if [ "$DEPLOYED_SHA" = "$GITHUB_SHA" ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "dashboard.profitku.my.id belum menyajikan commit $GITHUB_SHA" >&2
+          exit 1
 
   deploy-api:
     name: Deploy API Worker
@@ -144,8 +167,16 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.54.0"
           command: deploy
-          workingDirectory: ./workers/api
+          workingDirectory: "workers/api"
+
+      - name: Verify API Deployment
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 5 https://api.profitku.my.id/health > /dev/null
+          STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" https://api.profitku.my.id/admin/api/settings)
+          test "$STATUS" = "401"
 
   notify-success:
     name: Notify Success

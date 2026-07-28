@@ -13,6 +13,7 @@ import {
   type AdminContext,
 } from '../lib/admin';
 import { CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
+import adminSettings from './admin-settings';
 
 type Variables = {
   userId: string | null;
@@ -21,6 +22,8 @@ type Variables = {
 };
 
 const admin = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+admin.route('/', adminSettings);
 
 function daysFromNow(days: number): string {
   const d = new Date();
@@ -371,74 +374,6 @@ admin.get('/events', async (c) => {
   }
 });
 
-admin.get('/settings', async (c) => {
-  const a = await requireAdmin(c);
-  if (a instanceof Response) return a;
-
-  let settings: Record<string, unknown> = {};
-  try {
-    type Row = { key: string; value: unknown; updated_at: string };
-    const rows = await sbGet<Row[]>(c.env, 'platform_settings?select=key,value,updated_at');
-    for (const r of rows) settings[r.key] = r.value;
-  } catch {
-    settings = { _warning: 'platform_settings belum ada — jalankan migrasi admin_ops' };
-  }
-
-  return c.json({
-    settings,
-    health: {
-      supabase: Boolean(c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY),
-      resend: Boolean(c.env.RESEND_API_KEY),
-      fonnte: Boolean(c.env.FONNTE_TOKEN),
-      paymentProvider: c.env.PAYMENT_PROVIDER || 'mock',
-      adminAllowlistConfigured: Boolean(c.env.ADMIN_EMAILS),
-    },
-    secretsNote:
-      'Token Fonnte/Resend/payment/service role hanya di Cloudflare secrets — tidak bisa diedit dari admin UI.',
-  });
-});
-
-admin.patch('/settings', async (c) => {
-  const a = await requireAdmin(c);
-  if (a instanceof Response) return a;
-  if (a.role !== 'superadmin' && a.role !== 'support') {
-    return c.json({ error: 'Hanya superadmin/support yang boleh ubah settings' }, 403);
-  }
-
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-  const allowed = ['maintenance_mode', 'dunning_enabled', 'mock_payment_note'] as const;
-  const updates: string[] = [];
-
-  try {
-    for (const key of allowed) {
-      if (body[key] === undefined) continue;
-      await sbPost(c.env, 'platform_settings', {
-        key,
-        value: body[key],
-        updated_at: new Date().toISOString(),
-        updated_by: a.userId,
-      }).catch(async () => {
-        // upsert via patch
-        await sbPatch(c.env, `platform_settings?key=eq.${key}`, {
-          value: body[key],
-          updated_at: new Date().toISOString(),
-          updated_by: a.userId,
-        });
-      });
-      updates.push(key);
-    }
-
-    await writeAudit(c.env, a, 'settings.update', 'platform_settings', null, {
-      keys: updates,
-      body,
-    });
-
-    return c.json({ ok: true, updated: updates });
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Gagal simpan settings' }, 500);
-  }
-});
-
 // --- Vouchers ---
 
 function normalizeCode(raw: string): string {
@@ -727,99 +662,6 @@ admin.delete('/vouchers/:id', async (c) => {
     });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Gagal menghapus voucher' }, 500);
-  }
-});
-
-// --- App Settings ---
-
-admin.put('/app-settings/:key', async (c) => {
-  const a = await requireAdmin(c);
-  if (a instanceof Response) return a;
-  if (!canWrite(a.role)) {
-    return c.json({ error: 'Role tidak boleh mengubah app settings' }, 403);
-  }
-
-  const key = c.req.param('key');
-  // Whitelist key yang boleh diubah dari admin
-  const allowed = ['action_buttons'];
-  if (!allowed.includes(key)) {
-    return c.json({ error: `Key '${key}' tidak diizinkan untuk diubah` }, 400);
-  }
-
-  const body = (await c.req.json().catch(() => ({}))) as {
-    value?: unknown;
-  };
-
-  if (body.value === undefined) {
-    return c.json({ error: 'Field value wajib ada' }, 400);
-  }
-
-  // Validasi structure untuk action_buttons
-  if (key === 'action_buttons') {
-    const val = body.value;
-    if (!val || typeof val !== 'object' || Array.isArray(val)) {
-      return c.json({ error: 'value harus berupa object' }, 400);
-    }
-    const buttons = val as Record<string, unknown>;
-    const requiredButtons = ['whatsNew', 'requestFeature', 'donate', 'telegram'];
-    const linkButtons = ['requestFeature', 'donate', 'telegram'];
-    
-    for (const btn of requiredButtons) {
-      const cfg = buttons[btn];
-      if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
-        return c.json({ error: `Button '${btn}' tidak valid` }, 400);
-      }
-      const b = cfg as Record<string, unknown>;
-      if (typeof b.enabled !== 'boolean') {
-        return c.json({ error: `Button '${btn}' field enabled harus boolean` }, 400);
-      }
-      // Only link buttons require url field
-      if (linkButtons.includes(btn) && typeof b.url !== 'string') {
-        return c.json({ error: `Button '${btn}' field url harus string` }, 400);
-      }
-    }
-  }
-
-  const now = new Date().toISOString();
-
-  try {
-    const rows = await sbPatch<{ key: string; value: unknown; updated_at: string }[]>(
-      c.env,
-      `app_settings?key=eq.${key}`,
-      {
-        value: body.value,
-        updated_at: now,
-        updated_by: a.userId,
-      },
-    );
-
-    const setting = Array.isArray(rows) ? rows[0] : rows;
-    if (!setting) {
-      return c.json({ error: `Setting key '${key}' tidak ditemukan di database` }, 404);
-    }
-
-    await writeAudit(c.env, a, 'app_settings.update', 'app_settings', key, {
-      value: body.value,
-    }, c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'));
-
-    await writeEvent(c.env, {
-      type: 'admin.app_settings.update',
-      message: `Admin updated app_settings key=${key}`,
-      actorUserId: a.userId,
-      payload: { key, actorEmail: a.email },
-    });
-
-    return c.json({
-      ok: true,
-      setting: {
-        key: setting.key,
-        value: setting.value,
-        updatedAt: setting.updated_at,
-      },
-    });
-  } catch (err) {
-    console.error('[admin app-settings update]', err);
-    return c.json({ error: err instanceof Error ? err.message : 'Gagal update app settings' }, 500);
   }
 });
 
