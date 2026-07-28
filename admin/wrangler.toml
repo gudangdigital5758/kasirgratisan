@@ -2,3 +2,10 @@
 name = "profitku-admin"
 compatibility_date = "2025-06-01"
 pages_build_output_dir = "dist"
+
+[vars]
+# Public browser configuration compiled by Vite; never put Worker secrets here.
+VITE_API_URL = "https://api.profitku.my.id"
+VITE_SUPABASE_URL = "https://zrlcmoffzwpopuhopkju.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpybGNtb2Zmendwb3B1aG9wa2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDIzNDcsImV4cCI6MjEwMDM3ODM0N30.0o288EowW0bhCt8yrAZq73lzGqfZWXU5bbwswWvpu-o"
+VITE_GOOGLE_CLIENT_ID = "1040830182815-5pmkm6h03p9v0v8d7e3megblojhm73jc.apps.googleusercontent.com"
