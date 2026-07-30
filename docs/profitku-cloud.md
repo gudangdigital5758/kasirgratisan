@@ -6,7 +6,7 @@
 ## Prinsip
 
 1. **Kasir offline tetap gratis** — IndexedDB/Dexie di perangkat.
-2. **Cloud berbayar** — backup, sync, multi-toko, notifikasi.
+2. **Cloud berbayar** — backup dan auto-backup satu toko, notifikasi. Sinkronisasi data antar-perangkat belum tersedia.
 3. **Secret hanya di Worker** — Fonnte, Resend, payment, Supabase service role.
 
 ## Domain
@@ -31,10 +31,10 @@ src/lib/cloud-api.ts   # client → api.profitku.my.id
 ## Setup Supabase
 
 1. Buat project Supabase (region Singapore disarankan).
-2. SQL Editor: jalankan `supabase/migrations/20260723000000_init_profitku.sql`.
-3. Jalankan `supabase/seed.sql`.
-4. Auth → Providers → Google (Client ID/Secret OAuth).
-5. Catat: Project URL, `anon` key, `service_role` key.
+3. SQL Editor: jalankan seluruh file `supabase/migrations/` secara berurutan berdasarkan timestamp.
+4. Jalankan `supabase/seed.sql`.
+5. Auth → Providers → Google (Client ID/Secret OAuth).
+6. Catat: Project URL, `anon` key, `service_role` key.
 
 ## Setup Worker
 
@@ -81,7 +81,7 @@ Deploy Pages: build `npm run build`, output `dist/`, custom domain `profitku.my.
 
 | ID | Nama | Harga/bln | Termasuk |
 |----|------|-----------|----------|
-| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000** | Backup cloud s/d 2 GB, auto-backup, sync 1 toko, hide watermark |
+| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000** | Backup cloud s/d 2 GB, auto-backup, hide watermark; sinkronisasi data antar-perangkat belum tersedia |
 
 Tidak ada multi-tier. Seed: `supabase/seed.sql` + fallback Worker `SEED_PLANS`.
 
@@ -107,7 +107,7 @@ Supabase session (access + refresh, storageKey profitku_supabase_auth)
 Cloudflare Worker API (validasi via /auth/v1/user)
 ```
 
-Tanpa `VITE_SUPABASE_*`, app jatuh ke **legacy** (Google JWT di `localStorage`) — hanya untuk dev.
+Tanpa `VITE_SUPABASE_*`, fitur cloud dinonaktifkan; POS offline tetap berjalan. Worker tidak menerima JWT yang hanya didekode tanpa validasi Supabase.
 
 ## Resend & Fonnte
 
@@ -123,7 +123,7 @@ Tanpa `VITE_SUPABASE_*`, app jatuh ke **legacy** (Google JWT di `localStorage`) 
 | **1** | **Backup R2** upload/list/download/delete + kuota | ✅ |
 | **2** | **Resend invoice + Fonnte** aktivasi + dunning H-3/H-1 (cron) | ✅ |
 | **3** | **Supabase Auth** (Google ID token → session, auto-refresh) | ✅ |
-| M3 | Sync push penuh | stub log |
+| M3 | Sync push penuh | belum tersedia — Worker menolak payload agar data lokal tidak salah ditandai tersinkron |
 | M4 | Pull + conflict | belum |
 | M5 | Midtrans/Xendit production | skeleton |
 

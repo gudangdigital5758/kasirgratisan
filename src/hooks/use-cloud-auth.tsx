@@ -9,9 +9,7 @@ import {
   loginWithGoogleIdToken,
   logoutCloud,
   isSupabaseMode,
-  loadToken,
-  isTokenValid,
-  decodeClaims,
+  clearLegacyToken,
   type CloudUserInfo,
 } from '@/lib/cloud-auth';
 import { getSupabase } from '@/lib/supabase-client';
@@ -27,8 +25,8 @@ interface CloudAuthValue {
   isLoggedIn: boolean;
   isSubscribed: boolean;
   isSyncSubscribed: boolean;
-  /** true jika memakai Supabase Auth (bukan Google JWT legacy) */
-  authMode: 'supabase' | 'legacy';
+  /** Cloud memakai Supabase Auth atau belum dikonfigurasi. */
+  authMode: 'supabase' | 'unconfigured';
   login: (googleIdToken: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -143,23 +141,8 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Legacy restore
-      const saved = loadToken();
-      if (isTokenValid(saved)) {
-        const claims = decodeClaims(saved!);
-        if (claims) {
-          applySession(saved!, {
-            id: claims.sub,
-            email: claims.email,
-            name: claims.name,
-            picture: claims.picture,
-          });
-          await refreshProfile();
-        }
-      } else if (saved) {
-        const { clearToken } = await import('@/lib/cloud-auth');
-        clearToken();
-      }
+      // Google JWT legacy is deliberately not restored or sent to the Worker.
+      clearLegacyToken();
     })();
 
     return () => {
@@ -194,7 +177,7 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     isLoggedIn: !!token,
     isSubscribed: hasCloud,
     isSyncSubscribed: hasCloud,
-    authMode: isSupabaseMode() ? 'supabase' : 'legacy',
+    authMode: isSupabaseMode() ? 'supabase' : 'unconfigured',
     login,
     logout,
     refreshProfile,

@@ -4,7 +4,7 @@
 
 Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan laporan berjalan 100% di perangkat (IndexedDB) — gratis, tanpa wajib daftar.
 
-**Profitku Cloud** (opsional): **Rp 25.000/bulan** — backup cloud (2 GB), auto-backup, sync 1 toko. Stack: **Git · Cloudflare · Supabase · Resend · Fonnte**. Distribusi utama: **PWA** (`profitku.my.id`); listing Play Store ditunda.
+**Profitku Cloud** (opsional): **Rp 25.000/bulan** — backup cloud (2 GB) dan auto-backup. Sinkronisasi data antar-perangkat belum tersedia. Stack: **Git · Cloudflare · Supabase · Resend · Fonnte**. Distribusi utama: **PWA** (`profitku.my.id`); listing Play Store ditunda.
 
 ### Documentation map
 
@@ -226,7 +226,7 @@ src/
 
 ## 💾 Database
 
-All data is stored locally in the browser using IndexedDB (via Dexie.js). No data is ever sent to any server.
+Data POS inti (kasir, stok, dan laporan) tersimpan lokal di browser menggunakan IndexedDB (via Dexie.js) dan tetap berjalan tanpa internet. Data hanya dikirim ke server saat pengguna memakai fitur cloud atau memilih mengirim laporan error.
 
 ### Tables
 

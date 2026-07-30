@@ -51,8 +51,9 @@ export function useCloudAutoBackup() {
     const due = Date.now() - last >= ms;
     if (!due) return;
 
+    // A backup can be restored without binding the device to a cloud store.
+    // This keeps backup recovery available while cross-device sync is disabled.
     const storeId = storeSettings.cloudStoreId ?? undefined;
-    if (isSyncSubscribed && !storeId) return; // sync aktif tapi belum pilih toko
 
     ranRef.current = true; // tandai sudah jalan untuk sesi ini
 

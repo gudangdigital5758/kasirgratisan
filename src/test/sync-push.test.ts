@@ -1,16 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { db } from '@/lib/db';
-import { pushSyncData, triggerBackgroundSync } from '@/lib/sync';
-import * as cloudApi from '@/lib/cloud-api';
-
-vi.mock('@/lib/cloud-api', async () => {
-  const actual = await vi.importActual<typeof cloudApi>('@/lib/cloud-api');
-  return {
-    ...actual,
-    syncStoreData: vi.fn(),
-    hasCloudToken: vi.fn(),
-  };
-});
+import { pushSyncData } from '@/lib/sync';
 
 describe('Incremental Data Sync PUSH', () => {
   beforeEach(async () => {
@@ -43,8 +33,14 @@ describe('Incremental Data Sync PUSH', () => {
     await db.storeSettings.clear();
   });
 
-  it('should push only dirty records and update syncedAt on success', async () => {
-    // 1. Add some records
+  it('returns the disabled-sync response without exposing a push API', async () => {
+    await expect(pushSyncData('test-cloud-store-id')).resolves.toEqual({
+      success: false,
+      message: 'Sinkronisasi lintas perangkat belum tersedia. Gunakan backup cloud untuk pemulihan data.',
+    });
+  });
+
+  it('keeps dirty records unsynced while cloud push is disabled', async () => {
     const categoryId = await db.categories.add({
       name: 'Sync Category',
       color: '#FF0000',
@@ -65,42 +61,10 @@ describe('Incremental Data Sync PUSH', () => {
       isDeleted: 0,
       deletedAt: null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    // 2. Set mock return value
-    const mockSyncStoreData = vi.mocked(cloudApi.syncStoreData);
-    mockSyncStoreData.mockResolvedValue({ message: 'Sync OK' });
-
-    // 3. Execute push sync
-    const result = await pushSyncData('test-cloud-store-id');
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Sync OK');
-
-    // 4. Verify mock was called with correct payload
-    expect(mockSyncStoreData).toHaveBeenCalledTimes(1);
-    const [storeId, payload] = mockSyncStoreData.mock.calls[0];
-    expect(storeId).toBe('test-cloud-store-id');
-    expect(payload.categories).toHaveLength(1);
-    expect(payload.categories?.[0].id).toBe(categoryId);
-    expect(payload.products).toHaveLength(1);
-    expect(payload.products?.[0].id).toBe(productId);
-
-    // 5. Verify local syncedAt fields are updated
-    const updatedCategory = await db.categories.get(categoryId);
-    const updatedProduct = await db.products.get(productId);
-    expect(updatedCategory?.syncedAt).toBeInstanceOf(Date);
-    expect(updatedProduct?.syncedAt).toBeInstanceOf(Date);
-
-    // 6. Running sync again should not send anything (no dirty records)
-    vi.clearAllMocks();
-    const secondResult = await pushSyncData('test-cloud-store-id');
-    expect(secondResult.success).toBe(true);
-    expect(secondResult.message).toContain('sinkron');
-    expect(mockSyncStoreData).not.toHaveBeenCalled();
-  });
-
-  it('should include transaction items when pushing dirty transactions', async () => {
-    const txId = await db.transactions.add({
+    const transactionId = await db.transactions.add({
       subtotal: 30000,
       discountType: null,
       discountValue: 0,
@@ -115,29 +79,12 @@ describe('Incremental Data Sync PUSH', () => {
       status: 'completed',
     });
 
-    const itemId = await db.transactionItems.add({
-      transactionId: txId,
-      productId: 1,
-      productName: 'Sync Product',
-      quantity: 2,
-      price: 15000,
-      hpp: 10000,
-      discountType: null,
-      discountValue: 0,
-      discountAmount: 0,
-      subtotal: 30000,
+    await expect(pushSyncData('test-cloud-store-id')).resolves.toEqual({
+      success: false,
+      message: 'Sinkronisasi lintas perangkat belum tersedia. Gunakan backup cloud untuk pemulihan data.',
     });
-
-    const mockSyncStoreData = vi.mocked(cloudApi.syncStoreData);
-    mockSyncStoreData.mockResolvedValue({ message: 'Sync OK' });
-
-    await pushSyncData('test-cloud-store-id');
-
-    expect(mockSyncStoreData).toHaveBeenCalledTimes(1);
-    const payload = mockSyncStoreData.mock.calls[0][1];
-    expect(payload.transactions).toHaveLength(1);
-    expect(payload.transactions?.[0].id).toBe(txId);
-    expect(payload.transactionItems).toHaveLength(1);
-    expect(payload.transactionItems?.[0].id).toBe(itemId);
+    await expect(db.categories.get(categoryId)).resolves.toMatchObject({ syncedAt: null });
+    await expect(db.products.get(productId)).resolves.toMatchObject({ syncedAt: null });
+    await expect(db.transactions.get(transactionId)).resolves.toMatchObject({ syncedAt: null });
   });
 });

@@ -107,6 +107,18 @@ Login tetap via Google ID token, lalu:
 
 ---
 
+## 2026-07-30 — Cloud auth fail-closed tanpa fallback JWT legacy
+
+**Status:** Accepted
+
+Cloud API tidak lagi menerima Google ID JWT yang hanya di-decode dari client. Bila konfigurasi Supabase tidak lengkap, login dan endpoint cloud ditolak; POS offline tetap tersedia.
+
+**Why:** Payload JWT tanpa verifikasi signature, issuer, audience, dan expiry dapat dipalsukan saat konfigurasi Worker tidak lengkap.
+
+**Implications:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, dan `SUPABASE_ANON_KEY` wajib untuk fitur cloud. Token legacy di localStorage dibersihkan dan tidak direstore.
+
+---
+
 ## 2026-07-23 — Agent workflow: AGENTS.md + approval-aware
 
 **Status:** Accepted

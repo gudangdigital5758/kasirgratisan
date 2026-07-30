@@ -61,6 +61,17 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+const ISSUE_REPORT_MAX_BYTES = 32 * 1024;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 app.use('*', async (c, next) => {
   const origin = c.env.APP_ORIGIN || 'https://profitku.my.id';
   const adminOrigin = c.env.ADMIN_ORIGIN || 'https://dashboard.profitku.my.id';
@@ -93,24 +104,13 @@ async function bearerAuth(c: {
   c.set('userId', null);
   c.set('userEmail', null);
 
+  // Never trust an undecoded JWT payload. If Supabase validation is not
+  // configured, protected routes remain unauthenticated and fail closed.
   if (token && c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) {
     const user = await getUserFromJwt(c.env, token);
     if (user) {
       c.set('userId', user.id);
       c.set('userEmail', user.email ?? null);
-    }
-  } else if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1] || '')) as {
-        sub?: string;
-        email?: string;
-      };
-      if (payload.sub) {
-        c.set('userId', payload.sub);
-        c.set('userEmail', payload.email ?? null);
-      }
-    } catch {
-      /* ignore */
     }
   }
 
@@ -228,7 +228,7 @@ app.get('/api/user/profile', async (c) => {
   if (userId instanceof Response) return userId;
 
   // Default free entitlements
-  let profile = {
+  const profile = {
     user: {
       id: userId,
       email: c.get('userEmail') || '',
@@ -833,52 +833,62 @@ app.post('/api/stores', async (c) => {
   if (userId instanceof Response) return userId;
   const body = (await c.req.json().catch(() => ({}))) as { name?: string };
   if (!body.name?.trim()) return c.json({ error: 'Nama toko wajib' }, 400);
-
-  try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      type S = {
-        id: string;
-        user_id: string;
-        name: string;
-        created_at: string;
-        updated_at: string;
-      };
-      const rows = await sbPost<S[]>(c.env, 'stores', {
-        user_id: userId,
-        name: body.name.trim(),
-      });
-      const s = rows[0];
-      return c.json({
-        store: {
-          id: s.id,
-          userId: s.user_id,
-          name: s.name,
-          createdAt: s.created_at,
-          updatedAt: s.updated_at,
-        },
-      });
-    }
-  } catch (err) {
-    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
 
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  return c.json({
-    store: { id, userId: userId, name: body.name.trim(), createdAt: now, updatedAt: now },
-  });
+  try {
+    type Entitlement = { max_stores: number | null };
+    type S = {
+      id: string;
+      user_id: string;
+      name: string;
+      created_at: string;
+      updated_at: string;
+    };
+
+    const entitlements = await sbGet<Entitlement[]>(
+      c.env,
+      `user_entitlements?user_id=eq.${userId}&select=max_stores`,
+    );
+    const configuredProvider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+    const maxStores = entitlements[0]?.max_stores ?? (configuredProvider === 'mock' ? 1 : 0);
+    if (!Number.isInteger(maxStores) || maxStores < 1) {
+      return c.json({ error: 'Langganan Profitku Cloud diperlukan untuk membuat toko cloud.' }, 403);
+    }
+
+    // The RPC takes an advisory lock, so concurrent requests cannot exceed the plan limit.
+    const result = await sbPost<S[] | S>(c.env, 'rpc/create_store_with_limit', {
+      p_user_id: userId,
+      p_name: body.name.trim(),
+      p_max_stores: maxStores,
+    });
+    const s = Array.isArray(result) ? result[0] : result;
+    if (!s) return c.json({ error: 'Gagal membuat toko cloud' }, 500);
+    return c.json({
+      store: {
+        id: s.id,
+        userId: s.user_id,
+        name: s.name,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+      },
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores create]', err);
+    return c.json({ error: 'Gagal membuat toko cloud' }, 500);
+  }
 });
 
-// Sync stub — terima payload, log, OK (full sync di fase berikutnya)
-app.post('/api/stores/:storeId/sync', async (c) => {
-  const userId = requireUser(c);
-  if (userId instanceof Response) return userId;
-  const storeId = c.req.param('storeId');
-  const payload = await c.req.json().catch(() => ({}));
-  const keys = typeof payload === 'object' && payload ? Object.keys(payload as object) : [];
-  console.log(`[sync] user=${userId} store=${storeId} keys=${keys.join(',')}`);
-  return c.json({ message: 'Sinkronisasi diterima (fase 1 — metadata only)' });
-});
+// Cross-device sync is intentionally unavailable until durable push, pull, and
+// conflict handling exist. Never acknowledge a payload that is not persisted.
+app.post('/api/stores/:storeId/sync', (c) =>
+  c.json(
+    { error: 'Sinkronisasi lintas perangkat belum tersedia. Gunakan backup cloud untuk pemulihan data.' },
+    501,
+  ),
+);
 
 // --- Backups (R2 + metadata Supabase) ---
 app.get('/api/backups', async (c) => {
@@ -977,24 +987,34 @@ app.post('/api/backups', async (c) => {
     const id = crypto.randomUUID();
     const key = fileKeyFor(String(userId), fileName);
     await putBackupObject(c.env, key, buf);
-    const meta = await insertBackupMeta(c.env, {
-      id,
-      user_id: String(userId),
-      store_id: storeId,
-      file_name: fileName,
-      file_key: key,
-      file_size: fileSize,
-    });
+    try {
+      const meta = await insertBackupMeta(c.env, {
+        id,
+        user_id: String(userId),
+        store_id: storeId,
+        file_name: fileName,
+        file_key: key,
+        file_size: fileSize,
+      });
 
-    return c.json({
-      backup: {
-        id: meta.id,
-        fileName: meta.file_name,
-        fileSize: meta.file_size,
-        createdAt: meta.created_at,
-        updatedAt: meta.updated_at,
-      },
-    });
+      return c.json({
+        backup: {
+          id: meta.id,
+          fileName: meta.file_name,
+          fileSize: meta.file_size,
+          createdAt: meta.created_at,
+          updatedAt: meta.updated_at,
+        },
+      });
+    } catch (metadataError) {
+      // Avoid an unreachable R2 object when the metadata write fails.
+      try {
+        await deleteBackupObject(c.env, key);
+      } catch (cleanupError) {
+        console.error('[backup upload] orphan cleanup failed', cleanupError);
+      }
+      throw metadataError;
+    }
   } catch (err) {
     console.error('[backup upload]', err);
     const msg = err instanceof Error ? err.message : 'Upload gagal';
@@ -1077,14 +1097,26 @@ app.get('/webhook/latest-version', (c) => {
 });
 
 app.post('/webhook/issue-report', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  console.log('[issue-report]', JSON.stringify(body).slice(0, 2000));
-  // Opsional: forward ke email support
+  const contentLength = Number(c.req.header('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > ISSUE_REPORT_MAX_BYTES) {
+    return c.json({ error: 'Laporan terlalu besar' }, 413);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object') return c.json({ error: 'Payload tidak valid' }, 400);
+
+  const serialized = JSON.stringify(body);
+  if (new TextEncoder().encode(serialized).byteLength > ISSUE_REPORT_MAX_BYTES) {
+    return c.json({ error: 'Laporan terlalu besar' }, 413);
+  }
+
+  // Do not write user-provided report contents to logs. They may contain PII.
+  console.log('[issue-report] accepted', { bytes: serialized.length });
   if (c.env.RESEND_API_KEY) {
     await sendEmail(c.env, {
       to: 'support@profitku.my.id',
       subject: '[Profitku] Issue report',
-      html: `<pre>${JSON.stringify(body, null, 2).slice(0, 8000)}</pre>`,
+      html: `<pre>${escapeHtml(JSON.stringify(body, null, 2))}</pre>`,
     });
   }
   return c.json({ ok: true });

@@ -35,8 +35,8 @@ Skrip bantu: `npm run cloud:check` (cek env lokal + health API).
 
 Di **SQL Editor**, jalankan berurutan:
 
-1. Seluruh isi `supabase/migrations/20260723000000_init_profitku.sql`  
-2. Seluruh isi `supabase/seed.sql` (paket `cloud_monthly` Rp 25.000)
+1. Seluruh file `supabase/migrations/` secara berurutan berdasarkan timestamp, termasuk `20260730120000_store_limit.sql`.
+2. Seluruh isi `supabase/seed.sql` (paket `cloud_monthly` Rp 25.000).
 
 Verifikasi:
 

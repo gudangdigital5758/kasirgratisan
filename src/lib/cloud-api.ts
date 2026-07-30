@@ -512,42 +512,8 @@ export async function deleteStoreLogo(id: string): Promise<CloudStore> {
   return data.store;
 }
 
-export interface SyncPayload {
-  categories?: any[];
-  products?: any[];
-  customers?: any[];
-  users?: any[];
-  transactions?: any[];
-  transactionItems?: any[];
-  expenseCategories?: any[];
-  expenses?: any[];
-  debts?: any[];
-  debtPayments?: any[];
-  stockOpnames?: any[];
-  stockOpnameItems?: any[];
-}
-
-export interface SyncResponse {
-  message: string;
-}
-
-export function hasCloudToken(): boolean {
-  try {
-    return tokenGetter() !== null;
-  } catch {
-    return false;
-  }
-}
-
-export async function syncStoreData(storeId: string, payload: SyncPayload): Promise<SyncResponse> {
-  const res = await fetch(`${BASE_URL}/api/stores/${storeId}/sync`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) await parseError(res);
-  return res.json();
-}
+// Cross-device sync is intentionally not exposed until the Worker can
+// durably persist records and resolve pull/conflict behavior.
 
 // === App Settings (public, no auth) ===
 export interface AppSetting {

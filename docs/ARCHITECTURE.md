@@ -5,7 +5,7 @@
 
 ## Ringkasan
 
-Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perangkat (IndexedDB). Cloud opsional untuk backup, langganan, dan notifikasi.
+Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perangkat (IndexedDB). Cloud opsional untuk backup dan auto-backup, langganan, serta notifikasi; sinkronisasi data antar-perangkat belum tersedia.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -37,7 +37,7 @@ Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perang
 | `src/lib/cloud-api.ts` | Client thin ke Worker |
 | `src/lib/cloud-auth.ts` + `supabase-client.ts` | Sesi cloud (Supabase Auth) |
 | `src/lib/brand.ts` | Nama, domain, harga paket, flag Play |
-| `src/lib/sync.ts` | Background push dirty records (subset; fase lanjut) |
+| `src/lib/sync.ts` | Guard sync lintas perangkat (dinonaktifkan sampai push/pull/conflict siap) |
 | `src/i18n/` | id / en / ms |
 | `workers/api/` | API edge production (`/api/*` user, `/admin/api/*` staff) |
 | `admin/` | Ops SPA → `dashboard.profitku.my.id` (bukan POS) |
@@ -65,7 +65,7 @@ Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perang
 1. User login Google → Supabase session → Bearer ke Worker.
 2. `POST /api/backups` (multipart) → object R2 + row `backups`.
 3. List/download/delete lewat API; kuota dari entitlements / limit plan.
-4. Auto-backup: `use-cloud-auto-backup` jika langganan aktif.
+4. Auto-backup: `use-cloud-auto-backup` jika langganan aktif; backup tidak menyinkronkan data antar-perangkat.
 
 ### Langganan
 
@@ -96,7 +96,7 @@ Worker memvalidasi token lewat Supabase `/auth/v1/user` (bukan trust decode JWT 
 
 - Portal B2B member catalog / sales CRM (domain MSC Grosir).
 - AI multi-provider render studio (domain MSC Studio).
-- Multi-device realtime sync penuh (belum; push partial + stub).
+- Sinkronisasi data antar-perangkat, termasuk realtime sync penuh (belum tersedia; endpoint Worker menolak payload agar data lokal tidak salah ditandai tersinkron).
 
 ## Prinsip desain
 

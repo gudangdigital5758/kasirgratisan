@@ -74,22 +74,6 @@ const App = () => {
       document.documentElement.classList.add('is-native');
     }
 
-    // Pemicu awal background sync saat startup
-    import('@/lib/sync').then(({ triggerBackgroundSync }) => {
-      triggerBackgroundSync();
-    });
-
-    const handleOnline = () => {
-      console.log('[Sync] Jaringan kembali online, memicu sync...');
-      import('@/lib/sync').then(({ triggerBackgroundSync }) => {
-        triggerBackgroundSync();
-      });
-    };
-
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
   }, []);
 
   return (
