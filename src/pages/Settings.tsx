@@ -783,7 +783,8 @@ export default function Pengaturan() {
           </Card>
         </Link>
 
-        <a href="https://t.me/profitku" target="_blank" rel="noopener noreferrer" className="block">
+        {(actionButtonsConfig?.value?.telegram as { enabled?: boolean } | undefined)?.enabled !== false && (
+        <a href={(actionButtonsConfig?.value?.telegram as { url?: string } | undefined)?.url || 'https://t.me/profitku'} target="_blank" rel="noopener noreferrer" className="block">
           <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
             <CardContent className="p-3 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -797,6 +798,7 @@ export default function Pengaturan() {
             </CardContent>
           </Card>
         </a>
+        )}
       </div>
 
       {/* Bluetooth Printer (APK only) */}

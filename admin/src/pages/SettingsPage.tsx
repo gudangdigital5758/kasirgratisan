@@ -289,8 +289,11 @@ export default function SettingsPage() {
                 }))
               }
             />
-            <strong>💬 Gabung Grup Telegram</strong>
+            <strong>💬 Support Telegram</strong>
           </label>
+          <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+            Hubungi tim support Profitku via Telegram — kartu "Support Telegram" di Settings app
+          </p>
           <input
             type="url"
             placeholder="URL (e.g. https://t.me/profitku)"
