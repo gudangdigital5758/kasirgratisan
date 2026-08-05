@@ -162,9 +162,13 @@ create table if not exists public.sync_meta (
    — `src/lib/sync.ts` (collect→push→ack→pull→apply, fail-closed), `syncMeta` tabel,
    tombol "Sync Sekarang" di CloudHub + auto-sync saat app dibuka.
 4. **M3 — Pengujian:** unit test push/pull/LWW; simulasi dua device (fake-indexeddb
-   + dua profile); smoke manual; update docs. **Sebagian** — unit test pipeline &
-   LWW sudah ada; simulasi dua device live menyusul.
-5. **M4 — Release bertahap:** flag env, observability via `platform_events`. Belum.
+   + dua profile); smoke manual; update docs. **✅ Selesai (2026-08-05)** — tambahan
+   test simulasi dua device (`sync-two-device.test.ts`: konvergensi, edit lintas
+   device, konflik LWW, tombstone); observability `platform_events` di push/pull.
+5. **M4 — Release bertahap:** flag env, observability via `platform_events`.
+   **✅ Selesai (2026-08-05)** — flag `SYNC_ENABLED` (Worker var, default `true`;
+   `"false"` menonaktifkan push/pull sementara) + `writeEvent` (sync_push/sync_pull)
+   + sync pertama otomatis saat wizard toko online membuat store cloud.
 
 ## 11. Risiko & mitigasi
 

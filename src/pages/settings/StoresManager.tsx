@@ -25,6 +25,7 @@ import {
 import { STORE_TYPES, DEFAULT_STORE_TYPE, normalizeStoreType, type StoreType } from '@/lib/product-fields';
 import { PosDatabase } from '@/lib/db-migrations';
 import { createStore } from '@/lib/cloud-api';
+import { syncNow } from '@/lib/sync';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { toast } from 'sonner';
 
@@ -117,6 +118,17 @@ export default function StoresManager() {
         storeType: entry.storeType,
         cloudStoreId,
       });
+
+      // Sync pertama otomatis (M3): untuk toko online, langsung register device
+      // + inisialisasi kursor pull sebelum pindah toko. Best-effort — kegagalan
+      // tidak menghalangi pembuatan toko (auto-sync juga berjalan saat app dibuka).
+      if (mode === 'cloud') {
+        try {
+          await syncNow(newDb);
+        } catch (err) {
+          console.warn('[stores] sync awal gagal (dilanjutkan):', err);
+        }
+      }
 
       setActiveStoreKey(entry.storeKey);
       window.location.reload();

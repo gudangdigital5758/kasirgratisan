@@ -31,4 +31,6 @@ export interface Env {
   ONESIGNAL_REST_API_KEY?: string;
   /** R2 binding (opsional) */
   BACKUP_BUCKET?: R2Bucket;
+  /** Gate fase sync (M4): set "false" untuk menonaktifkan push/pull sementara. */
+  SYNC_ENABLED?: string;
 }

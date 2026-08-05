@@ -976,6 +976,9 @@ async function handlePushSync(c: {
   };
   const storeId = explicitStoreId ?? String(body.storeId ?? '');
   if (!storeId) return c.json({ error: 'storeId wajib' }, 400);
+  if (c.env.SYNC_ENABLED === 'false') {
+    return c.json({ error: 'Sinkronisasi lintas perangkat sedang dinonaktifkan sementara' }, 503);
+  }
 
   const guard = await requireSyncStore(c, storeId);
   if (guard) return guard;
@@ -1027,6 +1030,12 @@ async function handlePushSync(c: {
       p_store_id: storeId,
       p_items: items,
     });
+    await writeEvent(c.env, {
+      type: 'sync_push',
+      message: `push ${accepted?.length ?? 0} records`,
+      actorUserId: c.get('userId'),
+      payload: { count: accepted?.length ?? 0, tables: Object.keys(body.records ?? {}) },
+    });
     return c.json({ accepted: accepted ?? [], count: accepted?.length ?? 0, serverTime: new Date().toISOString() });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
@@ -1042,6 +1051,9 @@ app.post('/api/stores/:storeId/sync', (c) => handlePushSync(c, c.req.param('stor
 app.get('/api/sync/pull', async (c) => {
   const storeId = c.req.query('storeId') ?? '';
   if (!storeId) return c.json({ error: 'storeId wajib' }, 400);
+  if (c.env.SYNC_ENABLED === 'false') {
+    return c.json({ error: 'Sinkronisasi lintas perangkat sedang dinonaktifkan sementara' }, 503);
+  }
   const guard = await requireSyncStore(c, storeId);
   if (guard) return guard;
   const since = c.req.query('since') ?? '';
@@ -1059,6 +1071,12 @@ app.get('/api/sync/pull', async (c) => {
     const tombstones = rows
       .filter((r) => r.deleted)
       .map((r) => ({ table: r.table_name, syncId: r.sync_id, deletedAt: r.deleted_at ?? r.server_updated_at }));
+    await writeEvent(c.env, {
+      type: 'sync_pull',
+      message: `pull ${records.length + tombstones.length} changes`,
+      actorUserId: c.get('userId'),
+      payload: { records: records.length, tombstones: tombstones.length },
+    });
     return c.json({ records, tombstones, serverTime: new Date().toISOString() });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
