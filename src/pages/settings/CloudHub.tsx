@@ -57,6 +57,7 @@ import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { storeRegistry, getActiveStoreKey } from '@/lib/store-registry';
+import { syncNow } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -90,6 +91,29 @@ export default function CloudHub() {
   const [voucherInput, setVoucherInput] = useState('');
   const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewResult | null>(null);
   const [voucherBusy, setVoucherBusy] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    db.syncMeta.get(1).then((m) => setLastSyncAt(m?.lastSyncAt ?? null)).catch(() => {});
+  }, []);
+
+  const handleRealSync = async () => {
+    setBusy('realsync');
+    try {
+      const res = await syncNow();
+      if (res.ok) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+      const m = await db.syncMeta.get(1);
+      setLastSyncAt(m?.lastSyncAt ?? null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.syncFailed'));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const storeCount = hasLoadedStores ? stores.length : null;
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
@@ -579,6 +603,27 @@ export default function CloudHub() {
                   {storeSettings?.lastCloudBackupAt
                     ? t('cloudBackup.lastSync', { time: new Date(storeSettings.lastCloudBackupAt).toLocaleString(numberLocale) })
                     : t('cloudBackup.neverSynced')}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sinkronisasi lintas perangkat (Phase A M2) */}
+          {storeSettings?.cloudStoreId && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  {t('cloudBackup.realSync.title')}
+                </p>
+                <Button className="w-full h-11 gap-2 font-semibold" disabled={busy === 'realsync'} onClick={handleRealSync}>
+                  {busy === 'realsync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  {t('cloudBackup.realSync.button')}
+                </Button>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  {lastSyncAt
+                    ? t('cloudBackup.realSync.lastSync', { time: lastSyncAt.toLocaleString(numberLocale) })
+                    : t('cloudBackup.realSync.never')}
                 </p>
               </CardContent>
             </Card>

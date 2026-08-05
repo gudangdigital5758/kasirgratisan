@@ -343,8 +343,18 @@ export interface DeletedRecord {
   id?: number;
   tableName: string;
   recordId: number | string;
+  /** syncId record yang dihapus (untuk tombstone lintas perangkat). */
+  recordSyncId?: string;
   deletedAt: Date;
   syncedAt: Date | null;
+}
+
+/** Metadata sync lintas perangkat (Phase A M1/M2) — satu baris (id=1). */
+export interface SyncMeta {
+  id?: number;
+  /** Kursor pull terakhir (ISO server time). */
+  lastPullCursor: string | null;
+  lastSyncAt: Date | null;
 }
 
 /** Shift kasir — buka/tutup kas, hitung selisih tunai (v2). */

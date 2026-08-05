@@ -360,6 +360,12 @@
     "syncNow": "Sync Sekarang",
     "lastSync": "Selaras terakhir: {{time}}",
     "neverSynced": "Belum pernah diselaraskan",
+    "realSync": {
+      "title": "Sinkronisasi Antara Peranti",
+      "button": "Sync Sekarang",
+      "lastSync": "Terakhir sync data: {{time}}",
+      "never": "Belum pernah sync data antara peranti"
+    },
     "manageFromAnywhere": "Urus kedai dari mana saja",
     "subscription": {
       "singleTitle": "Profitku Cloud",

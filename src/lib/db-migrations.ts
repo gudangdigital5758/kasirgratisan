@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Category, Product, Supplier, Customer, StockIn, StockOut, StockOpname, StockOpnameItem,
   HppHistory, PaymentMethod, Transaction, TransactionItemRecord, Unit, ExpenseCategory,
-  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role,
+  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role, SyncMeta,
 } from './db-schema';
 import { ALL_PERMISSIONS } from './db-schema';
 import { newSyncId } from './sync-id';
@@ -30,6 +30,7 @@ export class PosDatabase extends Dexie {
   stockOpnameItems!: Table<StockOpnameItem>;
   deletedRecords!: Table<DeletedRecord>;
   cashierShifts!: Table<CashierShift>;
+  syncMeta!: Table<SyncMeta>;
 
   constructor(dbName: string = 'kasirgratisan-db') {
     super(dbName);
@@ -728,6 +729,33 @@ export class PosDatabase extends Dexie {
         ['opnameId', 'opnameSyncId', stockOpnames],
         ['productId', 'productSyncId', products],
       ]);
+    });
+
+    // Version 19 — Sync M1/M2 client: tabel syncMeta (kursor pull + last sync).
+    this.version(19).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+      syncMeta:          'id',
     });
   }
 }

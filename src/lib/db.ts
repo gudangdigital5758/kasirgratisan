@@ -33,6 +33,7 @@ export type {
   CashierShift,
   StoreSettings,
   StoreCustomField,
+  SyncMeta,
 } from './db-schema';
 
 // === Multi-toko (MULTI-STORE M1): db mengikuti toko aktif ===
@@ -174,10 +175,12 @@ export function setupSyncHooks(db: PosDatabase) {
   hardDeleteTables.forEach((tableName) => {
     const table = db.table<Record<string, unknown>, number>(tableName);
     table.hook('deleting', (primKey, obj) => {
+      const rec = (obj ?? {}) as Record<string, unknown>;
       setTimeout(() => {
         db.deletedRecords.add({
           tableName,
           recordId: primKey,
+          recordSyncId: typeof rec.syncId === 'string' ? rec.syncId : undefined,
           deletedAt: new Date(),
           syncedAt: null
         }).catch((err) => {

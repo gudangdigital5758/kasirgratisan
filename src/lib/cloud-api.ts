@@ -241,6 +241,63 @@ async function parseError(res: Response): Promise<never> {
   throw new CloudApiError(message, res.status, body);
 }
 
+// === Sync lintas perangkat (Phase A M1) ===
+
+export interface SyncPushItem {
+  syncId: string;
+  data: unknown; // record tanpa syncId/syncedAt/id (id lokal tidak pernah dikirim)
+  updatedAt: string;
+}
+
+export interface SyncTombstoneItem {
+  table: string;
+  syncId: string;
+  deletedAt: string;
+}
+
+export interface SyncPushResult {
+  accepted: string[];
+  count: number;
+  serverTime: string;
+}
+
+export interface SyncPullRecord {
+  table: string;
+  syncId: string;
+  data: unknown;
+  updatedAt: string;
+}
+
+export interface SyncPullResult {
+  records: SyncPullRecord[];
+  tombstones: SyncTombstoneItem[];
+  serverTime: string;
+}
+
+/** Push batch record + tombstone (LWW server-side). */
+export async function syncPush(
+  storeId: string,
+  payload: { records: Record<string, SyncPushItem[]>; tombstones: SyncTombstoneItem[] },
+  deviceId?: string,
+  deviceName?: string,
+): Promise<SyncPushResult> {
+  const res = await fetch(`${BASE_URL}/api/sync/push`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ storeId, ...payload, deviceId, deviceName }),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json() as Promise<SyncPushResult>;
+}
+
+/** Pull record yang berubah sejak `since` (ISO server time). */
+export async function syncPull(storeId: string, since: string): Promise<SyncPullResult> {
+  const qs = new URLSearchParams({ storeId, since });
+  const res = await fetch(`${BASE_URL}/api/sync/pull?${qs.toString()}`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  return res.json() as Promise<SyncPullResult>;
+}
+
 // === Endpoints ===
 
 /** Daftar paket langganan (publik, tanpa auth). */

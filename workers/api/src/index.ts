@@ -907,14 +907,165 @@ app.post('/api/stores', async (c) => {
   }
 });
 
-// Cross-device sync is intentionally unavailable until durable push, pull, and
-// conflict handling exist. Never acknowledge a payload that is not persisted.
-app.post('/api/stores/:storeId/sync', (c) =>
-  c.json(
-    { error: 'Sinkronisasi lintas perangkat belum tersedia. Gunakan backup cloud untuk pemulihan data.' },
-    501,
-  ),
-);
+// === Sync lintas perangkat (Phase A M1) ===
+// LWW server-side via RPC sync_upsert_batch. Guard: auth + has_sync + kepemilikan store.
+
+const SYNC_TABLES = new Set([
+  'categories', 'products', 'suppliers', 'customers', 'stockIns', 'stockOuts',
+  'hppHistory', 'paymentMethods', 'transactions', 'transactionItems', 'units',
+  'users', 'roles', 'expenseCategories', 'expenses', 'debts', 'debtPayments',
+  'stockOpnames', 'stockOpnameItems', 'cashierShifts',
+]);
+const SYNC_MAX_RECORDS = 2000;
+
+type SyncRow = {
+  table_name: string;
+  sync_id: string;
+  data: unknown;
+  server_updated_at: string;
+  deleted: boolean;
+  deleted_at: string | null;
+};
+
+/** Validasi auth + langganan sync + kepemilikan store. Return Response bila gagal. */
+async function requireSyncStore(c: {
+  get: (k: 'userId' | 'userEmail' | 'bearer') => string | null;
+  json: (b: unknown, s?: number) => Response;
+  env: Env;
+}, storeId: string): Promise<null | Response> {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const ent = await sbGet<{ has_sync: boolean }[]>(
+      c.env,
+      `user_entitlements?user_id=eq.${userId}&select=has_sync`,
+    );
+    if (!ent[0]?.has_sync) {
+      return c.json({ error: 'Langganan sinkronisasi tidak aktif' }, 403);
+    }
+    const stores = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
+    );
+    if (!stores[0]) {
+      return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    }
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[sync guard]', err);
+    return c.json({ error: 'Gagal memvalidasi langganan/toko' }, 500);
+  }
+  return null;
+}
+
+async function handlePushSync(c: {
+  env: Env;
+  req: { json: () => Promise<unknown> };
+  get: (k: 'userId' | 'userEmail' | 'bearer') => string | null;
+  json: (b: unknown, s?: number) => Response;
+}, explicitStoreId?: string) {
+  const body = (await c.req.json().catch(() => ({}))) as {
+    storeId?: string;
+    records?: Record<string, unknown[]>;
+    tombstones?: { table?: string; syncId?: string; deletedAt?: string }[];
+    deviceId?: string;
+    deviceName?: string;
+  };
+  const storeId = explicitStoreId ?? String(body.storeId ?? '');
+  if (!storeId) return c.json({ error: 'storeId wajib' }, 400);
+
+  const guard = await requireSyncStore(c, storeId);
+  if (guard) return guard;
+
+  const items: Record<string, unknown>[] = [];
+
+  for (const [table, rows] of Object.entries(body.records ?? {})) {
+    if (!SYNC_TABLES.has(table)) return c.json({ error: `Tabel tidak dikenal: ${table}` }, 400);
+    for (const raw of rows ?? []) {
+      const r = raw as { syncId?: string; data?: unknown; updatedAt?: string };
+      if (!r.syncId || !r.updatedAt) continue;
+      items.push({
+        table_name: table,
+        sync_id: r.syncId,
+        data: r.data ?? {},
+        updated_at: r.updatedAt,
+        deleted: false,
+        deleted_at: null,
+      });
+    }
+  }
+  for (const t of body.tombstones ?? []) {
+    if (!t?.table || !SYNC_TABLES.has(t.table) || !t.syncId || !t.deletedAt) continue;
+    items.push({
+      table_name: t.table,
+      sync_id: t.syncId,
+      data: {},
+      updated_at: t.deletedAt,
+      deleted: true,
+      deleted_at: t.deletedAt,
+    });
+  }
+  if (items.length === 0) return c.json({ error: 'Tidak ada record valid untuk di-push' }, 400);
+  if (items.length > SYNC_MAX_RECORDS) return c.json({ error: 'Batch terlalu besar (maks 2000)' }, 413);
+
+  try {
+    if (body.deviceId) {
+      try {
+        await sbPost(c.env, 'rpc/sync_register_device', {
+          p_store_id: storeId,
+          p_device_id: body.deviceId,
+          p_device_name: body.deviceName ?? '',
+        });
+      } catch {
+        // best-effort — jangan gagalkan push karena device metadata
+      }
+    }
+    const accepted = await sbPost<string[]>(c.env, 'rpc/sync_upsert_batch', {
+      p_store_id: storeId,
+      p_items: items,
+    });
+    return c.json({ accepted: accepted ?? [], count: accepted?.length ?? 0, serverTime: new Date().toISOString() });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[sync push]', err);
+    return c.json({ error: 'Gagal menyimpan data sync' }, 500);
+  }
+}
+
+app.post('/api/sync/push', (c) => handlePushSync(c));
+
+app.post('/api/stores/:storeId/sync', (c) => handlePushSync(c, c.req.param('storeId')));
+
+app.get('/api/sync/pull', async (c) => {
+  const storeId = c.req.query('storeId') ?? '';
+  if (!storeId) return c.json({ error: 'storeId wajib' }, 400);
+  const guard = await requireSyncStore(c, storeId);
+  if (guard) return guard;
+  const since = c.req.query('since') ?? '';
+  if (!since) return c.json({ error: 'since wajib (ISO time)' }, 400);
+
+  try {
+    const rows = await sbGet<SyncRow[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&server_updated_at=gt.${encodeURIComponent(since)}` +
+        '&order=server_updated_at.asc&limit=5000&select=table_name,sync_id,data,server_updated_at,deleted,deleted_at',
+    );
+    const records = rows
+      .filter((r) => !r.deleted)
+      .map((r) => ({ table: r.table_name, syncId: r.sync_id, data: r.data, updatedAt: r.server_updated_at }));
+    const tombstones = rows
+      .filter((r) => r.deleted)
+      .map((r) => ({ table: r.table_name, syncId: r.sync_id, deletedAt: r.deleted_at ?? r.server_updated_at }));
+    return c.json({ records, tombstones, serverTime: new Date().toISOString() });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[sync pull]', err);
+    return c.json({ error: 'Gagal menarik data sync' }, 500);
+  }
+});
 
 // --- Backups (R2 + metadata Supabase) ---
 app.get('/api/backups', async (c) => {

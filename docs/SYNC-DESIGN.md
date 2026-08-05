@@ -153,14 +153,18 @@ create table if not exists public.sync_meta (
 ## 10. Rencana implementasi (urutan)
 
 1. **M0 — Migrasi DB:** kolom `syncId` + `sync_meta` + `devices`; backfill syncId utk
-   data existing; `setupSyncHooks` menghasilkan syncId saat create.
+   data existing; `setupSyncHooks` menghasilkan syncId saat create. **✅ Selesai (2026-08-05).**
 2. **M1 — Server:** endpoint push/pull + validasi + LWW + tombstone; guard
-   `has_sync`; ubah `501` sync jadi nyata.
+   `has_sync`; ubah `501` sync jadi nyata. **✅ Selesai (2026-08-05)** — `POST /api/sync/push`,
+   `GET /api/sync/pull`, migrasi `20260805120000_sync.sql` (sync_records + RPC LWW batch).
 3. **M2 — Client:** `syncQueue`, push/pull pipeline, penerapan LWW, tombstones,
-   `triggerBackgroundSync` nyata; UI link device di CloudHub.
+   `triggerBackgroundSync` nyata; UI link device di CloudHub. **✅ Selesai (2026-08-05)**
+   — `src/lib/sync.ts` (collect→push→ack→pull→apply, fail-closed), `syncMeta` tabel,
+   tombol "Sync Sekarang" di CloudHub + auto-sync saat app dibuka.
 4. **M3 — Pengujian:** unit test push/pull/LWW; simulasi dua device (fake-indexeddb
-   + dua profile); smoke manual; update docs.
-5. **M4 — Release bertahap:** flag env, observability via `platform_events`.
+   + dua profile); smoke manual; update docs. **Sebagian** — unit test pipeline &
+   LWW sudah ada; simulasi dua device live menyusul.
+5. **M4 — Release bertahap:** flag env, observability via `platform_events`. Belum.
 
 ## 11. Risiko & mitigasi
 
