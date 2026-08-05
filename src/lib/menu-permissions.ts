@@ -9,6 +9,22 @@
 
 import type { PermissionKey } from '@/lib/db';
 
+/**
+ * Kelompok permission untuk UI role manager — toggle dikelompokkan per area
+ * (ROLES-PERMISSIONS M2).
+ */
+export const PERMISSION_GROUPS: { labelKey: string; permissions: PermissionKey[] }[] = [
+  { labelKey: 'settings:roles.groups.cashier', permissions: ['create_transaction', 'delete_transaction'] },
+  {
+    labelKey: 'settings:roles.groups.productStock',
+    permissions: ['manage_products', 'manage_stock_inout', 'manage_categories_payments'],
+  },
+  { labelKey: 'settings:roles.groups.reports', permissions: ['view_reports'] },
+  { labelKey: 'settings:roles.groups.customer', permissions: ['manage_customers', 'manage_supplier'] },
+  { labelKey: 'settings:roles.groups.expenses', permissions: ['view_expenses', 'manage_expenses'] },
+  { labelKey: 'settings:roles.groups.settings', permissions: ['manage_backup', 'manage_store_settings'] },
+];
+
 export const MENU_PERMISSION: Record<string, PermissionKey> = {
   '/': 'view_reports',
   '/cashier': 'create_transaction',

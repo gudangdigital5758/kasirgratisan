@@ -46,6 +46,8 @@ const ThemeSettings = lazy(() => import("./pages/settings/ThemeSettings"));
 const ReceiptSettings = lazy(() => import("./pages/settings/ReceiptSettings"));
 const IssueReport = lazy(() => import("./pages/settings/IssueReport"));
 const StockOpname = lazy(() => import("./pages/settings/StockOpname"));
+const RoleManager = lazy(() => import("./pages/settings/RoleManager"));
+const StoresManager = lazy(() => import("./pages/settings/StoresManager"));
 const BackupRestoreSettings = lazy(() => import("./pages/settings/BackupRestoreSettings"));
 const CloudHub = lazy(() => import("./pages/settings/CloudHub"));
 const CloudAutoBackupSettings = lazy(() => import("./pages/settings/CloudAutoBackupSettings"));
@@ -269,6 +271,22 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <IssueReport />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/roles"
+                    element={
+                      <ErrorBoundary>
+                        <RoleManager />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/settings/stores"
+                    element={
+                      <ErrorBoundary>
+                        <StoresManager />
                       </ErrorBoundary>
                     }
                   />

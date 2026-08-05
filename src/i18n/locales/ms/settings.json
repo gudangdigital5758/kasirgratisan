@@ -72,6 +72,10 @@
       "title": "Urus Pekerja",
       "description": "{{count}} akaun berdaftar · atur akses setiap pekerja"
     },
+    "roles": {
+      "title": "Peranan & Hak Akses",
+      "description": "Buat & urus peranan; menu papar/sorok mengikut peranan"
+    },
     "active": {
       "title": "Multi-User Aktif",
       "description": "Pekerja mesti log masuk untuk akses kasir",
@@ -931,6 +935,9 @@
       "pinPlaceholder": "4-6 digit",
       "ownerNotice": "Pemilik sentiasa mempunyai akses penuh kepada semua ciri.",
       "accessLabel": "Hak Akses",
+      "roleLabel": "Peranan",
+      "rolePlaceholder": "Pilih peranan",
+      "roleHint": "Pilih peranan untuk mengisi hak akses secara automatik; anda tetap boleh laraskan manual.",
       "saving": "Menyimpan…",
       "saveAdd": "Tambah Pekerja",
       "saveEdit": "Simpan Perubahan"
@@ -962,6 +969,87 @@
       "accountDisabled": "Akaun dinyahaktifkan",
       "accountEnabled": "Akaun diaktifkan",
       "accountDeleted": "Akaun \"{{name}}\" dipadam"
+    }
+  },
+  "roles": {
+    "title": "Peranan & Hak Akses",
+    "desc": "Urus hak akses setiap peranan. Menu navigasi papar/sorok secara automatik mengikut peranan.",
+    "addButton": "Buat Peranan Baharu",
+    "administrator": "Pentadbir",
+    "administratorDesc": "Pemilik — akses penuh & mengurus peranan/pekerja. Tidak boleh diubah.",
+    "builtIn": "Bawaan",
+    "inactive": "Tidak aktif",
+    "noAccess": "Tiada akses",
+    "accessCount_one": "{{count}} akses",
+    "accessCount_other": "{{count}} akses",
+    "usersCount_one": "{{count}} pekerja",
+    "usersCount_other": "{{count}} pekerja",
+    "edit": "Edit",
+    "delete": "Padam",
+    "lockedPermission": "Perlu akses urus tetapan kedai (Pentadbir)",
+    "notEnabled": {
+      "title": "Multi-user belum aktif",
+      "description": "Aktifkan dahulu di Tetapan untuk mengurus peranan & hak akses.",
+      "button": "Buka Tetapan"
+    },
+    "toast": {
+      "saved": "Peranan disimpan & digunakan ke pekerja",
+      "nameRequired": "Nama peranan wajib diisi",
+      "created": "Peranan baharu dibuat",
+      "deleted": "Peranan dipadam; pekerja dipindah ke Sales"
+    },
+    "dialog": {
+      "editTitle": "Edit Peranan: {{name}}",
+      "editDesc": "Hak akses terus digunakan ke semua pekerja dengan peranan ini.",
+      "addTitle": "Buat Peranan Baharu",
+      "addDesc": "Beri nama dan pilih hak akses peranan.",
+      "nameLabel": "Nama Peranan",
+      "namePlaceholder": "Cth: Kasir Senior",
+      "save": "Simpan Peranan",
+      "create": "Buat Peranan",
+      "saving": "Menyimpan…"
+    },
+    "deleteDialog": {
+      "title": "Padam Peranan {{name}}?",
+      "description": "Pekerja dengan peranan ini akan dipindah ke peranan Sales.",
+      "cancel": "Batal",
+      "confirm": "Padam"
+    },
+    "groups": {
+      "cashier": "Kasir & Transaksi",
+      "productStock": "Produk & Stok",
+      "reports": "Laporan",
+      "customer": "Pelanggan / Hutang / Pembekal",
+      "expenses": "Perbelanjaan",
+      "settings": "Backup & Tetapan"
+    }
+  },
+  "stores": {
+    "title": "Kedai",
+    "desc": "Urus beberapa kedai pada peranti ini. Data setiap kedai terasing.",
+    "cardTitle": "Kedai",
+    "cardDesc": "Tambah & tukar kedai (offline/online)",
+    "switchHint": "Menukar kedai akan memuat semula aplikasi — semua data dipaparkan mengikut kedai aktif.",
+    "addButton": "Tambah Kedai",
+    "modeLocal": "Offline",
+    "modeCloud": "Online",
+    "active": "Aktif",
+    "current": "Sedang digunakan",
+    "switch": "Guna Kedai Ini",
+    "empty": "Tiada kedai lagi.",
+    "lockedPermission": "Perlu akses urus tetapan kedai",
+    "wizard": {
+      "title": "Tambah Kedai",
+      "desc": "Buat kedai baharu pada peranti ini (data terasing dari kedai lain).",
+      "nameLabel": "Nama Kedai",
+      "namePlaceholder": "Cth: Kedai Cawangan 2",
+      "modeLabel": "Mod",
+      "offlineDesc": "Data setempat pada peranti ini",
+      "onlineSoon": "Kedai online menyusul (perlu langganan cloud)",
+      "create": "Buat & Buka Kedai",
+      "saving": "Membuat…",
+      "failed": "Gagal membuat kedai",
+      "nameRequired": "Nama kedai wajib diisi"
     }
   },
   "backupReminder": {

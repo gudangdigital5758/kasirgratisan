@@ -72,6 +72,10 @@
       "title": "Kelola Karyawan",
       "description": "{{count}} akun terdaftar · atur akses per karyawan"
     },
+    "roles": {
+      "title": "Role & Hak Akses",
+      "description": "Buat & atur role; menu tampil/sembunyi sesuai role"
+    },
     "active": {
       "title": "Multi-User Aktif",
       "description": "Karyawan harus login untuk akses kasir",
@@ -1348,6 +1352,9 @@
       "pinPlaceholder": "4-6 digit",
       "ownerNotice": "Pemilik selalu memiliki akses penuh ke semua fitur.",
       "accessLabel": "Hak Akses",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Pilih role",
+      "roleHint": "Pilih role untuk mengisi hak akses otomatis; kamu tetap bisa sesuaikan manual.",
       "saving": "Menyimpan…",
       "saveAdd": "Tambah Karyawan",
       "saveEdit": "Simpan Perubahan"
@@ -1379,6 +1386,87 @@
       "accountDisabled": "Akun dinonaktifkan",
       "accountEnabled": "Akun diaktifkan",
       "accountDeleted": "Akun \"{{name}}\" dihapus"
+    }
+  },
+  "roles": {
+    "title": "Role & Hak Akses",
+    "desc": "Atur hak akses per role. Menu di navigasi otomatis tampil/sembunyi sesuai role.",
+    "addButton": "Buat Role Baru",
+    "administrator": "Administrator",
+    "administratorDesc": "Pemilik — akses penuh & mengelola role/karyawan. Tidak bisa diubah.",
+    "builtIn": "Bawaan",
+    "inactive": "Nonaktif",
+    "noAccess": "Tidak ada akses",
+    "accessCount_one": "{{count}} akses",
+    "accessCount_other": "{{count}} akses",
+    "usersCount_one": "{{count}} karyawan",
+    "usersCount_other": "{{count}} karyawan",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "lockedPermission": "Perlu akses kelola pengaturan toko (Administrator)",
+    "notEnabled": {
+      "title": "Multi-user belum aktif",
+      "description": "Aktifkan dulu di Pengaturan untuk mengelola role & hak akses.",
+      "button": "Buka Pengaturan"
+    },
+    "toast": {
+      "saved": "Role disimpan & diterapkan ke karyawan",
+      "nameRequired": "Nama role wajib diisi",
+      "created": "Role baru dibuat",
+      "deleted": "Role dihapus; karyawan dipindahkan ke Sales"
+    },
+    "dialog": {
+      "editTitle": "Edit Role: {{name}}",
+      "editDesc": "Hak akses langsung diterapkan ke seluruh karyawan dengan role ini.",
+      "addTitle": "Buat Role Baru",
+      "addDesc": "Beri nama dan pilih hak akses role.",
+      "nameLabel": "Nama Role",
+      "namePlaceholder": "Contoh: Kasir Senior",
+      "save": "Simpan Role",
+      "create": "Buat Role",
+      "saving": "Menyimpan…"
+    },
+    "deleteDialog": {
+      "title": "Hapus Role {{name}}?",
+      "description": "Karyawan dengan role ini akan dipindahkan ke role Sales.",
+      "cancel": "Batal",
+      "confirm": "Hapus"
+    },
+    "groups": {
+      "cashier": "Kasir & Transaksi",
+      "productStock": "Produk & Stok",
+      "reports": "Laporan",
+      "customer": "Pelanggan / Hutang / Supplier",
+      "expenses": "Pengeluaran",
+      "settings": "Backup & Pengaturan"
+    }
+  },
+  "stores": {
+    "title": "Toko",
+    "desc": "Kelola beberapa toko di perangkat ini. Data tiap toko terpisah.",
+    "cardTitle": "Toko",
+    "cardDesc": "Tambah & ganti toko (offline/online)",
+    "switchHint": "Mengganti toko akan memuat ulang aplikasi — seluruh data tampil sesuai toko aktif.",
+    "addButton": "Tambah Toko",
+    "modeLocal": "Offline",
+    "modeCloud": "Online",
+    "active": "Aktif",
+    "current": "Sedang dipakai",
+    "switch": "Pakai Toko Ini",
+    "empty": "Belum ada toko.",
+    "lockedPermission": "Perlu akses kelola pengaturan toko",
+    "wizard": {
+      "title": "Tambah Toko",
+      "desc": "Buat toko baru di perangkat ini (data terpisah dari toko lain).",
+      "nameLabel": "Nama Toko",
+      "namePlaceholder": "Contoh: Toko Cabang 2",
+      "modeLabel": "Mode",
+      "offlineDesc": "Data lokal di perangkat ini",
+      "onlineSoon": "Toko online menyusul (butuh langganan cloud)",
+      "create": "Buat & Buka Toko",
+      "saving": "Membuat…",
+      "failed": "Gagal membuat toko",
+      "nameRequired": "Nama toko wajib diisi"
     }
   },
   "backupReminder": {

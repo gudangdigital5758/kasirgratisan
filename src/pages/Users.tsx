@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -36,6 +37,7 @@ export default function UsersPage() {
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? idLocale;
   const users = useLiveQuery(() => db.users.toArray());
+  const roles = useLiveQuery(() => db.roles.toArray());
 
   // Add/edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,6 +45,7 @@ export default function UsersPage() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
+  const [roleId, setRoleId] = useState<number | undefined>(undefined);
   const [permissions, setPermissions] = useState<PermissionKey[]>(DEFAULT_STAFF_PERMISSIONS);
   const [saving, setSaving] = useState(false);
 
@@ -101,11 +104,13 @@ export default function UsersPage() {
   }
 
   const openAdd = () => {
+    const sales = (roles ?? []).find((r) => r.name === 'Sales' && r.isBuiltIn === 1);
     setEditing(null);
     setName('');
     setUsername('');
     setPin('');
-    setPermissions(DEFAULT_STAFF_PERMISSIONS);
+    setRoleId(sales?.id);
+    setPermissions(sales?.permissions ?? DEFAULT_STAFF_PERMISSIONS);
     setDialogOpen(true);
   };
 
@@ -114,8 +119,16 @@ export default function UsersPage() {
     setName(user.name);
     setUsername(user.username);
     setPin('');
+    setRoleId(user.roleId);
     setPermissions(user.role === 'owner' ? [...ALL_PERMISSIONS] : user.permissions);
     setDialogOpen(true);
+  };
+
+  const onRoleChange = (id: string) => {
+    const rid = Number(id) || undefined;
+    setRoleId(rid);
+    const role = (roles ?? []).find((r) => r.id === rid);
+    setPermissions(role ? [...role.permissions] : DEFAULT_STAFF_PERMISSIONS);
   };
 
   const togglePermission = (key: PermissionKey, checked: boolean) => {
@@ -133,6 +146,7 @@ export default function UsersPage() {
         }
         await db.users.update(editing.id!, {
           name: name.trim(),
+          roleId: editing.role === 'owner' ? undefined : roleId,
           permissions: editing.role === 'owner' ? [] : permissions,
         });
         toast.success(t('users.toast.staffUpdated'));
@@ -156,6 +170,7 @@ export default function UsersPage() {
           pin,
           name,
           role: 'staff',
+          roleId,
           permissions,
         });
         if (!result.ok) {
@@ -390,6 +405,20 @@ export default function UsersPage() {
               </div>
             ) : (
               <div className="space-y-2">
+                {roles && roles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label>{t('users.dialog.roleLabel')}</Label>
+                    <Select value={roleId?.toString() ?? ''} onValueChange={onRoleChange}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder={t('users.dialog.rolePlaceholder')} /></SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r) => (
+                          <SelectItem key={r.id} value={r.id!.toString()}>{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">{t('users.dialog.roleHint')}</p>
+                  </div>
+                )}
                 <Label className="text-sm">{t('users.dialog.accessLabel')}</Label>
                 <div className="space-y-1.5">
                   {ALL_PERMISSIONS.map((key) => {

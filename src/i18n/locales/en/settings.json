@@ -72,6 +72,10 @@
       "title": "Manage Employees",
       "description": "{{count}} registered accounts · manage access per employee"
     },
+    "roles": {
+      "title": "Roles & Access Rights",
+      "description": "Create & manage roles; menus show/hide per role"
+    },
     "active": {
       "title": "Multi-User Active",
       "description": "Staff must login to access the cashier",
@@ -1348,6 +1352,9 @@
       "pinPlaceholder": "4-6 digits",
       "ownerNotice": "Owner always has full access to all features.",
       "accessLabel": "Access Rights",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Select role",
+      "roleHint": "Selecting a role fills access rights automatically; you can still tweak manually.",
       "saving": "Saving…",
       "saveAdd": "Add Employee",
       "saveEdit": "Save Changes"
@@ -1379,6 +1386,87 @@
       "accountDisabled": "Account deactivated",
       "accountEnabled": "Account activated",
       "accountDeleted": "Account \"{{name}}\" deleted"
+    }
+  },
+  "roles": {
+    "title": "Roles & Access Rights",
+    "desc": "Manage access per role. Navigation menus show/hide automatically per role.",
+    "addButton": "Create New Role",
+    "administrator": "Administrator",
+    "administratorDesc": "Owner — full access & manages roles/employees. Cannot be edited.",
+    "builtIn": "Built-in",
+    "inactive": "Inactive",
+    "noAccess": "No access",
+    "accessCount_one": "{{count}} access",
+    "accessCount_other": "{{count}} accesses",
+    "usersCount_one": "{{count}} employee",
+    "usersCount_other": "{{count}} employees",
+    "edit": "Edit",
+    "delete": "Delete",
+    "lockedPermission": "Requires manage store settings access (Administrator)",
+    "notEnabled": {
+      "title": "Multi-user not enabled",
+      "description": "Enable it in Settings first to manage roles & access rights.",
+      "button": "Open Settings"
+    },
+    "toast": {
+      "saved": "Role saved & applied to employees",
+      "nameRequired": "Role name is required",
+      "created": "New role created",
+      "deleted": "Role deleted; employees moved to Sales"
+    },
+    "dialog": {
+      "editTitle": "Edit Role: {{name}}",
+      "editDesc": "Access rights are applied immediately to all employees with this role.",
+      "addTitle": "Create New Role",
+      "addDesc": "Give a name and pick access rights for the role.",
+      "nameLabel": "Role Name",
+      "namePlaceholder": "Example: Senior Cashier",
+      "save": "Save Role",
+      "create": "Create Role",
+      "saving": "Saving…"
+    },
+    "deleteDialog": {
+      "title": "Delete Role {{name}}?",
+      "description": "Employees with this role will be moved to the Sales role.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "groups": {
+      "cashier": "Cashier & Transactions",
+      "productStock": "Products & Stock",
+      "reports": "Reports",
+      "customer": "Customers / Debts / Suppliers",
+      "expenses": "Expenses",
+      "settings": "Backup & Settings"
+    }
+  },
+  "stores": {
+    "title": "Stores",
+    "desc": "Manage multiple stores on this device. Each store's data is isolated.",
+    "cardTitle": "Stores",
+    "cardDesc": "Add & switch stores (offline/online)",
+    "switchHint": "Switching a store reloads the app — all data shown belongs to the active store.",
+    "addButton": "Add Store",
+    "modeLocal": "Offline",
+    "modeCloud": "Online",
+    "active": "Active",
+    "current": "In use",
+    "switch": "Use This Store",
+    "empty": "No stores yet.",
+    "lockedPermission": "Requires manage store settings access",
+    "wizard": {
+      "title": "Add Store",
+      "desc": "Create a new store on this device (data isolated from other stores).",
+      "nameLabel": "Store Name",
+      "namePlaceholder": "Example: Branch Store 2",
+      "modeLabel": "Mode",
+      "offlineDesc": "Local data on this device",
+      "onlineSoon": "Online stores coming soon (requires cloud subscription)",
+      "create": "Create & Open Store",
+      "saving": "Creating…",
+      "failed": "Failed to create store",
+      "nameRequired": "Store name is required"
     }
   },
   "backupReminder": {

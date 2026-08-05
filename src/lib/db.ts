@@ -34,12 +34,15 @@ export type {
   StoreCustomField,
 } from './db-schema';
 
-export const db = new PosDatabase();
+// === Multi-toko (MULTI-STORE M1): db mengikuti toko aktif ===
+// Saat load, baca toko aktif dari localStorage. Ganti toko = set active key +
+// reload (seluruh aplikasi otomatis memakai DB toko tsb).
+const activeDbKey = getActiveStoreKey();
+export const db =
+  activeDbKey === DEFAULT_STORE_KEY ? new PosDatabase() : new PosDatabase(dbNameForStore(activeDbKey));
 setupSyncHooks(db);
 
-// === Multi-toko (MULTI-STORE M0): factory DB per toko ===
-// `db` tetap instance toko default (kompatibel dengan seluruh import existing).
-// Toko tambahan memakai instance PosDatabase terpisah dengan nama DB per toko.
+// Instance tambahan untuk toko lain (preview / operasi lintas toko).
 const storeDbs = new Map<string, PosDatabase>();
 
 /**

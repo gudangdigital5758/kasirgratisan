@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type StoreCustomField } from '@/lib/db';
 import { STORE_TYPES, DEFAULT_STORE_TYPE, normalizeStoreType, type StoreType, type ProductFieldType } from '@/lib/product-fields';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle, Bell } from 'lucide-react';
+import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, UserCog, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle, Bell } from 'lucide-react';
 import {
   isPushSupported,
   getPermissionState,
@@ -603,6 +603,9 @@ export default function Pengaturan() {
           ) : (
             <>
               <SettingsLinkCard to="/users" icon={UsersIcon} title={t('employees.manage.title')} description={t('employees.manage.description', { count: usersCount ?? 0 })} />
+              {isOwner && (
+                <SettingsLinkCard to="/settings/roles" icon={UserCog} iconClass="bg-accent/10 text-accent" title={t('employees.roles.title')} description={t('employees.roles.description')} />
+              )}
               <Card className="border-0 shadow-sm mb-2">
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
@@ -648,6 +651,8 @@ export default function Pengaturan() {
         )}
 
         <SettingsLinkCard to="/settings/units" icon={Ruler} title={t('masterData.units.title')} description={t('masterData.units.description', { count: units?.length ?? 0 })} />
+
+        <SettingsLinkCard to="/settings/stores" icon={Store} iconClass="bg-primary/10 text-primary" title={t('stores.cardTitle')} description={t('stores.cardDesc')} />
 
         {can('manage_store_settings') && (
           <Card className="border-0 shadow-sm mb-2">
