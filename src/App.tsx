@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { checkVersion } from "@/lib/version-check";
 import { initAnalytics } from "@/lib/analytics";
 import { Capacitor } from "@capacitor/core";
@@ -14,41 +14,46 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { CloudAuthProvider } from "@/hooks/use-cloud-auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
+import PageLoader from "@/components/PageLoader";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
 import AppLayout from "./components/layout/AppLayout";
-import Dashboard from "./pages/Dashboard";
-import Cashier from "./pages/Cashier";
-import Products from "./pages/Products";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import SupplierPage from "./pages/Supplier";
-import CustomersPage from "./pages/Customers";
-import StockInPage from "./pages/StockIn";
-import StockOutPage from "./pages/StockOut";
-import TransactionHistory from "./pages/TransactionHistory";
-import StockReport from "./pages/StockReport";
-import UsersPage from "./pages/Users";
-import ExpensesPage from "./pages/Expenses";
-import DebtsPage from "./pages/Debts";
-import ShiftsPage from "./pages/Shifts";
-import PaymentMethodsSettings from "./pages/settings/PaymentMethodsSettings";
-import ProductCategoriesSettings from "./pages/settings/ProductCategoriesSettings";
-import ExpenseCategoriesSettings from "./pages/settings/ExpenseCategoriesSettings";
-import UnitsSettings from "./pages/settings/UnitsSettings";
-import ThemeSettings from "./pages/settings/ThemeSettings";
-import ReceiptSettings from "./pages/settings/ReceiptSettings";
-import IssueReport from "./pages/settings/IssueReport";
-import StockOpname from "./pages/settings/StockOpname";
-import BackupRestoreSettings from "./pages/settings/BackupRestoreSettings";
-import CloudHub from "./pages/settings/CloudHub";
-import CloudAutoBackupSettings from "./pages/settings/CloudAutoBackupSettings";
-import CloudHistorySettings from "./pages/settings/CloudHistorySettings";
-import CloudBackupsListSettings from "./pages/settings/CloudBackupsListSettings";
-import CloudStoreSettings from "./pages/settings/CloudStoreSettings";
-import CloudOnlineStoreSettings from "./pages/settings/CloudOnlineStoreSettings";
-import NotFound from "./pages/NotFound";
 import { CLOUD_ROUTES, CLOUD_LEGACY_REDIRECTS } from "./lib/cloud-routes";
+
+// Route-level code splitting: tiap halaman diunduh & di-parse on-demand.
+// (Di PWA, Workbox tetap pre-cache semua chunk; manfaat utama = parse/execute
+//  awal lebih ringan + cache per-route.)
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Cashier = lazy(() => import("./pages/Cashier"));
+const Products = lazy(() => import("./pages/Products"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const SupplierPage = lazy(() => import("./pages/Supplier"));
+const CustomersPage = lazy(() => import("./pages/Customers"));
+const StockInPage = lazy(() => import("./pages/StockIn"));
+const StockOutPage = lazy(() => import("./pages/StockOut"));
+const TransactionHistory = lazy(() => import("./pages/TransactionHistory"));
+const StockReport = lazy(() => import("./pages/StockReport"));
+const UsersPage = lazy(() => import("./pages/Users"));
+const ExpensesPage = lazy(() => import("./pages/Expenses"));
+const DebtsPage = lazy(() => import("./pages/Debts"));
+const ShiftsPage = lazy(() => import("./pages/Shifts"));
+const PaymentMethodsSettings = lazy(() => import("./pages/settings/PaymentMethodsSettings"));
+const ProductCategoriesSettings = lazy(() => import("./pages/settings/ProductCategoriesSettings"));
+const ExpenseCategoriesSettings = lazy(() => import("./pages/settings/ExpenseCategoriesSettings"));
+const UnitsSettings = lazy(() => import("./pages/settings/UnitsSettings"));
+const ThemeSettings = lazy(() => import("./pages/settings/ThemeSettings"));
+const ReceiptSettings = lazy(() => import("./pages/settings/ReceiptSettings"));
+const IssueReport = lazy(() => import("./pages/settings/IssueReport"));
+const StockOpname = lazy(() => import("./pages/settings/StockOpname"));
+const BackupRestoreSettings = lazy(() => import("./pages/settings/BackupRestoreSettings"));
+const CloudHub = lazy(() => import("./pages/settings/CloudHub"));
+const CloudAutoBackupSettings = lazy(() => import("./pages/settings/CloudAutoBackupSettings"));
+const CloudHistorySettings = lazy(() => import("./pages/settings/CloudHistorySettings"));
+const CloudBackupsListSettings = lazy(() => import("./pages/settings/CloudBackupsListSettings"));
+const CloudStoreSettings = lazy(() => import("./pages/settings/CloudStoreSettings"));
+const CloudOnlineStoreSettings = lazy(() => import("./pages/settings/CloudOnlineStoreSettings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 /** Preserve query/hash when redirecting legacy cloud-backup URLs. */
 function LegacyCloudRedirect({ to }: { to: string }) {
@@ -88,6 +93,7 @@ const App = () => {
                <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                 <CloudAuthProvider>
                 <AnalyticsTracker />
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route element={<AppLayout />}>
                   <Route
@@ -336,6 +342,7 @@ const App = () => {
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
               </CloudAuthProvider>
              </GoogleOAuthProvider>
             </AuthProvider>

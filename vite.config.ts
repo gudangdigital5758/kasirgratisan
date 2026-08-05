@@ -76,6 +76,31 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "es2022",
+    rollupOptions: {
+      output: {
+        // Pecah hanya library berat & independen (ESM) yang di-lazy-load via route.
+        // Ekosistem React/UI (react, react-dom, @radix-ui, dll — banyak yang CJS)
+        // DIBIARKAN dikelompokkan Rollup: memecahnya manual menyebabkan duplikasi
+        // modul / interop CJS rusak (mis. `createContext` undefined).
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("exceljs")) return "exceljs";
+          if (id.includes("html5-qrcode")) return "qrcode-scanner";
+          if (id.includes("leaflet")) return "leaflet";
+          if (id.includes("html2canvas")) return "html2canvas";
+          if (
+            id.includes("recharts") ||
+            id.includes("d3-") ||
+            id.includes("victory") ||
+            id.includes("internmap") ||
+            id.includes("delaunator")
+          ) {
+            return "charts";
+          }
+          return undefined;
+        },
+      },
+    },
   },
   resolve: {
     alias: {

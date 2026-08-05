@@ -22,25 +22,8 @@ import { useTranslation } from 'react-i18next';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { downloadOrShareFile } from '@/lib/file-utils';
 import { calcMarginPercent, calcProfitPerUnit, marginTone, priceFromMargin } from '@/lib/pricing';
-
-const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
-const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
-
-interface ParsedRow {
-  rowNum: number;
-  name: string;
-  sku: string;
-  categoryName: string;
-  price: number;
-  hpp: number;
-  trackStock: boolean;
-  stock: number;
-  unit: string;
-  barcode?: string;
-  description?: string;
-  isValid: boolean;
-  errors: string[];
-}
+import { CURRENCY_SYMBOL, NUMBER_LOCALES } from '@/lib/format';
+import { validateImportRow, type ParsedRow } from '@/lib/product-import';
 
 export default function Produk() {
   const { currentUser, can } = useAuth();
@@ -391,107 +374,31 @@ export default function Produk() {
             const barcode = getVal(9) || undefined;
             const description = getVal(10) || undefined;
 
-            const errors: string[] = [];
-
-            // Validation
-            if (!name) {
-              errors.push(t('excel.errorNameRequired'));
-            }
-            if (!sku) {
-              errors.push(t('excel.errorSkuRequired'));
-            } else {
-              const skuLower = sku.toLowerCase().trim();
-              if (skuInFile.has(skuLower)) {
-                errors.push(t('excel.errorSkuDupExcel'));
-              } else {
-                skuInFile.add(skuLower);
-              }
-              if (dbSkus.has(skuLower)) {
-                const existingName = dbProductsBySku.get(skuLower);
-                errors.push(t('excel.errorSkuDupDb') + ` ("${existingName}")`);
-              }
-            }
-
-            // Check Category Name (case-insensitive)
-            const matchedCat = activeCats.find(c => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim());
-            if (!categoryName) {
-              errors.push(t('excel.errorCatNotFound'));
-            } else if (!matchedCat) {
-              errors.push(t('excel.errorCatNotFound') + `: "${categoryName}"`);
-            }
-
-            // Check Unit Name (case-insensitive)
-            const matchedUnit = activeUnts.find(u => u.name.toLowerCase().trim() === unit.toLowerCase().trim());
-            if (!unit) {
-              errors.push(t('excel.errorUnitNotFound'));
-            } else if (!matchedUnit) {
-              errors.push(t('excel.errorUnitNotFound') + `: "${unit}"`);
-            }
-
-            // Parse numbers (handling Rp, spaces, commas, dots)
-            const cleanNumber = (val: string): number => {
-              if (!val) return 0;
-              let clean = val.replace(/Rp/gi, '').replace(/\s+/g, '');
-              const lastDot = clean.lastIndexOf('.');
-              const lastComma = clean.lastIndexOf(',');
-              if (lastDot > lastComma) {
-                clean = clean.replace(/,/g, '');
-              } else if (lastComma > lastDot) {
-                clean = clean.replace(/\./g, '').replace(/,/g, '.');
-              } else {
-                const match = clean.match(/[.,](\d+)$/);
-                if (match) {
-                  const decimals = match[1];
-                  if (decimals.length === 3) {
-                    clean = clean.replace(/[.,]/g, '');
-                  } else {
-                    clean = clean.replace(/[.,]/g, '.');
-                  }
-                }
-              }
-              const parsed = Number(clean);
-              return isNaN(parsed) ? -1 : parsed;
-            };
-
-            const price = cleanNumber(priceStr);
-            const hpp = hppStr ? cleanNumber(hppStr) : 0;
-            const stock = stockStr ? cleanNumber(stockStr) : 0;
-
-            if (price < 0) {
-              errors.push(t('excel.errorPriceInvalid'));
-            }
-            if (hpp < 0) {
-              errors.push(t('excel.errorHppInvalid'));
-            }
-
-            // Kelola Stok boolean: default to true
-            let trackStock = true;
-            if (trackStockStr) {
-              const lower = trackStockStr.toLowerCase();
-              if (lower === 'tidak' || lower === 'no' || lower === 'false' || lower === '0' || lower === 'salah') {
-                trackStock = false;
-              }
-            }
-
-            if (trackStock && stock < 0) {
-              errors.push(t('excel.errorStockInvalid'));
-            }
-
-            tempRows.push({
-              rowNum: rowNumber,
-              name,
-              sku,
-              categoryName,
-              price: price >= 0 ? price : 0,
-              hpp: hpp >= 0 ? hpp : 0,
-              trackStock,
-              stock: stock >= 0 ? stock : 0,
-              unit,
-              barcode,
-              description,
-              isValid: errors.length === 0,
-              errors
-            });
+            tempRows.push(
+              validateImportRow(
+                {
+                  rowNum: rowNumber,
+                  name,
+                  sku,
+                  categoryName,
+                  priceStr,
+                  hppStr,
+                  stockStr,
+                  trackStockStr,
+                  unit,
+                  barcode,
+                  description,
+                },
+                {
+                  categories: activeCats,
+                  units: activeUnts,
+                  dbSkus,
+                  dbProductsBySku,
+                  skuInFile,
+                  t,
+                },
+              ),
+            );
           });
 
           setImportRows(tempRows);

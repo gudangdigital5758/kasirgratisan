@@ -17,8 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { id, enUS, ms } from 'date-fns/locale';
-import type { Locale } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/use-auth';
 import { trackEvent } from '@/lib/analytics';
@@ -33,6 +31,13 @@ import {
   type CartLine,
 } from '@/lib/cashier-ops';
 import { getOpenShift } from '@/lib/shift';
+import { appLang, currencySymbolFor, dateLocaleFor, numberLocaleFor } from '@/lib/format';
+import {
+  lineDiscountAmount,
+  lineProfit,
+  lineSubtotal,
+  transactionDiscountAmount,
+} from '@/lib/cart-math';
 
 interface CartItem {
   product: Product;
@@ -58,24 +63,6 @@ function toCartLines(
   }));
 }
 
-const CURRENCY_SYMBOL: Record<string, string> = {
-  id: 'Rp',
-  en: '$',
-  ms: 'Rp',
-};
-
-const NUMBER_LOCALES: Record<string, string> = {
-  id: 'id-ID',
-  en: 'en-US',
-  ms: 'ms-MY',
-};
-
-const LOCALES: Record<string, Locale> = {
-  id,
-  en: enUS,
-  ms,
-};
-
 export default function Kasir() {
   const { currentUser, can } = useAuth();
   const openShift = useLiveQuery(
@@ -86,10 +73,10 @@ export default function Kasir() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('settings');
 
-  const lang = i18n.language?.split('-')[0] || 'id';
-  const dateLocale = LOCALES[lang] || id;
-  const numberLocale = NUMBER_LOCALES[lang] || 'id-ID';
-  const currencySymbol = CURRENCY_SYMBOL[lang] || 'Rp';
+  const lang = appLang(i18n.language);
+  const dateLocale = dateLocaleFor(lang);
+  const numberLocale = numberLocaleFor(lang);
+  const currencySymbol = currencySymbolFor(lang);
   const rp = (n: number) => `${currencySymbol} ${n.toLocaleString(numberLocale)}`;
 
   const [search, setSearch] = useState('');
@@ -249,36 +236,41 @@ export default function Kasir() {
     setItemDiscountTargetId(null);
   };
 
-  const getItemDiscountAmount = (item: CartItem) => {
-    const base = item.product.price * item.qty;
-    if (item.discountType === 'percentage') {
-      const pct = Math.min(100, Math.max(0, item.discountValue));
-      return base * pct / 100;
-    }
-    if (item.discountType === 'nominal') {
-      return Math.min(base, Math.max(0, item.discountValue));
-    }
-    return 0;
-  };
+  const getItemDiscountAmount = (item: CartItem) =>
+    lineDiscountAmount({
+      price: item.product.price,
+      qty: item.qty,
+      discountType: item.discountType,
+      discountValue: item.discountValue,
+    });
 
-  const getItemSubtotal = (item: CartItem) => {
-    const base = item.product.price * item.qty;
-    return Math.max(0, base - getItemDiscountAmount(item));
-  };
+  const getItemSubtotal = (item: CartItem) =>
+    lineSubtotal({
+      price: item.product.price,
+      qty: item.qty,
+      discountType: item.discountType,
+      discountValue: item.discountValue,
+    });
 
   const subtotal = cart.reduce((sum, item) => sum + getItemSubtotal(item), 0);
-  const txDiscountAmount = txDiscountType === 'percentage'
-    ? subtotal * Math.min(100, Math.max(0, Number(txDiscountValue) || 0)) / 100
-    : txDiscountType === 'nominal'
-      ? Math.min(subtotal, Math.max(0, Number(txDiscountValue) || 0))
-      : 0;
+  const txDiscountAmount = transactionDiscountAmount(
+    subtotal,
+    txDiscountType,
+    Number(txDiscountValue) || 0,
+  );
   const total = Math.max(0, subtotal - txDiscountAmount);
   const paidAmount = Number(paymentAmount) || 0;
   const checkoutPaidAmount = useDebt ? Math.min(total, Math.max(0, paidAmount)) : paidAmount;
   const debtAmount = useDebt ? Math.max(0, total - checkoutPaidAmount) : 0;
   const change = useDebt ? 0 : paidAmount - total;
   const totalItemDiscount = cart.reduce((sum, item) => sum + getItemDiscountAmount(item), 0);
-  const totalProfit = cart.reduce((sum, item) => sum + (item.product.price - item.product.hpp) * item.qty, 0) - totalItemDiscount - txDiscountAmount;
+  const totalProfit =
+    cart.reduce(
+      (sum, item) => sum + lineProfit({ price: item.product.price, hpp: item.product.hpp, qty: item.qty }),
+      0,
+    ) -
+    totalItemDiscount -
+    txDiscountAmount;
 
   // === Open Bill Operations (atomic via cashier-ops) ===
 
