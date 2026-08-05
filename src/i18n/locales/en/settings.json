@@ -240,7 +240,7 @@
       "title": "Cloud Storage",
       "description": "Backup files in Profitku Cloud. {{limit}} MB quota, stored for 30 days.",
       "warning": "Warning: Cloud storage has reached {{percent}}% of quota. Delete old backups or upgrade plan.",
-      "needSubscription": "Profitku Cloud not active. Subscribe Rp 25,000/month for auto-backup and 2 GB quota."
+      "needSubscription": "Profitku Cloud not active. Subscribe Rp 25,000/month for auto-backup and 1 GB quota."
     }
   },
   "storeDialog": {
@@ -315,7 +315,7 @@
     },
     "hero": {
       "title": "Upgrade to Profitku Cloud",
-      "description": "Secure cloud backup, auto-backup, and 2 GB for 1 store. Just Rp 25,000/month — one plan.",
+      "description": "Secure cloud backup, auto-backup, and 1 GB for 1 store. Just Rp 25,000/month — one plan.",
       "startFrom": "Only",
       "perMonth": "/month"
     },
@@ -363,7 +363,7 @@
     "manageFromAnywhere": "Manage store from anywhere",
     "subscription": {
       "singleTitle": "Profitku Cloud",
-      "description": "One plan at Rp 25,000/month: cloud backup (up to 2 GB), auto-backup, 1-store sync, and reports from other devices. Your data stays safe if the phone is lost or replaced.",
+      "description": "One plan at Rp 25,000/month: cloud backup (up to 1 GB), auto-backup, 1-store sync, and reports from other devices. Your data stays safe if the phone is lost or replaced.",
       "loadingPlans": "Loading plans…",
       "activePlan": "(active)",
       "unlimitedStores": "Unlimited",
@@ -531,6 +531,15 @@
       "deleteSuccess": "Cloud backup deleted",
       "deleteFailed": "Failed to delete backup"
     }
+  },
+  "cloudStores": {
+    "title": "Stores & Subscriptions",
+    "linked": "Linked to cloud",
+    "notLinked": "Not linked",
+    "active": "Active",
+    "planActive": "Plan active",
+    "planInactive": "No plan",
+    "note": "1 subscription ({{price}}/month) = 1 online store. Offline stores are free, unlimited."
   },
   "cloudStore": {
     "locked": {

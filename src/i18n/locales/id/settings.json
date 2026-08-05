@@ -240,7 +240,7 @@
       "title": "Penyimpanan Cloud",
       "description": "File backup di Profitku Cloud. Kuota {{limit}} MB, Masa simpan 30 hari.",
       "warning": "Peringatan: Penyimpanan cloud sudah mencapai {{percent}}% dari kuota. Hapus backup lama atau upgrade paket.",
-      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk backup otomatis dan kuota 2 GB."
+      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk backup otomatis dan kuota 1 GB."
     }
   },
   "storeDialog": {
@@ -315,7 +315,7 @@
     },
     "hero": {
       "title": "Upgrade ke Profitku Cloud",
-      "description": "Backup aman di cloud, auto-backup, dan kuota 2 GB untuk 1 toko. Cukup Rp 25.000/bulan — satu paket.",
+      "description": "Backup aman di cloud, auto-backup, dan kuota 1 GB untuk 1 toko. Cukup Rp 25.000/bulan — satu paket.",
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
@@ -363,7 +363,7 @@
     "manageFromAnywhere": "Kelola toko dari mana saja",
     "subscription": {
       "singleTitle": "Profitku Cloud",
-      "description": "Satu paket Rp 25.000/bulan: backup cloud (hingga 2 GB), auto-backup, sinkron 1 toko, dan akses laporan dari perangkat lain. Data tetap aman walau HP hilang atau ganti perangkat.",
+      "description": "Satu paket Rp 25.000/bulan: backup cloud (hingga 1 GB), auto-backup, sinkron 1 toko, dan akses laporan dari perangkat lain. Data tetap aman walau HP hilang atau ganti perangkat.",
       "loadingPlans": "Memuat paket…",
       "activePlan": "(aktif)",
       "unlimitedStores": "Unlimited",
@@ -531,6 +531,15 @@
       "deleteSuccess": "Backup cloud dihapus",
       "deleteFailed": "Gagal menghapus backup"
     }
+  },
+  "cloudStores": {
+    "title": "Toko & Langganan",
+    "linked": "Terhubung cloud",
+    "notLinked": "Belum terhubung",
+    "active": "Aktif",
+    "planActive": "Langganan aktif",
+    "planInactive": "Tanpa langganan",
+    "note": "1 langganan ({{price}}/bulan) = 1 toko online. Toko offline gratis tanpa batas."
   },
   "cloudStore": {
     "locked": {

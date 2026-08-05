@@ -5,6 +5,7 @@ import type {
   Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role,
 } from './db-schema';
 import { ALL_PERMISSIONS } from './db-schema';
+import { newSyncId } from './sync-id';
 
 export class PosDatabase extends Dexie {
   categories!: Table<Category>;
@@ -623,6 +624,110 @@ export class PosDatabase extends Dexie {
           }
         });
       }
+    });
+
+    // Version 18 — Phase A sync M0: backfill syncId (UUID) di semua record
+    // syncable + isi relasi dual (parentSyncId) dari id numerik lokal.
+    this.version(18).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+    }).upgrade(async (tx) => {
+      const uuid = () => newSyncId();
+
+      // 1) Backfill syncId untuk semua record syncable.
+      const syncTables = [
+        'categories', 'products', 'suppliers', 'customers', 'stockIns', 'stockOuts',
+        'hppHistory', 'paymentMethods', 'transactions', 'transactionItems', 'units',
+        'users', 'roles', 'expenseCategories', 'expenses', 'debts', 'debtPayments',
+        'stockOpnames', 'stockOpnameItems', 'cashierShifts',
+      ];
+      for (const tn of syncTables) {
+        await tx.table<Record<string, unknown>, number>(tn).toCollection().modify((r) => {
+          if (!r.syncId) r.syncId = uuid();
+        });
+      }
+
+      // 2) Backfill relasi dual: id numerik lokal -> syncId parent.
+      const mapOf = async (tn: string): Promise<Map<number, string>> => {
+        const rows = await tx.table<Record<string, unknown>, number>(tn).toArray();
+        const m = new Map<number, string>();
+        for (const r of rows) {
+          if (r.id != null && r.syncId) m.set(r.id as number, r.syncId as string);
+        }
+        return m;
+      };
+      const products = await mapOf('products');
+      const suppliers = await mapOf('suppliers');
+      const customers = await mapOf('customers');
+      const paymentMethods = await mapOf('paymentMethods');
+      const transactions = await mapOf('transactions');
+      const expenseCategories = await mapOf('expenseCategories');
+      const stockOpnames = await mapOf('stockOpnames');
+      const debts = await mapOf('debts');
+
+      const fillFk = async (
+        tn: string,
+        fks: [string, string, Map<number, string>][],
+      ) => {
+        await tx.table<Record<string, unknown>, number>(tn).toCollection().modify((r) => {
+          for (const [idField, syncField, map] of fks) {
+            if (!r[syncField] && r[idField] != null) {
+              r[syncField] = map.get(r[idField] as number);
+            }
+          }
+        });
+      };
+
+      await fillFk('transactionItems', [
+        ['transactionId', 'transactionSyncId', transactions],
+        ['productId', 'productSyncId', products],
+      ]);
+      await fillFk('stockIns', [
+        ['productId', 'productSyncId', products],
+        ['supplierId', 'supplierSyncId', suppliers],
+      ]);
+      await fillFk('stockOuts', [['productId', 'productSyncId', products]]);
+      await fillFk('hppHistory', [['productId', 'productSyncId', products]]);
+      await fillFk('transactions', [
+        ['paymentMethodId', 'paymentMethodSyncId', paymentMethods],
+        ['customerId', 'customerSyncId', customers],
+      ]);
+      await fillFk('expenses', [
+        ['categoryId', 'categorySyncId', expenseCategories],
+        ['paymentMethodId', 'paymentMethodSyncId', paymentMethods],
+      ]);
+      await fillFk('debts', [
+        ['transactionId', 'transactionSyncId', transactions],
+        ['customerId', 'customerSyncId', customers],
+      ]);
+      await fillFk('debtPayments', [
+        ['debtId', 'debtSyncId', debts],
+        ['paymentMethodId', 'paymentMethodSyncId', paymentMethods],
+      ]);
+      await fillFk('stockOpnameItems', [
+        ['opnameId', 'opnameSyncId', stockOpnames],
+        ['productId', 'productSyncId', products],
+      ]);
     });
   }
 }

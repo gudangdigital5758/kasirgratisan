@@ -45,6 +45,7 @@ export interface User {
   createdAt: Date;
   lastLoginAt: Date | null;
   updatedAt?: Date;
+  syncId?: string;         // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -57,6 +58,7 @@ export interface Role {
   isActive: number;             // 0/1
   createdAt: Date;
   updatedAt?: Date;
+  syncId?: string;              // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;       // ikut sync cloud nanti
 }
 
@@ -75,6 +77,7 @@ export interface Category {
   isDeleted: number; // 0 = active, 1 = deleted (IndexedDB can't index booleans)
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -100,6 +103,7 @@ export interface Product {
   deletedAt: Date | null;
   createdBy?: number; // userId (optional — undefined for legacy/single-user mode)
   updatedBy?: number; // userId
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -113,6 +117,7 @@ export interface Supplier {
   isDeleted: number; // 0 = active, 1 = deleted
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -127,6 +132,7 @@ export interface Customer {
   isDeleted: number; // 0 = active, 1 = deleted
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -141,6 +147,9 @@ export interface StockIn {
   notes: string;
   createdBy?: number; // userId
   updatedAt?: Date;
+  syncId?: string;          // UUID unik lintas perangkat (Phase A)
+  productSyncId?: string;   // relasi dual ke products
+  supplierSyncId?: string;  // relasi dual ke suppliers
   syncedAt?: Date | null;
 }
 
@@ -153,6 +162,8 @@ export interface StockOut {
   notes: string;
   createdBy?: number; // userId
   updatedAt?: Date;
+  syncId?: string;        // UUID unik lintas perangkat (Phase A)
+  productSyncId?: string; // relasi dual ke products
   syncedAt?: Date | null;
 }
 
@@ -163,6 +174,7 @@ export interface StockOpname {
   notes?: string;
   createdBy?: number; // userId
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -173,6 +185,9 @@ export interface StockOpnameItem {
   systemStock: number;
   realStock: number;
   difference: number;
+  syncId?: string;         // UUID unik lintas perangkat (Phase A)
+  opnameSyncId?: string;   // relasi dual ke stockOpnames
+  productSyncId?: string;  // relasi dual ke products
 }
 
 export interface HppHistory {
@@ -183,6 +198,8 @@ export interface HppHistory {
   source: 'stock_in' | 'manual';
   date: Date;
   updatedAt?: Date;
+  syncId?: string;        // UUID unik lintas perangkat (Phase A)
+  productSyncId?: string; // relasi dual ke products
   syncedAt?: Date | null;
 }
 
@@ -193,6 +210,7 @@ export interface PaymentMethod {
   isDefault: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -220,6 +238,9 @@ export interface Transaction {
   createdBy?: number; // userId — kasir pembuat transaksi
   debtAmount?: number; // snapshot hutang awal; 0/undefined = lunas saat checkout
   updatedAt?: Date;
+  syncId?: string;            // UUID unik lintas perangkat (Phase A)
+  paymentMethodSyncId?: string; // relasi dual ke paymentMethods
+  customerSyncId?: string;      // relasi dual ke customers
   syncedAt?: Date | null;
 }
 
@@ -236,6 +257,9 @@ export interface TransactionItemRecord {
   discountAmount: number;
   subtotal: number;
   notes?: string;
+  syncId?: string;            // UUID unik lintas perangkat (Phase A)
+  transactionSyncId?: string; // relasi dual ke transactions
+  productSyncId?: string;     // relasi dual ke products
 }
 
 export interface Unit {
@@ -246,6 +270,7 @@ export interface Unit {
   isDeleted: number; // 0 = active, 1 = deleted
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -259,6 +284,7 @@ export interface ExpenseCategory {
   isDeleted: number;   // 0 = active, 1 = deleted
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 
@@ -275,6 +301,9 @@ export interface Expense {
   isDeleted: number;               // 0 = active, 1 = deleted
   deletedAt: Date | null;
   updatedAt?: Date;
+  syncId?: string;            // UUID unik lintas perangkat (Phase A)
+  categorySyncId?: string;    // relasi dual ke expenseCategories
+  paymentMethodSyncId?: string; // relasi dual ke paymentMethods
   syncedAt?: Date | null;
 }
 
@@ -289,6 +318,9 @@ export interface Debt {
   createdAt: Date;
   settledAt: Date | null;
   updatedAt?: Date;
+  syncId?: string;            // UUID unik lintas perangkat (Phase A)
+  transactionSyncId?: string; // relasi dual ke transactions
+  customerSyncId?: string;    // relasi dual ke customers
   syncedAt?: Date | null;
 }
 
@@ -301,6 +333,9 @@ export interface DebtPayment {
   notes?: string;
   createdBy?: number;
   updatedAt?: Date;
+  syncId?: string;            // UUID unik lintas perangkat (Phase A)
+  debtSyncId?: string;        // relasi dual ke debts
+  paymentMethodSyncId?: string; // relasi dual ke paymentMethods
   syncedAt?: Date | null;
 }
 
@@ -330,6 +365,7 @@ export interface CashierShift {
   notes?: string;
   status: 'open' | 'closed';
   updatedAt?: Date;
+  syncId?: string; // UUID unik lintas perangkat (Phase A)
   syncedAt?: Date | null;
 }
 

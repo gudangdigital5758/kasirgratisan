@@ -998,8 +998,8 @@ app.post('/api/backups', async (c) => {
       return c.json({ error: 'Ukuran backup maksimal 50 MB' }, 400);
     }
 
-    // Kuota storage (default 2 GB bila mock tanpa ent)
-    const limitBytes = (limitMb > 0 ? limitMb : 2048) * 1024 * 1024;
+    // Kuota storage (default 1024 MB bila mock tanpa ent — BRAND.cloudStorageMb)
+    const limitBytes = (limitMb > 0 ? limitMb : 1024) * 1024 * 1024;
     const used = await sumBackupBytes(c.env, String(userId));
     if (used + fileSize > limitBytes) {
       return c.json(

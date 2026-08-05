@@ -56,6 +56,7 @@ import { BRAND } from '@/lib/brand';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { storeRegistry, getActiveStoreKey } from '@/lib/store-registry';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -69,6 +70,8 @@ export default function CloudHub() {
   const { can } = useAuth();
   const { isLoggedIn, googleUser, profile, loadingProfile, isSyncSubscribed, login, logout, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const localStores = useLiveQuery(() => storeRegistry.stores.orderBy('createdAt').toArray());
+  const activeLocalKey = getActiveStoreKey();
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? id;
   const numberLocale = NUMBER_LOCALES[i18n.language] ?? 'id-ID';
@@ -469,6 +472,48 @@ export default function CloudHub() {
               <Button variant="ghost" size="sm" className="h-8 gap-1 text-muted-foreground" onClick={logout}>
                 <LogOut className="w-4 h-4" /> {t('cloudBackup.account.logout')}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Toko & langganan per toko (multi-toko M3) */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Store className="w-3.5 h-3.5" />
+                {t('cloudStores.title')}
+              </p>
+              {(localStores ?? []).map((s) => {
+                const isActive = s.storeKey === activeLocalKey;
+                const online = s.mode === 'cloud';
+                return (
+                  <div key={s.storeKey} className="flex items-center gap-2.5 rounded-xl border border-border p-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      {online ? <Cloud className="w-4 h-4 text-primary" /> : <Store className="w-4 h-4 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{s.name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {online ? t('stores.modeCloud') : t('stores.modeLocal')}
+                        {online ? ` · ${s.cloudStoreId ? t('cloudStores.linked') : t('cloudStores.notLinked')}` : ''}
+                        {isActive ? ` · ${t('cloudStores.active')}` : ''}
+                      </p>
+                    </div>
+                    {online && (
+                      <span
+                        className={cn(
+                          'text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0',
+                          isSyncSubscribed ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {isSyncSubscribed ? t('cloudStores.planActive') : t('cloudStores.planInactive')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-muted-foreground leading-snug pt-1">
+                {t('cloudStores.note', { price: rp(BRAND.cloudPriceIdr) })}
+              </p>
             </CardContent>
           </Card>
 

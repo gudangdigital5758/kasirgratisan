@@ -240,7 +240,7 @@
       "title": "Storan Cloud",
       "description": "Fail backup di Profitku Cloud. Kuota {{limit}} MB, tempoh simpan 30 hari.",
       "warning": "Amaran: Storan cloud telah mencapai {{percent}}% daripada kuota. Padam backup lama atau naik taraf pakej.",
-      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk auto-backup dan kuota 2 GB."
+      "needSubscription": "Profitku Cloud belum aktif. Langganan Rp 25.000/bulan untuk auto-backup dan kuota 1 GB."
     }
   },
   "storeDialog": {
@@ -315,7 +315,7 @@
     },
     "hero": {
       "title": "Naik Taraf ke Profitku Cloud",
-      "description": "Backup cloud selamat, auto-backup, dan 2 GB untuk 1 kedai. Hanya Rp 25.000/bulan — satu pakej.",
+      "description": "Backup cloud selamat, auto-backup, dan 1 GB untuk 1 kedai. Hanya Rp 25.000/bulan — satu pakej.",
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
@@ -363,7 +363,7 @@
     "manageFromAnywhere": "Urus kedai dari mana saja",
     "subscription": {
       "singleTitle": "Profitku Cloud",
-      "description": "Satu pakej Rp 25.000/bulan: sandaran cloud (hingga 2 GB), auto-backup, sync 1 kedai, dan laporan dari peranti lain. Data kekal selamat jika telefon hilang atau diganti.",
+      "description": "Satu pakej Rp 25.000/bulan: sandaran cloud (hingga 1 GB), auto-backup, sync 1 kedai, dan laporan dari peranti lain. Data kekal selamat jika telefon hilang atau diganti.",
       "loadingPlans": "Memuat pakej…",
       "activePlan": "(aktif)",
       "unlimitedStores": "Unlimited",
@@ -531,6 +531,15 @@
       "deleteSuccess": "Sandaran awan dipadam",
       "deleteFailed": "Gagal memadam sandaran"
     }
+  },
+  "cloudStores": {
+    "title": "Kedai & Langganan",
+    "linked": "Pautan cloud",
+    "notLinked": "Belum dipautkan",
+    "active": "Aktif",
+    "planActive": "Langganan aktif",
+    "planInactive": "Tiada langganan",
+    "note": "1 langganan ({{price}}/bulan) = 1 kedai online. Kedai offline percuma, tanpa had."
   },
   "cloudStore": {
     "locked": {

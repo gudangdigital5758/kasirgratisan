@@ -3,6 +3,7 @@ import type { Table } from 'dexie';
 import { ALL_PERMISSIONS } from './db-schema';
 import type { Product } from './db-schema';
 import { getActiveStoreKey, DEFAULT_STORE_KEY, dbNameForStore, ensureDefaultStoreEntry } from './store-registry';
+import { newSyncId } from './sync-id';
 
 // Re-export untuk backward compatibility: seluruh import 'from @/lib/db' tetap bekerja.
 export { PosDatabase } from './db-migrations';
@@ -135,6 +136,9 @@ export function setupSyncHooks(db: PosDatabase) {
     const table = db.table<Record<string, unknown>, number>(tableName);
 
     table.hook('creating', (primKey, obj: Record<string, unknown>) => {
+      if (!obj.syncId) {
+        obj.syncId = newSyncId();
+      }
       if (!obj.updatedAt) {
         obj.updatedAt = new Date();
       }
