@@ -1127,7 +1127,8 @@
       "title": "Keranjang ({{count}} item)",
       "empty": "Keranjang kosong",
       "editLabel": "— edit",
-      "editOpenBillLabel": "— edit open bill"
+      "editOpenBillLabel": "— edit open bill",
+      "title_other": "Keranjang ({{count}} item)"
     },
     "itemNotes": {
       "add": "Tambah catatan",

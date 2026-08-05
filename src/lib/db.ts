@@ -387,39 +387,53 @@ class PosDatabase extends Dexie {
       storeSettings: '++id',
     }).upgrade(async (tx) => {
       // CR-2: Set soft delete defaults on existing records
-      const catTable = tx.table('categories');
-      await catTable.toCollection().modify((cat: any) => {
+      const catTable = tx.table<Category, number>('categories');
+      await catTable.toCollection().modify((cat) => {
         cat.isDeleted = 0;
         cat.deletedAt = null;
       });
 
-      const prodTable = tx.table('products');
-      await prodTable.toCollection().modify((prod: any) => {
+      const prodTable = tx.table<Product, number>('products');
+      await prodTable.toCollection().modify((prod) => {
         prod.isDeleted = 0;
         prod.deletedAt = null;
       });
 
-      const supTable = tx.table('suppliers');
-      await supTable.toCollection().modify((sup: any) => {
+      const supTable = tx.table<Supplier, number>('suppliers');
+      await supTable.toCollection().modify((sup) => {
         sup.isDeleted = 0;
         sup.deletedAt = null;
       });
 
       // CR-1: Generate deviceId for existing storeSettings
-      const storeTable = tx.table('storeSettings');
-      await storeTable.toCollection().modify((s: any) => {
+      const storeTable = tx.table<StoreSettings, number>('storeSettings');
+      await storeTable.toCollection().modify((s) => {
         s.deviceId = crypto.randomUUID();
       });
 
       // CR-5: Migrate embedded items[] from transactions to transactionItems table
-      const txTable = tx.table('transactions');
-      const itemsTable = tx.table('transactionItems');
+      // (skema v1 menyimpan item di dalam transaksi — field `items` sudah tidak ada di tipe modern)
+      type LegacyEmbeddedItem = {
+        productId: number;
+        productName: string;
+        quantity: number;
+        price: number;
+        hpp: number;
+        discountType: 'percentage' | 'nominal' | null;
+        discountValue: number;
+        discountAmount: number;
+        subtotal: number;
+      };
+      type LegacyTransaction = Transaction & { items?: LegacyEmbeddedItem[] };
+
+      const txTable = tx.table<LegacyTransaction, number>('transactions');
+      const itemsTable = tx.table<TransactionItemRecord, number>('transactionItems');
       const allTx = await txTable.toArray();
 
       for (const t of allTx) {
-        const items = (t as any).items;
+        const items = t.items;
         if (Array.isArray(items) && items.length > 0) {
-          const records = items.map((item: any) => ({
+          const records: TransactionItemRecord[] = items.map((item) => ({
             transactionId: t.id!,
             productId: item.productId,
             productName: item.productName,
@@ -434,7 +448,7 @@ class PosDatabase extends Dexie {
           await itemsTable.bulkAdd(records);
         }
         // Remove embedded items field
-        delete (t as any).items;
+        delete t.items;
         await txTable.put(t);
       }
     });
@@ -453,7 +467,7 @@ class PosDatabase extends Dexie {
       storeSettings:    '++id',
     }).upgrade(async (tx) => {
       // Set all existing transactions to 'completed' status
-      await tx.table('transactions').toCollection().modify((t: any) => {
+      await tx.table<Transaction, number>('transactions').toCollection().modify((t) => {
         t.status = 'completed';
       });
     });
@@ -472,13 +486,13 @@ class PosDatabase extends Dexie {
       storeSettings:    '++id',
     }).upgrade(async (tx) => {
       // Deduplicate SKUs before applying unique constraint
-      const prodTable = tx.table('products');
+      const prodTable = tx.table<Product, number>('products');
       const allProducts = await prodTable.toArray();
       const seenSku = new Map<string, number>(); // sku -> first occurrence index
 
       for (const p of allProducts) {
-        const sku = (p as any).sku as string | undefined;
-        if (!sku || sku.trim() === '') continue;
+        const sku = p.sku?.trim();
+        if (!sku) continue;
 
         if (seenSku.has(sku)) {
           // Duplicate SKU found — append suffix to make unique
@@ -488,10 +502,10 @@ class PosDatabase extends Dexie {
             counter++;
             newSku = `${sku}_dup${counter}`;
           }
-          seenSku.set(newSku, (p as any).id);
-          await prodTable.update((p as any).id!, { sku: newSku });
+          seenSku.set(newSku, p.id ?? 0);
+          await prodTable.update(p.id!, { sku: newSku });
         } else {
-          seenSku.set(sku, (p as any).id);
+          seenSku.set(sku, p.id ?? 0);
         }
       }
     });
@@ -511,8 +525,8 @@ class PosDatabase extends Dexie {
       units:            '++id, &name, isDeleted',
     }).upgrade(async (tx) => {
       // Seed default units + harvest unique units already used by products
-      const unitsTable = tx.table('units');
-      const prodTable = tx.table('products');
+      const unitsTable = tx.table<Unit, number>('units');
+      const prodTable = tx.table<Product, number>('products');
       const now = new Date();
 
       const defaults = ['pcs', 'kg', 'gram', 'liter', 'ml', 'porsi', 'cup', 'botol', 'bungkus'];
@@ -532,7 +546,7 @@ class PosDatabase extends Dexie {
       // Harvest custom units already used by existing products (e.g. 'mangkok', 'gelas')
       const allProducts = await prodTable.toArray();
       for (const p of allProducts) {
-        const u = ((p as any).unit as string | undefined)?.trim();
+        const u = p.unit?.trim();
         if (!u) continue;
         if (seen.has(u)) continue;
         seen.add(u);
@@ -776,14 +790,19 @@ class PosDatabase extends Dexie {
       deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
     }).upgrade(async (tx) => {
       const now = new Date();
+      type SyncableRecord = Record<string, unknown> & {
+        updatedAt?: Date | null;
+        syncedAt?: Date | null;
+      };
       const backfillTable = async (tableName: string, dateFields: string[]) => {
-        const table = tx.table(tableName);
-        await table.toCollection().modify((record: any) => {
+        const table = tx.table<SyncableRecord, number>(tableName);
+        await table.toCollection().modify((record) => {
           if (!record.updatedAt) {
             let baseDate = now;
             for (const field of dateFields) {
-              if (record[field]) {
-                const parsed = new Date(record[field]);
+              const value = record[field];
+              if (value) {
+                const parsed = new Date(value as string | number | Date);
                 if (!isNaN(parsed.getTime())) {
                   baseDate = parsed;
                   break;
@@ -805,7 +824,7 @@ class PosDatabase extends Dexie {
       await backfillTable('stockIns', ['date']);
       await backfillTable('stockOuts', ['date']);
       
-      await tx.table('hppHistory').toCollection().modify((record: any) => {
+      await tx.table<SyncableRecord, number>('hppHistory').toCollection().modify((record) => {
         if (record.syncedAt === undefined) record.syncedAt = null;
       });
 
@@ -856,15 +875,17 @@ export function isStockManaged(product: Pick<Product, 'trackStock'>): boolean {
   return product.trackStock !== false;
 }
 
-async function sanitizeTableDates(table: any, dateFields: string[]) {
+async function sanitizeTableDates<T>(table: Table<T, number>, dateFields: string[]) {
   try {
-    await table.toCollection().modify((record: any) => {
+    await table.toCollection().modify((record) => {
+      const r = record as Record<string, unknown>;
       let changed = false;
       for (const field of dateFields) {
-        if (record[field] !== undefined && record[field] !== null && typeof record[field] === 'string') {
-          const parsed = new Date(record[field]);
+        const value = r[field];
+        if (value !== undefined && value !== null && typeof value === 'string') {
+          const parsed = new Date(value);
           if (!isNaN(parsed.getTime())) {
-            record[field] = parsed;
+            r[field] = parsed;
             changed = true;
           }
         }

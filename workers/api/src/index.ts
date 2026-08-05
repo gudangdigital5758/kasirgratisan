@@ -195,8 +195,14 @@ app.get('/api/plans', async (c) => {
 });
 
 // --- App Settings (public read) ---
+const APP_SETTINGS_KEY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
 app.get('/api/app-settings/:key', async (c) => {
   const key = c.req.param('key');
+  // Whitelist key untuk mencegah injeksi filter PostgREST (key dipakai dalam `key=eq.${key}`).
+  if (!APP_SETTINGS_KEY_RE.test(key)) {
+    return c.json({ error: 'Setting not found' }, 404);
+  }
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) {
       type Row = {
@@ -1123,8 +1129,10 @@ app.post('/webhook/issue-report', async (c) => {
 });
 
 app.post('/webhook/user-type', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  console.log('[user-type]', body);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  // Jangan log isi penuh — bisa berisi identifier device (PII ringan).
+  const businessType = typeof body['business-type'] === 'string' ? body['business-type'] : 'unknown';
+  console.log('[user-type]', { bytes: JSON.stringify(body).length, businessType });
   return c.json({ ok: true });
 });
 

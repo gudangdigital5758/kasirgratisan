@@ -36,7 +36,9 @@
       "selectStore": "Langganan aktif, tetapi peranti belum disambungkan ke kedai. Pilih kedai untuk menyelaraskan data.",
       "needsSetup": "Kedai telah disambungkan, tetapi penyelarasan automatik belum diaktifkan. Tetapkan jadual untuk menyelaraskan data secara berkala.",
       "active": "Penyelarasan aktif. Pantau laporan kedai secara real-time di dashboard.profitku.my.id dari mana-mana peranti."
-    }
+    },
+    "lastSync": "Kali terakhir sync: {{time}}",
+    "neverSynced": "Tidak pernah diselaraskan"
   },
   "installApp": {
     "title": "Pasang sebagai Aplikasi",
@@ -74,6 +76,33 @@
       "title": "Multi-User Aktif",
       "description": "Pekerja mesti log masuk untuk akses kasir",
       "disable": "Nyahaktifkan"
+    },
+    "activateDialog": {
+      "title": "Aktifkan Multi-User",
+      "description": "Cipta akaun pemilik. Selepas diaktifkan, anda perlu log masuk dengan username & PIN ini setiap kali membuka aplikasi. Data kedai anda kekal utuh.",
+      "nameLabel": "Nama Anda",
+      "namePlaceholder": "Contoh: Encik Ahmad",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Contoh: owner",
+      "usernameHint": "3-20 aksara, huruf/angka/garis bawah. Tidak boleh diubah.",
+      "pinLabel": "PIN",
+      "pinPlaceholder": "4-6 digit angka",
+      "pinConfirmLabel": "Sahkan PIN",
+      "pinConfirmPlaceholder": "Taip semula PIN",
+      "warningTitle": "Penting:",
+      "warningText": "Simpan username & PIN dengan baik. Jika terlupa, satu-satunya cara untuk reset ialah dengan memadam data aplikasi (data kedai turut terpadam). Pastikan anda sudah backup.",
+      "submitting": "Mengaktifkan…",
+      "submit": "Aktifkan Multi-User"
+    },
+    "disableDialog": {
+      "title": "Nyahaktifkan Multi-User?",
+      "description": "Aplikasi akan kembali ke mod tanpa log masuk. Akaun pekerja kekal disimpan dan akan aktif semula jika multi-user diaktifkan semula. Data transaksi kekal utuh.",
+      "confirm": "Nyahaktifkan"
+    },
+    "logoutDialog": {
+      "title": "Log Keluar?",
+      "description": "Anda akan diarahkan ke halaman log masuk. Pastikan tiada open bill yang belum disimpan.",
+      "confirm": "Log Keluar"
     }
   },
   "transactionsAndStock": {
@@ -549,7 +578,8 @@
       "deleteFailed": "Gagal memadam kedai",
       "createBound": "Kedai dibuat dan peranti automatik disambungkan.",
       "atLimit": "Had kedai pakej anda sudah penuh. Naik taraf pakej untuk menambah kedai."
-    }
+    },
+    "syncActive": "Sinkronisasi automatik latar belakang aktif"
   },
   "backupRestore": {
     "locked": {
@@ -680,7 +710,8 @@
       "title": "Troli ({{count}} item)",
       "empty": "Troli kosong",
       "editLabel": "— edit",
-      "editOpenBillLabel": "— edit open bill"
+      "editOpenBillLabel": "— edit open bill",
+      "title_other": "Troli ({{count}} item)"
     },
     "itemNotes": {
       "add": "Tambah nota",
@@ -1130,5 +1161,422 @@
     "failed": "Gagal menghantar laporan. Sila cuba lagi.",
     "networkError": "Ralat rangkaian berlaku semasa menghantar laporan.",
     "emptyError": "Sila isi keterangan kendala terlebih dahulu."
+  },
+  "transactionHistory": {
+    "title": "Sejarah Transaksi",
+    "searchPlaceholder": "Cari no. resit atau nama produk...",
+    "dateFrom": "Dari tarikh",
+    "dateTo": "Sehingga tarikh",
+    "status": {
+      "all": "Semua",
+      "open": "Open Bill",
+      "completed": "Lunas"
+    },
+    "cashierFilter": {
+      "placeholder": "Tapis Kasir",
+      "all": "Semua Kasir",
+      "unknown": "Tanpa Kasir (data lama)",
+      "cashierLabel": "{{name}} (@{{username}})"
+    },
+    "summary": {
+      "totalTransactions": "Jumlah Transaksi",
+      "totalSales": "Jumlah Jualan"
+    },
+    "empty": {
+      "noDateFilter": "Tiada transaksi lagi",
+      "withDateFilter": "Tiada transaksi dalam julat tarikh ini"
+    },
+    "groupHeader_zero": "{{date}} · {{count}} transaksi",
+    "groupHeader_one": "{{date}} · {{count}} transaksi",
+    "groupHeader_other": "{{date}} · {{count}} transaksi",
+    "badges": {
+      "open": "Buka",
+      "debt": "Hutang",
+      "paid": "Lunas"
+    },
+    "cashFallback": "Tunai",
+    "detail": {
+      "title": "Butiran Transaksi",
+      "status": {
+        "label": "Status",
+        "open": "Open Bill",
+        "paid": "Lunas"
+      },
+      "receiptNumber": "No. Resit",
+      "date": "Tarikh",
+      "payment": "Pembayaran",
+      "cashier": "Kasir",
+      "customer": "Pelanggan",
+      "table": "Meja {{number}}",
+      "notes": "Catatan",
+      "items": "Item",
+      "quantityFormat": "{{qty}} × {{price}}",
+      "discount": "diskaun {{amount}}",
+      "subtotal": "Subtotal",
+      "discountAmount": "Diskaun",
+      "total": "Jumlah",
+      "remainingDebt": "Baki Hutang",
+      "paid": "Bayar",
+      "change": "Wang Kembali",
+      "profit": "Untung",
+      "unpaidBill": "Bil belum dibayar",
+      "continueInCashier": "Sambung di Kasir",
+      "viewReceipt": "Lihat & Cetak Resit",
+      "delete": "Padam Transaksi",
+      "noDeletePermission": "Anda tiada akses untuk memadam transaksi"
+    },
+    "deleteDialog": {
+      "title": "Padam Transaksi?",
+      "description": "Transaksi {{receiptNumber}} bernilai {{amount}} akan dipadam kekal.",
+      "restoreStock": "Pulihkan stok produk",
+      "cancel": "Batal",
+      "confirm": "Padam"
+    },
+    "toast": {
+      "hasDebtPayments": "Transaksi tidak boleh dipadam kerana sudah ada pembayaran hutang",
+      "deleteSuccess": "Transaksi berjaya dipadam",
+      "deleteFailed": "Gagal memadam transaksi"
+    }
+  },
+  "supplier": {
+    "locked": {
+      "title": "Pembekal",
+      "permissionLabel": "Urus Pembekal"
+    },
+    "title": "Pembekal",
+    "add": "Tambah",
+    "searchPlaceholder": "Cari pembekal...",
+    "count_zero": "{{count}} pembekal",
+    "count_one": "{{count}} pembekal",
+    "count_other": "{{count}} pembekal",
+    "empty": {
+      "title": "Tiada pembekal lagi",
+      "add": "Tambah Pembekal"
+    },
+    "dialog": {
+      "addTitle": "Tambah Pembekal",
+      "editTitle": "Edit Pembekal",
+      "nameLabel": "Nama Pembekal *",
+      "namePlaceholder": "Contoh: PT Sumber Jaya",
+      "phoneLabel": "Telefon",
+      "phonePlaceholder": "08123456789",
+      "addressLabel": "Alamat",
+      "addressPlaceholder": "Alamat pembekal",
+      "notesLabel": "Catatan",
+      "notesPlaceholder": "Catatan tambahan",
+      "save": "Simpan"
+    },
+    "deleteDialog": {
+      "title": "Padam Pembekal?",
+      "description": "Data pembekal yang dipadam tidak dapat dipulihkan.",
+      "cancel": "Batal",
+      "confirm": "Padam"
+    },
+    "toast": {
+      "updated": "Pembekal dikemas kini",
+      "added": "Pembekal ditambah",
+      "deleted": "Pembekal dipadam"
+    }
+  },
+  "customers": {
+    "locked": {
+      "title": "Pelanggan",
+      "permissionLabel": "Urus Pelanggan"
+    },
+    "title": "Pelanggan",
+    "add": "Tambah",
+    "searchPlaceholder": "Cari pelanggan...",
+    "count_zero": "{{count}} pelanggan",
+    "count_one": "{{count}} pelanggan",
+    "count_other": "{{count}} pelanggan",
+    "empty": {
+      "title": "Tiada pelanggan lagi",
+      "add": "Tambah Pelanggan"
+    },
+    "dialog": {
+      "addTitle": "Tambah Pelanggan",
+      "editTitle": "Edit Pelanggan",
+      "nameLabel": "Nama Pelanggan *",
+      "namePlaceholder": "Contoh: Ahmad bin Ali",
+      "phoneLabel": "No. Telefon",
+      "phonePlaceholder": "08123456789",
+      "emailLabel": "E-mel",
+      "emailPlaceholder": "nama@email.com",
+      "addressLabel": "Alamat",
+      "addressPlaceholder": "Alamat pelanggan",
+      "notesLabel": "Catatan",
+      "notesPlaceholder": "Catatan tambahan",
+      "save": "Simpan"
+    },
+    "deleteDialog": {
+      "title": "Padam Pelanggan?",
+      "description": "Data pelanggan yang dipadam tidak dapat dipulihkan. Transaksi lama tetap menyimpan nama pelanggan.",
+      "cancel": "Batal",
+      "confirm": "Padam"
+    },
+    "viewDialog": {
+      "summary": {
+        "totalTransactions": "Jumlah Transaksi",
+        "totalSpent": "Jumlah Belanja",
+        "remainingDebt": "Baki Hutang"
+      },
+      "openDebts": "Buka Senarai Hutang",
+      "historyTitle": "Sejarah Transaksi",
+      "loading": "Memuat...",
+      "empty": "Tiada transaksi lagi"
+    },
+    "toast": {
+      "updated": "Pelanggan dikemas kini",
+      "added": "Pelanggan ditambah",
+      "deleted": "Pelanggan dipadam"
+    }
+  },
+  "debts": {
+    "locked": {
+      "title": "Senarai Hutang",
+      "permissionLabel": "Urus Pelanggan"
+    },
+    "title": "Senarai Hutang",
+    "summary": {
+      "totalReceivable": "Jumlah Belum Diterima",
+      "activeDebts": "Hutang Aktif"
+    },
+    "searchPlaceholder": "Cari pelanggan atau nombor resit...",
+    "filters": {
+      "active": "Belum Lunas",
+      "paid": "Lunas",
+      "all": "Semua"
+    },
+    "empty": "Tiada data hutang",
+    "labels": {
+      "originalAmount": "Hutang Asal",
+      "paid": "Dibayar",
+      "remaining": "Baki"
+    },
+    "recordPayment": "Catat Pembayaran",
+    "deletedMethodFallback": "Kaedah dipadam",
+    "detail": {
+      "title": "Butiran Hutang",
+      "status": {
+        "paid": "Lunas",
+        "partial": "Sebahagian",
+        "unpaid": "Belum Dibayar"
+      },
+      "viewTransaction": "Lihat transaksi",
+      "paymentHistory": "Sejarah Pembayaran",
+      "noInstallments": "Tiada ansuran lagi"
+    },
+    "paymentDialog": {
+      "title": "Catat Pembayaran Hutang",
+      "remainingDebt": "Baki Hutang",
+      "amountLabel": "Jumlah Pembayaran",
+      "methodLabel": "Kaedah Pembayaran",
+      "methodPlaceholder": "Pilih kaedah",
+      "notesLabel": "Keterangan",
+      "notesPlaceholder": "Contoh: ansuran pertama",
+      "saving": "Menyimpan...",
+      "save": "Simpan Pembayaran"
+    },
+    "toast": {
+      "invalidAmount": "Jumlah pembayaran mesti lebih daripada Rp0 dan tidak melebihi baki hutang",
+      "selectMethod": "Pilih kaedah pembayaran",
+      "paidOff": "Hutang berjaya dilunaskan",
+      "recorded": "Pembayaran hutang dicatat",
+      "failed": "Gagal mencatat pembayaran hutang"
+    }
+  },
+  "stockIn": {
+    "locked": {
+      "title": "Stock In",
+      "permissionLabel": "Stock In / Stock Out"
+    },
+    "title": "Stock In",
+    "add": "Tambah",
+    "supplierFilter": {
+      "placeholder": "Tapis Pembekal",
+      "searchPlaceholder": "Cari pembekal...",
+      "all": "Semua Pembekal"
+    },
+    "count_zero": "{{count}} catatan",
+    "count_one": "{{count}} catatan",
+    "count_other": "{{count}} catatan",
+    "empty": "Tiada data stock in lagi",
+    "item": {
+      "fromSupplier": "dari {{supplier}}",
+      "quantity": "+{{qty}}",
+      "unitPrice": "@ Rp {{price}}"
+    },
+    "dialog": {
+      "title": "Tambah Stock In",
+      "productLabel": "Produk *",
+      "supplierLabel": "Pembekal *",
+      "quantityLabel": "Kuantiti *",
+      "quantityPlaceholder": "10",
+      "buyPriceLabel": "Harga Beli/Unit *",
+      "buyPricePlaceholder": "5000",
+      "notesLabel": "Catatan",
+      "notesPlaceholder": "Pilihan",
+      "total": "Jumlah: Rp {{amount}}",
+      "save": "Simpan Stock In"
+    },
+    "toast": {
+      "fillAll": "Lengkapkan semua medan",
+      "success": "Stok {{product}} bertambah {{qty}}. HPP: Rp {{hpp}}"
+    }
+  },
+  "stockOut": {
+    "locked": {
+      "title": "Stock Out",
+      "permissionLabel": "Stock In / Stock Out"
+    },
+    "title": "Stock Out",
+    "add": "Tambah",
+    "count_zero": "{{count}} catatan",
+    "count_one": "{{count}} catatan",
+    "count_other": "{{count}} catatan",
+    "empty": "Tiada data stock out lagi",
+    "item": {
+      "quantity": "-{{qty}}"
+    },
+    "dialog": {
+      "title": "Tambah Stock Out",
+      "productLabel": "Produk *",
+      "quantityLabel": "Kuantiti *",
+      "quantityPlaceholder": "1",
+      "reasonLabel": "Sebab *",
+      "reasonPlaceholder": "Pilih",
+      "notesLabel": "Catatan",
+      "notesPlaceholder": "Pilihan",
+      "stockAfter": "Stok selepas: {{stock}} {{unit}}",
+      "save": "Simpan Stock Out"
+    },
+    "reasons": {
+      "damaged": "Rosak",
+      "lost": "Hilang",
+      "expired": "Luput",
+      "returnSupplier": "Pulangkan ke Pembekal",
+      "ownUse": "Kegunaan Sendiri",
+      "opname": "Stock Opname",
+      "other": "Lain-lain"
+    },
+    "toast": {
+      "fillAll": "Lengkapkan semua medan",
+      "exceedsStock": "Kuantiti melebihi stok yang tersedia",
+      "success": "Stok {{product}} berkurang {{qty}}"
+    }
+  },
+  "expenses": {
+    "locked": {
+      "title": "Perbelanjaan",
+      "permissionLabel": "Lihat Perbelanjaan"
+    },
+    "title": "Perbelanjaan",
+    "add": "Tambah",
+    "edit": "Edit",
+    "delete": "Padam",
+    "range": {
+      "today": "Hari ini",
+      "last7": "7 hari",
+      "last30": "30 hari",
+      "thisMonth": "Bulan ini",
+      "all": "Semua"
+    },
+    "summary": {
+      "totalExpenses": "Jumlah Perbelanjaan ({{range}})",
+      "count_zero": "{{count}} catatan",
+      "count_one": "{{count}} catatan",
+      "count_other": "{{count}} catatan"
+    },
+    "categoryFilter": {
+      "placeholder": "Tapis kategori",
+      "all": "Semua kategori"
+    },
+    "clearFilter": "Padam tapisan",
+    "empty": {
+      "none": "Tiada perbelanjaan dicatat lagi",
+      "filtered": "Tiada perbelanjaan sepadan dengan tapisan"
+    },
+    "dialog": {
+      "addTitle": "Tambah Perbelanjaan",
+      "editTitle": "Edit Perbelanjaan",
+      "missingCategories": "Tiada kategori perbelanjaan lagi. Tambah dahulu di Tetapan.",
+      "missingPaymentMethods": "Tiada kaedah pembayaran lagi. Tambah dahulu di Tetapan.",
+      "titleLabel": "Tajuk *",
+      "titlePlaceholder": "Contoh: Bayar bil elektrik bulan ini",
+      "categoryLabel": "Kategori *",
+      "categoryPlaceholder": "Pilih kategori",
+      "amountLabel": "Jumlah *",
+      "amountPlaceholder": "50000",
+      "dateLabel": "Tarikh *",
+      "methodLabel": "Kaedah Pembayaran *",
+      "methodPlaceholder": "Pilih kaedah",
+      "notesLabel": "Catatan",
+      "notesPlaceholder": "Pilihan",
+      "addButton": "Catat Perbelanjaan",
+      "saveButton": "Simpan Perubahan"
+    },
+    "deleteDialog": {
+      "title": "Padam perbelanjaan?",
+      "description": "\"{{title}}\" berjumlah {{amount}} akan dipadam. Catatan ini tidak akan masuk ke laporan.",
+      "cancel": "Batal",
+      "confirm": "Padam"
+    },
+    "toast": {
+      "titleRequired": "Tajuk perbelanjaan wajib diisi",
+      "categoryRequired": "Pilih kategori",
+      "amountInvalid": "Jumlah mesti lebih daripada 0",
+      "methodRequired": "Pilih kaedah pembayaran",
+      "dateRequired": "Pilih tarikh",
+      "updated": "Perbelanjaan dikemas kini",
+      "added": "Perbelanjaan dicatat",
+      "saveFailed": "Gagal menyimpan perbelanjaan",
+      "deleted": "Perbelanjaan dipadam"
+    }
+  },
+  "stockReport": {
+    "locked": {
+      "title": "Laporan Stok",
+      "permissionLabel": "Lihat Laporan & Untung"
+    },
+    "title": "Laporan Stok",
+    "period": {
+      "7days": "7 Hari",
+      "30days": "30 Hari"
+    },
+    "summary": {
+      "in": "Masuk",
+      "out": "Keluar",
+      "available": "Tersedia"
+    },
+    "stockInValue": {
+      "title": "Nilai Stok Masuk",
+      "totalPurchase": "Jumlah Pembelian",
+      "average": "Purata: {{avg}} per unit"
+    },
+    "movementChart": {
+      "title": "Pergerakan Stok",
+      "in": "Masuk",
+      "out": "Keluar"
+    },
+    "reasons": {
+      "title": "Sebab Stok Keluar",
+      "damaged": "Rosak",
+      "lost": "Hilang",
+      "return": "Pulangan",
+      "expired": "Luput",
+      "sample": "Sampel",
+      "opname": "Stock Opname",
+      "other": "Lain-lain",
+      "unit": "unit"
+    },
+    "lowStock": {
+      "title": "Stok Menipis ({{count}})",
+      "more_zero": "+{{count}} produk lain",
+      "more_one": "+{{count}} produk lain",
+      "more_other": "+{{count}} produk lain"
+    },
+    "outOfStock": {
+      "title": "Stok Habis ({{count}})"
+    }
   }
 }

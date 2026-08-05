@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { Link } from 'react-router-dom';
+
+/** Escape nilai user sebelum disisipkan ke template HTML (mencegah self-XSS saat cetak). */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -381,7 +392,7 @@ export default function CloudOnlineStoreSettings() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print QR Code - \${store?.name || 'Toko'}</title>
+          <title>Print QR Code - \${escapeHtml(store?.name || 'Toko')}</title>
           <style>
             body {
               display: flex;
@@ -429,8 +440,8 @@ export default function CloudOnlineStoreSettings() {
         <body>
           <div class="container">
             <img src="\${qrUrl}" alt="QR Code" />
-            <h1>\${store?.name || 'Toko Online'}</h1>
-            <p>market.profitku.my.id/stores/\${store?.identifier}</p>
+            <h1>\${escapeHtml(store?.name || 'Toko Online')}</h1>
+            <p>market.profitku.my.id/stores/\${escapeHtml(store?.identifier ?? '')}</p>
             <div class="footer">Dicetak melalui Profitku</div>
           </div>
           <script>
@@ -457,7 +468,7 @@ export default function CloudOnlineStoreSettings() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print QR Code Template - \${store?.name || 'Toko'}</title>
+          <title>Print QR Code Template - \${escapeHtml(store?.name || 'Toko')}</title>
           <style>
             body {
               display: flex;

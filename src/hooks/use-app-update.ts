@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { AppUpdate, AppUpdateAvailability, FlexibleUpdateInstallStatus } from '@capawesome/capacitor-app-update';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { toast } from 'sonner';
 
 export function useAppUpdate() {
@@ -10,7 +10,7 @@ export function useAppUpdate() {
       return;
     }
 
-    let listener: any = null;
+    let listener: PluginListenerHandle | null = null;
 
     const checkUpdate = async () => {
       try {

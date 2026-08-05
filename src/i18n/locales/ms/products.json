@@ -95,5 +95,33 @@
     "securityBlocked": "Akses kamera disekat atas sebab keselamatan. Pastikan aplikasi diakses melalui HTTPS.",
     "accessFailed": "Gagal mengakses kamera ({{name}}).",
     "startFailed": "Gagal memulakan pengimbas ({{name}}). Cuba tutup dan buka semula."
+  },
+  "excel": {
+    "importButton": "Import Excel",
+    "downloadTemplate": "Muat Turun Template",
+    "dialogTitle": "Import Produk melalui Excel",
+    "step1": "1. Muat Turun Template Excel",
+    "step1Desc": "Gunakan fail template standard supaya data produk anda dapat dibaca dengan betul oleh sistem.",
+    "step2": "2. Muat Naik Fail Excel",
+    "step2Desc": "Pilih fail Excel (.xlsx) yang telah diisi dengan data produk (Maks. 100 baris).",
+    "selectFile": "Pilih Fail",
+    "dragDrop": "Seret & lepas fail Excel (.xlsx) di sini, atau klik untuk memilih",
+    "rowLimitWarning": "Perhatian: Fail mengandungi lebih daripada 100 baris. Hanya 100 baris pertama akan diproses.",
+    "summary": "Memaparkan {{total}} baris: {{valid}} sah, {{invalid}} ralat.",
+    "row": "Baris",
+    "status": "Status",
+    "errorSkuDupExcel": "SKU duplikat dalam fail Excel",
+    "errorSkuDupDb": "SKU sudah digunakan dalam pangkalan data (produk aktif atau dipadam)",
+    "errorCatNotFound": "Kategori tidak ditemui",
+    "errorUnitNotFound": "Unit tidak ditemui",
+    "errorNameRequired": "Nama produk wajib diisi",
+    "errorSkuRequired": "SKU wajib diisi",
+    "errorPriceInvalid": "Harga jualan mesti berupa nombor >= 0",
+    "errorHppInvalid": "Harga modal (HPP) mesti berupa nombor >= 0",
+    "errorStockInvalid": "Stok awal mesti berupa nombor >= 0",
+    "btnProceedValid": "Teruskan & Simpan {{count}} Produk",
+    "btnReupload": "Muat Naik Semula",
+    "btnCancel": "Batal",
+    "toastSuccess": "Berjaya mengimport {{count}} produk baharu."
   }
 }

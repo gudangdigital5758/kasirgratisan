@@ -53,13 +53,13 @@ describe('Real-time Sync Columns and Hooks', () => {
 
     // Simulate successful sync
     await db.products.update(id, { syncedAt: new Date() });
-    let syncedProduct = await db.products.get(id);
+    const syncedProduct = await db.products.get(id);
     expect(syncedProduct?.syncedAt).toBeInstanceOf(Date);
     expect(syncedProduct?.updatedAt.getTime()).toBe(initialUpdatedAt?.getTime());
 
     // User updates price
     await db.products.update(id, { price: 12000 });
-    let updatedProduct = await db.products.get(id);
+    const updatedProduct = await db.products.get(id);
     expect(updatedProduct?.syncedAt).toBeNull();
     expect(updatedProduct?.updatedAt.getTime()).toBeGreaterThan(initialUpdatedAt?.getTime() || 0);
   });

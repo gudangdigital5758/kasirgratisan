@@ -9,10 +9,8 @@ import Onboarding from '@/components/Onboarding';
 import LoginScreen from '@/components/LoginScreen';
 import PushPermissionModal from '@/components/PushPermissionModal';
 import { useAuth } from '@/hooks/use-auth';
-import { useTranslation } from 'react-i18next';
 
 export default function AppLayout() {
-  const {} = useTranslation();
   useThemeColor(); // Apply saved theme color on mount
   useCloudAutoBackup(); // Auto cloud backup on app open (if enabled & subscribed)
   const { multiUserEnabled, currentUser, loading } = useAuth();

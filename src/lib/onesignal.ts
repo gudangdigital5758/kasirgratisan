@@ -29,10 +29,21 @@ declare global {
 
 const APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined;
 
-let initialized = false;
-let initPromise: Promise<any> | null = null;
+/** API minimal modul native @onesignal/capacitor-plugin yang dipakai aplikasi. */
+interface NativeOneSignal {
+  initialize: (opts: { appId: string }) => Promise<void>;
+  login: (externalId: string) => Promise<void>;
+  logout: () => Promise<void>;
+  Notifications: {
+    requestPermission: (fallbackToSettings?: boolean) => Promise<boolean>;
+    hasPermission: () => Promise<boolean>;
+  };
+}
 
-async function ensureNativeOneSignal(): Promise<any> {
+let initialized = false;
+let initPromise: Promise<NativeOneSignal> | null = null;
+
+async function ensureNativeOneSignal(): Promise<NativeOneSignal> {
   if (!APP_ID) {
     throw new Error('OneSignal App ID is not configured');
   }
