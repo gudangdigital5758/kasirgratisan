@@ -174,11 +174,12 @@ export async function restoreSession(): Promise<User | null> {
 
 // === User CRUD helpers ===
 
-/** Terapkan permissions sebuah role ke semua user dengan roleId tsb. */
+/** Terapkan permissions sebuah role ke semua user dengan roleId tsb.
+ * User dengan overrideRole=1 tidak disentuh (override per-user, M3). */
 export async function syncUsersToRole(role: { id?: number; permissions: PermissionKey[] }): Promise<void> {
   if (role.id == null) return;
   // roleId tidak di-index — gunakan filter (jumlah user kecil).
-  await db.users.filter((u) => u.roleId === role.id).modify((u) => {
+  await db.users.filter((u) => u.roleId === role.id && u.overrideRole !== 1).modify((u) => {
     if (u.role !== 'owner') u.permissions = role.permissions;
   });
 }
@@ -190,6 +191,7 @@ export async function createUser(input: {
   role: 'owner' | 'staff';
   permissions: PermissionKey[];
   roleId?: number;
+  overrideRole?: number;
 }): Promise<{ ok: boolean; userId?: number; error?: string }> {
   const username = input.username.trim().toLowerCase();
   if (!isValidUsername(username)) {
@@ -215,6 +217,7 @@ export async function createUser(input: {
     name: input.name.trim(),
     role: input.role,
     roleId: input.roleId,
+    overrideRole: input.overrideRole ?? 0,
     permissions: input.role === 'owner' ? [] : input.permissions,
     isActive: 1,
     createdAt: new Date(),

@@ -132,4 +132,28 @@ describe('syncUsersToRole', () => {
     const owner = await db.users.where('username').equals('owner1').first();
     expect(owner?.permissions).toEqual([]);
   });
+
+  it('skips users with per-user override (overrideRole=1)', async () => {
+    const sales = (await db.roles.toArray()).find((r) => r.name === 'Sales')!;
+    // Kasir A: ikuti role. Kasir B: override manual.
+    await db.users.bulkAdd([
+      {
+        username: 'kasirA', pinHash: 'x', name: 'Kasir A', role: 'staff', roleId: sales.id,
+        permissions: ['create_transaction'], overrideRole: 0, isActive: 1, createdAt: new Date(), lastLoginAt: null,
+      },
+      {
+        username: 'kasirB', pinHash: 'x', name: 'Kasir B', role: 'staff', roleId: sales.id,
+        permissions: ['create_transaction', 'view_reports'], overrideRole: 1, isActive: 1, createdAt: new Date(), lastLoginAt: null,
+      },
+    ]);
+
+    const newPerms: PermissionKey[] = ['create_transaction', 'view_reports'];
+    await syncUsersToRole({ id: sales.id, permissions: newPerms });
+
+    const a = await db.users.where('username').equals('kasirA').first();
+    const b = await db.users.where('username').equals('kasirB').first();
+    expect(a?.permissions).toEqual(newPerms);
+    // Kasir B di-override — tetap mempertahankan setnya sendiri
+    expect(b?.permissions).toEqual(['create_transaction', 'view_reports']);
+  });
 });

@@ -38,6 +38,8 @@ export interface User {
   role: 'owner' | 'staff';
   /** Referensi role (tabel roles) untuk staff. Owner/Administrator implicit all. */
   roleId?: number;
+  /** 1 = permission user di-override manual (tidak ikut sync saat role berubah). */
+  overrideRole?: number;
   permissions: PermissionKey[]; // owner ignores this (has all)
   isActive: number;       // 0/1 — IndexedDB can't index booleans
   createdAt: Date;

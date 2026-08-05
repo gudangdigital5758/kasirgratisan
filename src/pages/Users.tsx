@@ -46,6 +46,7 @@ export default function UsersPage() {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [roleId, setRoleId] = useState<number | undefined>(undefined);
+  const [overrideRole, setOverrideRole] = useState<number>(0);
   const [permissions, setPermissions] = useState<PermissionKey[]>(DEFAULT_STAFF_PERMISSIONS);
   const [saving, setSaving] = useState(false);
 
@@ -110,6 +111,7 @@ export default function UsersPage() {
     setUsername('');
     setPin('');
     setRoleId(sales?.id);
+    setOverrideRole(0);
     setPermissions(sales?.permissions ?? DEFAULT_STAFF_PERMISSIONS);
     setDialogOpen(true);
   };
@@ -120,6 +122,7 @@ export default function UsersPage() {
     setUsername(user.username);
     setPin('');
     setRoleId(user.roleId);
+    setOverrideRole(user.overrideRole ?? 0);
     setPermissions(user.role === 'owner' ? [...ALL_PERMISSIONS] : user.permissions);
     setDialogOpen(true);
   };
@@ -129,10 +132,17 @@ export default function UsersPage() {
     setRoleId(rid);
     const role = (roles ?? []).find((r) => r.id === rid);
     setPermissions(role ? [...role.permissions] : DEFAULT_STAFF_PERMISSIONS);
+    setOverrideRole(0); // pilih role ulang = ikuti role lagi
   };
 
+  // Override per-user (M3): toggle manual berbeda dari role -> overrideRole=1.
   const togglePermission = (key: PermissionKey, checked: boolean) => {
-    setPermissions((prev) => (checked ? [...new Set([...prev, key])] : prev.filter((p) => p !== key)));
+    const next = checked ? [...new Set([...permissions, key])] : permissions.filter((p) => p !== key);
+    const role = (roles ?? []).find((r) => r.id === roleId);
+    const base = role ? [...role.permissions] : DEFAULT_STAFF_PERMISSIONS;
+    const same = next.length === base.length && next.every((p) => base.includes(p));
+    setPermissions(next);
+    setOverrideRole(same ? 0 : 1);
   };
 
   const handleSave = async () => {
@@ -147,6 +157,7 @@ export default function UsersPage() {
         await db.users.update(editing.id!, {
           name: name.trim(),
           roleId: editing.role === 'owner' ? undefined : roleId,
+          overrideRole: editing.role === 'owner' ? undefined : overrideRole,
           permissions: editing.role === 'owner' ? [] : permissions,
         });
         toast.success(t('users.toast.staffUpdated'));
@@ -171,6 +182,7 @@ export default function UsersPage() {
           name,
           role: 'staff',
           roleId,
+          overrideRole,
           permissions,
         });
         if (!result.ok) {
@@ -247,6 +259,11 @@ export default function UsersPage() {
     return a.name.localeCompare(b.name);
   });
 
+  const roleNameOf = (user: User) => {
+    const role = (roles ?? []).find((r) => r.id === user.roleId);
+    return role?.name;
+  };
+
   return (
     <div className="px-4 pt-6 pb-4 space-y-4">
       <div className="flex items-center gap-3">
@@ -299,11 +316,23 @@ export default function UsersPage() {
                   </div>
                   <p className="text-[11px] text-muted-foreground font-mono">@{user.username}</p>
                   {user.role !== 'owner' && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {user.permissions.length === 0
-                        ? t('users.card.noAccess')
-                        : t('users.card.accessCount', { count: user.permissions.length })}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      {roleNameOf(user) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+                          {roleNameOf(user)}
+                        </span>
+                      )}
+                      {user.overrideRole === 1 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
+                          {t('users.card.override')}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">
+                        {user.permissions.length === 0
+                          ? t('users.card.noAccess')
+                          : t('users.card.accessCount', { count: user.permissions.length })}
+                      </span>
+                    </div>
                   )}
                   {user.lastLoginAt && (
                     <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -416,7 +445,9 @@ export default function UsersPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-[10px] text-muted-foreground">{t('users.dialog.roleHint')}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {overrideRole === 1 ? t('users.dialog.overrideHint') : t('users.dialog.roleHint')}
+                    </p>
                   </div>
                 )}
                 <Label className="text-sm">{t('users.dialog.accessLabel')}</Label>
