@@ -16,7 +16,7 @@ export const SEED_PLANS: SeedPlan[] = [
   {
     id: CLOUD_PLAN_ID,
     name: 'Profitku Cloud',
-    storageLimitMb: 2048,
+    storageLimitMb: 1024,
     price: CLOUD_PLAN_PRICE_IDR,
     category: 'SYNC',
     maxStores: 1,

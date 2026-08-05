@@ -32,7 +32,7 @@ export const BRAND = {
   /** Paket tunggal langganan cloud */
   cloudPlanId: 'cloud_monthly',
   cloudPriceIdr: 25_000,
-  cloudStorageMb: 2048,
+  cloudStorageMb: 1024,
   cloudMaxStores: 1,
 } as const;
 

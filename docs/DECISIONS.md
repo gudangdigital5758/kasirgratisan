@@ -199,10 +199,99 @@ File backup di R2 disimpan maksimal **30 hari**. Setelah itu dihapus otomatis vi
 - Delete dari R2 + Supabase metadata
 - Manual endpoint: `POST /api/cron/cleanup-backups` (admin/debug)
 
+---
+
+## 2026-08-05 — Langganan Cloud per TOKO (unlimited device) + storage 1024 MB
+
+**Status:** Accepted
+
+Harga tetap **Rp 25.000/bulan**, tetapi unit lisensi adalah **per toko**, bukan per
+device. Pemilik bebas menghubungkan perangkat sebanyak apa pun ke satu toko.
+
+- `cloudStorageMb` diubah **2048 → 1024 MB** (`src/lib/brand.ts`, `seed-plans.ts`,
+  `supabase/seed.sql`).
+- `cloudMaxStores` tetap **1** (satu toko per langganan).
+- Device hanyalah *client* dari store yang sama; **tidak ada batas jumlah device**
+  di v1 sync (`docs/SYNC-DESIGN.md` §7).
+
+**Implications:** UI kuota mengikuti `BRAND.cloudStorageMb` (1024). Plan `storage_limit_mb`
+di Supabase perlu di-update (seed.sql / SQL Editor) agar entitlements existing konsisten.
+
+---
+
+## 2026-08-05 — Jenis Toko & kolom khusus produk
+
+**Status:** Accepted (desain: `docs/PRODUCT-TYPES.md`)
+
+Saat onboarding pertama, user memilih jenis toko → form produk menampilkan kolom
+pelengkap yang relevan:
+
+| Jenis | Kolom khusus |
+|---|---|
+| Toko Sepatu | size, insole, brand, kategori (Basket/Boots/Formal/Running/Sneakers/dll), made in, baru/bekas → kondisi (Seperti baru/Sangat baik/Baik/Cukup) |
+| Toko Kosmetik | Nomor BPOM (wajib), Nomor Halal (wajib), tanggal kadaluarsa (wajib), dll |
+| Jenis lain | Custom fields (kolom kustom user-defined) |
+| Toko Umum | Tanpa kolom khusus |
+
+**Teknis:** `storeSettings.storeType` + `Product.attributes` (JSON) + skema terpusat
+`src/lib/product-fields.ts`. Kolom khusus ikut sync & backup.
+
+---
+
+## 2026-08-05 — Role Administrator & kustomisasi menu per role
+
+**Status:** Accepted (desain: `docs/ROLES-PERMISSIONS.md`)
+
+- Role **Administrator** (setara pemilik) dapat mengatur **menu on/off** untuk role
+  **Admin**, **Sales**, dan role pegawai lain (termasuk **role kustom**).
+- Dasar: `PermissionKey` yang sudah ada + pemetaan menu terpusat
+  (`menu-permissions.ts`); role disimpan di tabel Dexie `roles`.
+- Gate UI via `can()`/`hasPermission` (device-local, bukan security server-grade —
+  konsisten dengan keputusan multi-user sebelumnya).
+
+---
+
+## 2026-08-05 — Roadmap fitur cloud (toko online → affiliate → SEO)
+
+**Status:** Direction
+
+Urutan fase cloud setelah sync lintas perangkat (Phase A):
+
+1. **Sync lintas perangkat** (fondasi).
+2. **Toko Online** (catalog publik + pesanan pelanggan) — `marketOrigin` & UI awal sudah ada.
+3. **Affiliate** (link/QR affiliate + komisi/bagi hasil).
+4. **Optimasi search: SEO & AI SEO** (judul/deskripsi otomatis, meta, sitemap).
+
+**Implications:** Desain schema & sync harus siap mendukung data toko online
+(produk publik, `stores`, atribut produk dari `docs/PRODUCT-TYPES.md`).
+
 **Implications:** 
 - User harus rutin backup (jangan andalkan backup lama > 30 hari)
 - UI bisa tampilkan warning "Backup expired otomatis setelah 30 hari"
 - Cost predictable: max 2 GB × user count × $0.015/GB = manageable
+
+---
+
+## 2026-08-05 — Fitur Tambah Toko (offline & online)
+
+**Status:** Accepted (desain: `docs/MULTI-STORE.md`)
+
+User bisa memiliki **lebih dari satu toko** dalam satu aplikasi:
+
+- **Toko offline:** data lokal terpisah per toko (DB Dexie sendiri); POS, stok,
+  laporan, multi-user berjalan penuh tanpa cloud.
+- **Toko online:** terhubung cloud (backup + sync); **1 langganan `cloud_monthly`
+  (Rp 25rb/bulan) per toko** — `cloudMaxStores` = 1 = jumlah toko per langganan;
+  tidak ada batas jumlah toko total.
+- **Isolasi total:** registry `kasirgratisan-stores` + `getDb(storeKey)` factory +
+  store context. Toko pertama/default tetap di `kasirgratisan-db` (data existing
+  aman, tidak diganti namanya).
+- Produk/laporan/pegawai per toko tidak tercampur. `storeType` (PRODUCT-TYPES) &
+  roles (ROLES-PERMISSIONS) bersifat per toko. Sync & backup cloud per `storeId`
+  (API `/api/stores` + `uploadBackup(..., storeId)` sudah mendukung).
+
+**Implications:** refactor `db.ts` instance tunggal → factory dilakukan bertahap
+per halaman; v1 tidak menyediakan agregasi data antar toko.
 
 ---
 

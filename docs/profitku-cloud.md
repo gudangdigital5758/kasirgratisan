@@ -81,7 +81,7 @@ Deploy Pages: build `npm run build`, output `dist/`, custom domain `profitku.my.
 
 | ID | Nama | Harga/bln | Termasuk |
 |----|------|-----------|----------|
-| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000** | Backup cloud s/d 2 GB, auto-backup, hide watermark; sinkronisasi data antar-perangkat belum tersedia |
+| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000/toko** | Backup cloud s/d 1 GB, auto-backup, hide watermark; sinkronisasi data antar-perangkat belum tersedia |
 
 Tidak ada multi-tier. Seed: `supabase/seed.sql` + fallback Worker `SEED_PLANS`.
 

@@ -16,14 +16,14 @@ values (
   'SYNC',
   25000,
   'month',
-  2048,
+  1024,
   1,
   '{
     "cloud_backup": true,
     "auto_backup": true,
     "sync": true,
     "hide_watermark": true,
-    "storage_mb": 2048,
+    "storage_mb": 1024,
     "max_stores": 1
   }'::jsonb,
   true,

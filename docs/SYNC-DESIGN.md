@@ -1,17 +1,39 @@
 # Profitku — Desain Sinkronisasi Lintas Perangkat (Phase A)
 
 > Draf teknis untuk review. **Belum diimplementasikan.** Tujuan: membuka
-> `has_sync` (langganan Rp 25rb) menjadi sinkronisasi data nyata antar-perangkat,
-> bukan hanya backup. Dokumen ini menentukan keputusan arsitektur sebelum kode.
+> `has_sync` (langganan **Rp 25.000/bulan per TOKO**) menjadi sinkronisasi data
+> nyata antar-perangkat, bukan hanya backup. Dokumen ini menentukan keputusan
+> arsitektur sebelum kode.
 
 ## 1. Tujuan & lingkup
 
 - **Tujuan:** Data kasir (produk, transaksi, stok, dll.) tersinkron antar-perangkat
   milik satu user/store: mis. HP kasir + tablet owner, atau HP lama → HP baru.
+- **Model lisensi: Rp 25.000/bulan per TOKO** (`cloud_monthly`) — **bukan per
+  device**. Pemilik bebas menggunakan perangkat sebanyak apa pun untuk satu toko
+  yang sama (device hanyalah *client* dari store yang sama).
+- **Kuota storage cloud: 1024 MB** (`BRAND.cloudStorageMb` = 1024).
 - **Bukan tujuan v1:** realtime collaborative editing, konflik per-field yang rumit,
   multi-tenant marketplace.
 - **Prinsip:** POS tetap berjalan **offline dulu**. Sync hanya berjalan saat online;
   kegagalan sync **tidak boleh** menandai data lokal sebagai tersinkron (fail-closed).
+
+## 1b. Visi cloud (roadmap fitur)
+
+Fitur cloud bertahap — **sync adalah fondasi** untuk semuanya:
+
+| Tahap | Fitur | Ketergantungan |
+|---|---|---|
+| Sudah | Backup + auto-backup cloud (1024 MB, retensi 30 hari) | — |
+| **Phase A (ini)** | **Sinkronisasi lintas perangkat (LWW v1)** | `syncId`, push/pull |
+| Fase berikutnya | **Toko Online** (catalog publik, pesanan dari pelanggan) | sync + `stores` |
+| Fase berikutnya | **Affiliate** (bagi hasil, link/QR affiliate, komisi) | toko online |
+| Fase berikutnya | **Search optimasi: SEO & AI SEO** (judul/deskripsi otomatis, meta, sitemap) | toko online |
+| Fase berikutnya | **Multi-store (offline & online)** — `docs/MULTI-STORE.md` | backup + sync stabil |
+| Fase berikutnya | Integrasi payment lebih dalam | toko online |
+
+> Catatan: `marketOrigin` (market.profitku.my.id) & `CloudOnlineStoreSettings` sudah
+> ada sebagai awal toko online; affiliate + SEO/AI SEO dirancang di atasnya.
 
 ## 2. Kondisi eksisting (fondasi sudah ada)
 
@@ -108,8 +130,11 @@ create table if not exists public.sync_meta (
 - Endpoint `POST /api/stores/:id/register-device` — client mengirim `deviceId`
   (sudah ada di storeSettings) + nama device; server catat di `sync_meta.device_count`
   + tabel `devices` (uuid, store_id, name, last_seen_at).
-- UI: halaman "Perangkat tersinkron" di CloudHub (list device, unlok device).
-- Guard: `cloudMaxStores` (1) & `has_sync` tetap dari entitlements server.
+- UI: halaman "Perangkat tersinkron" di CloudHub (list device, **unlok device** untuk
+  kendali akses).
+- **TIDAK ada batas jumlah device** — langganan per toko (`cloudMaxStores` = 1),
+  berapapun device boleh terhubung ke toko yang sama. `device_count` hanya info/opsional.
+- Guard tetap server-side: `has_sync` + `cloudMaxStores` dari entitlements.
 
 ## 8. Antrian offline & fail-closed
 
@@ -120,9 +145,10 @@ create table if not exists public.sync_meta (
 
 ## 9. Entitlement & monetisasi
 
-- `has_sync` di `user_entitlements` sudah ada; tetap satu paket 25rb.
+- `has_sync` di `user_entitlements` sudah ada; tetap **satu paket Rp 25.000/bulan
+  per toko** dengan kuota **1024 MB** (`storage_limit_mb` = 1024 di plan & seed).
 - Sync hanya untuk langganan aktif (server-side check di push/pull).
-- **Urutan release:** backup dulu (sudah), lalu sync v1 (LWW), lalu multi-store.
+- **Urutan release:** backup (sudah) → sync v1 (LWW) → toko online → affiliate → SEO.
 
 ## 10. Rencana implementasi (urutan)
 
@@ -146,9 +172,15 @@ create table if not exists public.sync_meta (
 | Payload besar / abuse | Batas ukuran + rate limit (sudah ada) |
 | Migrasi data existing (tanpa syncId) | Backfill satu kali saat upgrade versi Dexie |
 
-## 12. Pertanyaan terbuka untuk review
+## 12. Keputusan v1 (default — bisa direvisi saat review)
 
-1. Apakah LWW per-record (bukan per-field) dapat diterima untuk v1?
-2. Kolom relasi ganda (`transactionSyncId`) — setuju, atau mau pendekatan lain?
-3. Perangkat maksimum per store (mis. 3) perlu dibatasi di v1?
-4. `deletedRecords` saat ini hanya utk 5 tabel — perlu diperluas ke semua tabel sync?
+| # | Keputusan | Catatan |
+|---|---|---|
+| 1 | **Conflict: Last-Write-Wins per record** berbasis `updatedAt` (server time) | Per-field merge/CRDT = fase lanjutan |
+| 2 | **Identitas: `syncId` UUID** + relasi ganda (`transactionId` + `transactionSyncId`) | Paling praktis untuk offline-first |
+| 3 | **Perangkat: TANPA batas** — langganan per toko (Rp 25rb/1 toko), berapapun device | Sesuai keputusan produk |
+| 4 | **Tombstone: diperluas ke semua tabel sync** (bukan hanya 5 tabel) | Agar hapus/soft-delete konsisten lintas device |
+| 5 | **Storage: 1024 MB** per langganan | `BRAND.cloudStorageMb` & seed plan = 1024 |
+| 6 | **`deletedRecords` tetap lokal** (tidak dikirim ke server sebagai data user) | Tombstone dikirim sebagai metadata, bukan tabel cloud |
+
+Jika ada yang ingin diubah, coret/revisi di tabel ini sebelum implementasi dimulai.
