@@ -36,6 +36,8 @@ export interface User {
   pinHash: string;        // SHA-256 hex
   name: string;           // display name
   role: 'owner' | 'staff';
+  /** Referensi role (tabel roles) untuk staff. Owner/Administrator implicit all. */
+  roleId?: number;
   permissions: PermissionKey[]; // owner ignores this (has all)
   isActive: number;       // 0/1 — IndexedDB can't index booleans
   createdAt: Date;
@@ -43,6 +45,24 @@ export interface User {
   updatedAt?: Date;
   syncedAt?: Date | null;
 }
+
+/** Role bernama (ROLES-PERMISSIONS). Administrator = owner (implicit, tanpa baris). */
+export interface Role {
+  id?: number;
+  name: string;                 // "Admin", "Sales", "Karyawan Toko", dll
+  permissions: PermissionKey[]; // set hak akses
+  isBuiltIn: number;            // 1 = bawaan (Admin/Sales), 0 = kustom
+  isActive: number;             // 0/1
+  createdAt: Date;
+  updatedAt?: Date;
+  syncedAt?: Date | null;       // ikut sync cloud nanti
+}
+
+/** Kunci role bawaan. */
+export const BUILTIN_ROLE_KEYS = {
+  admin: 'Admin',
+  sales: 'Sales',
+} as const;
 
 export interface Category {
   id?: number;

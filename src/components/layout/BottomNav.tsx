@@ -2,6 +2,8 @@ import { Home, Package, BarChart3, Settings, ShoppingCart } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/hooks/use-auth';
+import { canAccessMenu } from '@/lib/menu-permissions';
 
 const navItems = [
   { to: '/', icon: Home, key: 'nav.home' as const },
@@ -13,11 +15,16 @@ const navItems = [
 
 export default function BottomNav() {
   const { t } = useTranslation('common');
+  const { can } = useAuth();
+
+  // Menu on/off sesuai role (ROLES-PERMISSIONS): sembunyikan item yang
+  // permission-nya tidak dimiliki. Mode legacy (tanpa multi-user) → semua tampil.
+  const visibleItems = navItems.filter(({ to }) => canAccessMenu(to, can));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-end justify-around h-16 max-w-lg md:max-w-6xl mx-auto px-2 md:px-4">
-        {navItems.map(({ to, icon: Icon, key, isCta }) => (
+        {visibleItems.map(({ to, icon: Icon, key, isCta }) => (
           <NavLink
             key={to}
             to={to}

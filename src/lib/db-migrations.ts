@@ -2,8 +2,9 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Category, Product, Supplier, Customer, StockIn, StockOut, StockOpname, StockOpnameItem,
   HppHistory, PaymentMethod, Transaction, TransactionItemRecord, Unit, ExpenseCategory,
-  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User,
+  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role,
 } from './db-schema';
+import { ALL_PERMISSIONS } from './db-schema';
 
 export class PosDatabase extends Dexie {
   categories!: Table<Category>;
@@ -18,6 +19,7 @@ export class PosDatabase extends Dexie {
   transactionItems!: Table<TransactionItemRecord>;
   storeSettings!: Table<StoreSettings>;
   users!: Table<User>;
+  roles!: Table<Role>;
   units!: Table<Unit>;
   expenseCategories!: Table<ExpenseCategory>;
   expenses!: Table<Expense>;
@@ -28,8 +30,8 @@ export class PosDatabase extends Dexie {
   deletedRecords!: Table<DeletedRecord>;
   cashierShifts!: Table<CashierShift>;
 
-  constructor() {
-    super('kasirgratisan-db');
+  constructor(dbName: string = 'kasirgratisan-db') {
+    super(dbName);
 
     // Version 1 — original schema (must remain for migration path)
     this.version(1).stores({
@@ -565,6 +567,62 @@ export class PosDatabase extends Dexie {
       await tx.table<StoreSettings, number>('storeSettings').toCollection().modify((s) => {
         if (!s.storeType) s.storeType = 'general';
       });
+    });
+
+    // Version 17 — Role bernama (ROLES-PERMISSIONS M0): tabel roles + roleId di user.
+    // Tidak ada index baru di tabel inti; upgrade men-seed role bawaan & memetakan
+    // user staff lama ke role Sales (permissions existing dipertahankan).
+    this.version(17).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+    }).upgrade(async (tx) => {
+      const now = new Date();
+      const rolesTable = tx.table<Role, number>('roles');
+      const roleCount = await rolesTable.count();
+      if (roleCount === 0) {
+        const salesId = await rolesTable.add({
+          name: 'Sales',
+          permissions: ['create_transaction'],
+          isBuiltIn: 1,
+          isActive: 1,
+          createdAt: now,
+          syncedAt: null,
+        });
+        await rolesTable.add({
+          name: 'Admin',
+          permissions: [...ALL_PERMISSIONS],
+          isBuiltIn: 1,
+          isActive: 1,
+          createdAt: now,
+          syncedAt: null,
+        });
+        // Map user staff lama ke role Sales; owner/Administrator implicit (tanpa roleId).
+        await tx.table<User, number>('users').toCollection().modify((u) => {
+          if (u.role === 'staff' && u.roleId === undefined) {
+            u.roleId = salesId as number;
+          }
+        });
+      }
     });
   }
 }

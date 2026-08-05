@@ -1,6 +1,8 @@
 ﻿import { PosDatabase } from './db-migrations';
 import type { Table } from 'dexie';
+import { ALL_PERMISSIONS } from './db-schema';
 import type { Product } from './db-schema';
+import { getActiveStoreKey, DEFAULT_STORE_KEY, dbNameForStore, ensureDefaultStoreEntry } from './store-registry';
 
 // Re-export untuk backward compatibility: seluruh import 'from @/lib/db' tetap bekerja.
 export { PosDatabase } from './db-migrations';
@@ -8,6 +10,7 @@ export { ALL_PERMISSIONS } from './db-schema';
 export type {
   PermissionKey,
   User,
+  Role,
   Category,
   Product,
   Supplier,
@@ -33,6 +36,27 @@ export type {
 
 export const db = new PosDatabase();
 setupSyncHooks(db);
+
+// === Multi-toko (MULTI-STORE M0): factory DB per toko ===
+// `db` tetap instance toko default (kompatibel dengan seluruh import existing).
+// Toko tambahan memakai instance PosDatabase terpisah dengan nama DB per toko.
+const storeDbs = new Map<string, PosDatabase>();
+
+/**
+ * Ambil instance DB untuk sebuah toko. Tanpa argumen → toko aktif.
+ * Toko default (key 'default') mengembalikan `db` yang sama.
+ */
+export function getDb(storeKey?: string): PosDatabase {
+  const key = storeKey ?? getActiveStoreKey();
+  if (key === DEFAULT_STORE_KEY) return db;
+  let inst = storeDbs.get(key);
+  if (!inst) {
+    inst = new PosDatabase(dbNameForStore(key));
+    setupSyncHooks(inst);
+    storeDbs.set(key, inst);
+  }
+  return inst;
+}
 
 // Apakah stok produk dikelola? `undefined`/`true` = dikelola (perilaku lama),
 // `false` = tidak dikelola (produk selalu tersedia, stok diabaikan).
@@ -157,8 +181,41 @@ export function setupSyncHooks(db: PosDatabase) {
   });
 }
 
+// Seed role bawaan (ROLES-PERMISSIONS) — idempotent, hanya saat roles kosong.
+export async function seedDefaultRoles() {
+  const count = await db.roles.count();
+  if (count > 0) return;
+  const now = new Date();
+  const salesId = await db.roles.add({
+    name: 'Sales',
+    permissions: ['create_transaction'],
+    isBuiltIn: 1,
+    isActive: 1,
+    createdAt: now,
+    syncedAt: null,
+  });
+  await db.roles.add({
+    name: 'Admin',
+    permissions: [...ALL_PERMISSIONS],
+    isBuiltIn: 1,
+    isActive: 1,
+    createdAt: now,
+    syncedAt: null,
+  });
+  // Map user staff existing (tanpa roleId) ke role Sales; permissions dipertahankan.
+  await db.users.toCollection().modify((u) => {
+    if (u.role === 'staff' && u.roleId === undefined) u.roleId = salesId as number;
+  });
+}
+
 // Seed default data
 export async function seedDefaultData() {
+  await seedDefaultRoles();
+
+  // Multi-toko (M0): pastikan entry registry toko default ada.
+  const settings = await db.storeSettings.toCollection().first();
+  await ensureDefaultStoreEntry(settings?.storeName);
+
   const categoryCount = await db.categories.count();
   if (categoryCount === 0) {
     await db.categories.bulkAdd([
