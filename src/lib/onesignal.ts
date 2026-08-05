@@ -31,7 +31,7 @@ const APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined;
 
 /** API minimal modul native @onesignal/capacitor-plugin yang dipakai aplikasi. */
 interface NativeOneSignal {
-  initialize: (opts: { appId: string }) => Promise<void>;
+  initialize: (appId: string) => Promise<void>;
   login: (externalId: string) => Promise<void>;
   logout: () => Promise<void>;
   Notifications: {
@@ -51,7 +51,7 @@ async function ensureNativeOneSignal(): Promise<NativeOneSignal> {
   if (!initPromise) {
     initPromise = (async () => {
       const { default: OneSignal } = await import('@onesignal/capacitor-plugin');
-      await OneSignal.initialize({ appId: APP_ID });
+      await OneSignal.initialize(APP_ID);
       return OneSignal;
     })();
   }

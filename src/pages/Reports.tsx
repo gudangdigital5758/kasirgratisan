@@ -141,9 +141,9 @@ export default function Laporan() {
       }
     }
 
-    transactions?.forEach(t => {
-      const d = format(new Date(t.date), 'dd/MM');
-      if (map[d] !== undefined) map[d] += t.total;
+    transactions?.forEach(tx => {
+      const d = format(new Date(tx.date), 'dd/MM');
+      if (map[d] !== undefined) map[d] += tx.total;
     });
     return Object.entries(map).map(([date, sales]) => ({ date, sales }));
   })();
@@ -158,12 +158,12 @@ export default function Laporan() {
   const topProducts = Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, period === 'daily' ? 10 : 5);
 
   const paymentSummary: Record<number, { name: string; amount: number; count: number }> = {};
-  transactions?.forEach(t => {
-    if (t.paymentAmount <= 0) return;
-    const method = paymentMethods?.find(p => p.id === t.paymentMethodId);
-    const key = t.paymentMethodId ?? 0;
+  transactions?.forEach(tx => {
+    if (tx.paymentAmount <= 0) return;
+    const method = paymentMethods?.find(p => p.id === tx.paymentMethodId);
+    const key = tx.paymentMethodId ?? 0;
     if (!paymentSummary[key]) paymentSummary[key] = { name: method?.name ?? t('fallbacks.noMethod'), amount: 0, count: 0 };
-    paymentSummary[key].amount += Math.min(t.paymentAmount, t.total);
+    paymentSummary[key].amount += Math.min(tx.paymentAmount, tx.total);
     paymentSummary[key].count += 1;
   });
   debtPayments?.forEach((payment) => {

@@ -5,7 +5,7 @@ import { ShoppingCart, Package, BarChart3, TrendingUp, AlertTriangle, Receipt, C
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { id, enUS, ms } from 'date-fns/locale';
+import { dateLocaleFor, numberLocaleFor } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import BackupReminder, { shouldShowBackupReminder, exportBackupData } from '@/components/BackupReminder';
 import WhatsNewModal from '@/components/WhatsNewModal';
@@ -17,9 +17,6 @@ import { useTranslation } from 'react-i18next';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { cn } from '@/lib/utils';
 
-const LOCALES: Record<string, Locale> = { id, en: enUS, ms };
-const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
-
 export default function Dashboard() {
   const { can } = useAuth();
   const { isLoggedIn: cloudLoggedIn, isSyncSubscribed: cloudSubscribed } = useCloudAuth();
@@ -27,8 +24,8 @@ export default function Dashboard() {
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
 
-  const dateLocale = LOCALES[i18n.language] ?? id;
-  const numberLocale = NUMBER_LOCALES[i18n.language] ?? 'id-ID';
+  const dateLocale = dateLocaleFor(i18n.language);
+  const numberLocale = numberLocaleFor(i18n.language);
 
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
 

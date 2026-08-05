@@ -8,6 +8,7 @@
     "build": "node scripts/bump-version.js && vite build",
     "build:dev": "node scripts/bump-version.js && vite build --mode development",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

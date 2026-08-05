@@ -26,6 +26,7 @@ describe('Real-time Sync Columns and Hooks', () => {
       isDeleted: 0,
       deletedAt: null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     const product = await db.products.get(id);
@@ -46,6 +47,7 @@ describe('Real-time Sync Columns and Hooks', () => {
       isDeleted: 0,
       deletedAt: null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     const initialProduct = await db.products.get(id);

@@ -57,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentUser?.id) return;
     const id = currentUser.id;
+    // Dexie tidak mencantumkan unsubscribe utk hook 'updating' di tipenya,
+    // padahal runtime mengembalikan fungsi penghapus — cast agar aman.
     const sub = db.users.hook('updating', (mods, primKey) => {
       if (primKey === id) {
         // Defer so the update is committed first, then re-read.
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentUser(fresh);
         });
       }
-    });
+    }) as unknown as () => void;
     return () => {
       db.users.hook('updating').unsubscribe(sub);
     };

@@ -155,6 +155,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       subtotal: 40000, discountType: discNull, discountValue: 0, discountAmount: 0, total: 40000,
       paymentMethodId: 1, paymentAmount: 50000, change: 10000, profit: 21000,
       date: new Date(now.getTime() - 3600000), receiptNumber: 'TX-DEMO-001',
+      status: 'completed',
     });
     await db.transactionItems.bulkAdd([
       { transactionId: tx1Id as number, productId: 1, productName: 'Nasi Goreng Spesial', quantity: 2, price: 15000, hpp: 8000, discountType: discNull, discountValue: 0, discountAmount: 0, subtotal: 30000 },
@@ -165,6 +166,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       subtotal: 30000, discountType: discNull, discountValue: 0, discountAmount: 0, total: 30000,
       paymentMethodId: 3, paymentAmount: 30000, change: 0, profit: 14000,
       date: new Date(now.getTime() - 1800000), receiptNumber: 'TX-DEMO-002',
+      status: 'completed',
     });
     await db.transactionItems.bulkAdd([
       { transactionId: tx2Id as number, productId: 3, productName: 'Ayam Bakar', quantity: 1, price: 20000, hpp: 12000, discountType: discNull, discountValue: 0, discountAmount: 0, subtotal: 20000 },
@@ -175,6 +177,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       subtotal: 40000, discountType: discNull, discountValue: 0, discountAmount: 0, total: 40000,
       paymentMethodId: 1, paymentAmount: 50000, change: 10000, profit: 18500,
       date: new Date(now.getTime() - 900000), receiptNumber: 'TX-DEMO-003',
+      status: 'completed',
     });
     await db.transactionItems.bulkAdd([
       { transactionId: tx3Id as number, productId: 1, productName: 'Nasi Goreng Spesial', quantity: 1, price: 15000, hpp: 8000, discountType: discNull, discountValue: 0, discountAmount: 0, subtotal: 15000 },
@@ -291,6 +294,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           printLogo: false,
           onboardingDone: true,
           lastBackupAt: null,
+          deviceId: crypto.randomUUID(),
           themeColor,
         });
       }

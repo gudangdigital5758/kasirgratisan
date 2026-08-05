@@ -75,20 +75,7 @@ import {
   type CloudStore,
   type DestinationItem,
 } from '@/lib/cloud-api';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix Leaflet marker icons via unpkg CDN to ensure reliability in bundles
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import StoreLocationMap, { type StoreLocationMapHandle } from '@/components/StoreLocationMap';
 
 interface SearchableSelectProps {
   value: string;
@@ -226,10 +213,8 @@ export default function CloudOnlineStoreSettings() {
   const [templatedQrUrl, setTemplatedQrUrl] = useState<string>('');
   const [hasTemplate, setHasTemplate] = useState<boolean>(false);
 
-  // Leaflet map refs
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
-  const markerInstance = useRef<L.Marker | null>(null);
+  // Leaflet map (diekstrak ke StoreLocationMap)
+  const mapRef = useRef<StoreLocationMapHandle>(null);
 
   // Load active store from backend
   const loadStoreDetails = useCallback(async () => {
@@ -568,72 +553,7 @@ export default function CloudOnlineStoreSettings() {
     loadDistrictsData();
   }, [cityId]);
 
-  // Map Initialization & Updates
-  useEffect(() => {
-    // If loading is true or container is not available, do nothing
-    if (loading || !mapContainerRef.current) {
-      return;
-    }
-
-    const defaultLat = latitude ?? -6.2088;
-    const defaultLng = longitude ?? 106.8456;
-    const zoomLevel = latitude && longitude ? 15 : 5;
-
-    let map = mapInstance.current;
-    let marker = markerInstance.current;
-
-    // Initialize map if not yet created
-    if (!map) {
-      map = L.map(mapContainerRef.current).setView([defaultLat, defaultLng], zoomLevel);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
-
-      marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
-
-      // Listen to marker dragend
-      marker.on('dragend', () => {
-        const position = marker?.getLatLng();
-        if (position) {
-          setLatitude(position.lat);
-          setLongitude(position.lng);
-        }
-      });
-
-      // Listen to map click
-      map.on('click', (e) => {
-        marker?.setLatLng(e.latlng);
-        setLatitude(e.latlng.lat);
-        setLongitude(e.latlng.lng);
-      });
-
-      mapInstance.current = map;
-      markerInstance.current = marker;
-
-      // Force a relayout to ensure Leaflet renders tiles properly
-      setTimeout(() => {
-        map?.invalidateSize();
-      }, 100);
-    } else {
-      // Update map view & marker if position changes externally
-      if (latitude !== null && longitude !== null) {
-        const curLatLng = marker?.getLatLng();
-        if (!curLatLng || curLatLng.lat !== latitude || curLatLng.lng !== longitude) {
-          marker?.setLatLng([latitude, longitude]);
-          map.setView([latitude, longitude], map.getZoom());
-        }
-      }
-    }
-
-    return () => {
-      // Clean up map when component unmounts or loading status changes
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-        markerInstance.current = null;
-      }
-    };
-  }, [latitude, longitude, loading]);
+  // (Inisialisasi & sinkronisasi Leaflet map dipindah ke StoreLocationMap.)
 
   // Request current GPS coordinates
   const handleGetGPSLocation = () => {
@@ -647,10 +567,7 @@ export default function CloudOnlineStoreSettings() {
         const { latitude: lat, longitude: lng } = pos.coords;
         setLatitude(lat);
         setLongitude(lng);
-        if (mapInstance.current && markerInstance.current) {
-          markerInstance.current.setLatLng([lat, lng]);
-          mapInstance.current.setView([lat, lng], 15);
-        }
+        mapRef.current?.setPosition(lat, lng, 15);
         setLocating(false);
         toast.success('Lokasi koordinat GPS berhasil didapatkan.');
       },
@@ -1336,7 +1253,16 @@ export default function CloudOnlineStoreSettings() {
                 </div>
 
                 {/* Map Container */}
-                <div ref={mapContainerRef} className="h-56 rounded-xl border relative z-10 w-full overflow-hidden" />
+                <StoreLocationMap
+                  ref={mapRef}
+                  loading={loading}
+                  latitude={latitude}
+                  longitude={longitude}
+                  onChange={(lat, lng) => {
+                    setLatitude(lat);
+                    setLongitude(lng);
+                  }}
+                />
                 <p className="text-[10px] text-muted-foreground leading-snug">
                   {t('cloudOnlineStore.location.dragPin')}
                 </p>

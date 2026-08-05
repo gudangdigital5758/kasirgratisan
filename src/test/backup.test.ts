@@ -20,15 +20,18 @@ describe('Backup and Restore Logic', () => {
 
   it('should include stockOpnames and stockOpnameItems in buildBackupData', async () => {
     // Add dummy data to tables
-    await db.categories.add({ id: 1, name: 'Category 1', isDeleted: 0 });
-    await db.products.add({ id: 1, name: 'Product 1', sku: 'P1', categoryId: 1, isDeleted: 0 });
+    await db.categories.add({ id: 1, name: 'Category 1', color: '', icon: '', isDeleted: 0, createdAt: new Date(), deletedAt: null });
+    await db.products.add({
+      id: 1, name: 'Product 1', sku: 'P1', categoryId: 1, price: 10000, hpp: 5000, stock: 10, unit: 'pcs',
+      isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date(),
+    });
     
     // Add stock opname data
     await db.stockOpnames.add({
       id: 1,
       date: new Date(),
       status: 'completed',
-      createdBy: 'user1',
+      createdBy: 1,
       notes: 'Test Opname'
     });
     await db.stockOpnameItems.add({
@@ -36,9 +39,8 @@ describe('Backup and Restore Logic', () => {
       opnameId: 1,
       productId: 1,
       systemStock: 10,
-      actualStock: 8,
-      difference: -2,
-      notes: 'Shrinkage'
+      realStock: 8,
+      difference: -2
     });
 
     const backup = await buildBackupData();

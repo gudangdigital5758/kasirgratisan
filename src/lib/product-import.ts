@@ -56,28 +56,56 @@ export interface ImportValidationContext {
 /**
  * Parsing angka dari string Excel: menangani "Rp", spasi, pemisah ribuan
  * (titik/koma) dan desimal. Mengembalikan -1 bila tidak bisa diparsing.
+ *
+ * Aturan disambiguasi:
+ * - Bila ada titik DAN koma → separator terakhir = desimal, sisanya ribuan.
+ * - Bila hanya satu jenis separator → dianggap ribuan jika diikuti 3 digit
+ *   di akhir ("10.000" = 10000, "1.234" = 1234), desimal jika 1-2 digit
+ *   ("12.5", "12,50").
  */
 export function cleanNumber(val: string): number {
   if (!val) return 0;
-  let clean = val.replace(/Rp/gi, '').replace(/\s+/g, '');
+  const clean = val.replace(/Rp/gi, '').replace(/[^\d.,-]/g, '');
+  if (!clean || !/\d/.test(clean)) return -1;
+
   const lastDot = clean.lastIndexOf('.');
   const lastComma = clean.lastIndexOf(',');
-  if (lastDot > lastComma) {
-    clean = clean.replace(/,/g, '');
-  } else if (lastComma > lastDot) {
-    clean = clean.replace(/\./g, '').replace(/,/g, '.');
-  } else {
-    const match = clean.match(/[.,](\d+)$/);
-    if (match) {
-      const decimals = match[1];
-      if (decimals.length === 3) {
-        clean = clean.replace(/[.,]/g, '');
-      } else {
-        clean = clean.replace(/[.,]/g, '.');
-      }
+
+  let decimalSep = '';
+  let thousandSep = '';
+
+  if (lastDot >= 0 && lastComma >= 0) {
+    // Kedua separator ada → yang paling akhir adalah desimal.
+    if (lastDot > lastComma) {
+      decimalSep = '.';
+      thousandSep = ',';
+    } else {
+      decimalSep = ',';
+      thousandSep = '.';
+    }
+  } else if (lastDot >= 0) {
+    const after = clean.slice(lastDot + 1);
+    if (after.length >= 1 && after.length <= 2) {
+      decimalSep = '.';
+    } else {
+      thousandSep = '.';
+    }
+  } else if (lastComma >= 0) {
+    const after = clean.slice(lastComma + 1);
+    if (after.length >= 1 && after.length <= 2) {
+      decimalSep = ',';
+    } else {
+      thousandSep = ',';
     }
   }
-  const parsed = Number(clean);
+
+  let normalized = clean;
+  if (thousandSep) normalized = normalized.split(thousandSep).join('');
+  if (decimalSep) normalized = normalized.replace(decimalSep, '.');
+  // split() di atas sudah menghapus SEMUA separator ribuan; tidak ada sisa
+  // separator lain setelah konversi desimal.
+
+  const parsed = Number(normalized);
   return isNaN(parsed) ? -1 : parsed;
 }
 

@@ -23,16 +23,23 @@ describe('product import — cleanNumber', () => {
     expect(cleanNumber('')).toBe(0);
   });
 
-  it('handles Rp, spaces and mixed separators (faithful to legacy parser)', () => {
-    expect(cleanNumber('Rp 10.000')).toBe(10); // dot tunggal = desimal (perilaku lama)
-    expect(cleanNumber('10,000')).toBe(10); // koma tunggal = desimal (perilaku lama)
+  it('handles Rp, spaces and mixed separators', () => {
+    expect(cleanNumber('Rp 10.000')).toBe(10000);
+    expect(cleanNumber('10,000')).toBe(10000);
     expect(cleanNumber('1.234,56')).toBeCloseTo(1234.56, 2);
+    expect(cleanNumber('1,234.56')).toBeCloseTo(1234.56, 2);
+    expect(cleanNumber('1.234.567')).toBe(1234567);
+    expect(cleanNumber('1.234.567,89')).toBeCloseTo(1234567.89, 2);
     expect(cleanNumber('12.5')).toBeCloseTo(12.5, 2);
+    expect(cleanNumber('12,50')).toBeCloseTo(12.5, 2);
+    expect(cleanNumber('1.234')).toBe(1234);
+    expect(cleanNumber('  Rp 15.000  ')).toBe(15000);
   });
 
   it('plain integers parse directly', () => {
     expect(cleanNumber('10000')).toBe(10000);
     expect(cleanNumber('0')).toBe(0);
+    expect(cleanNumber('-2')).toBe(-2);
   });
 
   it('returns -1 for unparsable', () => {

@@ -10,6 +10,7 @@ import {
 } from '@/lib/onesignal';
 
 import WhatsNewModal from '@/components/WhatsNewModal';
+import SettingsLinkCard from '@/components/SettingsLinkCard';
 import { FEATURES, getUnseenFeatures } from '@/lib/whats-new';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
@@ -411,20 +412,7 @@ export default function Pengaturan() {
               </CardContent>
             </Card>
           </Link>
-          <Link to="/settings/backup" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
-                  <HardDrive className="w-4 h-4" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{t('localBackup.title')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('localBackup.description')}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/backup" icon={HardDrive} iconClass="bg-success/10 text-success" title={t('localBackup.title')} description={t('localBackup.description')} className="" />
         </div>
       )}
 
@@ -468,81 +456,22 @@ export default function Pengaturan() {
       {/* 2. Transaksi & Stok */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.transactionsAndStock')}</h2>
-        <Link to="/history">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Receipt className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.transactionHistory.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.transactionHistory.description')}</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
+        <SettingsLinkCard to="/history" icon={Receipt} title={t('transactionsAndStock.transactionHistory.title')} description={t('transactionsAndStock.transactionHistory.description')} />
         {can('create_transaction') && (
-          <Link to="/shifts">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><ClipboardCheck className="w-4 h-4" /></div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{t('shiftMenu.title')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('shiftMenu.description')}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/shifts" icon={ClipboardCheck} title={t('shiftMenu.title')} description={t('shiftMenu.description')} />
         )}
         {can('manage_stock_inout') && (
           <>
-            <Link to="/stock-in">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center"><ArrowDownToLine className="w-4 h-4" /></div>
-                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.stockIn.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.stockIn.description')}</p></div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/stock-out">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center"><ArrowUpFromLine className="w-4 h-4" /></div>
-                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.stockOut.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.stockOut.description')}</p></div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/settings/stock-opname" className="block">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><ClipboardCheck className="w-4 h-4" /></div>
-                  <div className="flex-1"><p className="text-sm font-semibold">{t('stockOpname.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.stockOpname.description')}</p></div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
+            <SettingsLinkCard to="/stock-in" icon={ArrowDownToLine} iconClass="bg-success/10 text-success" title={t('transactionsAndStock.stockIn.title')} description={t('transactionsAndStock.stockIn.description')} />
+            <SettingsLinkCard to="/stock-out" icon={ArrowUpFromLine} iconClass="bg-destructive/10 text-destructive" title={t('transactionsAndStock.stockOut.title')} description={t('transactionsAndStock.stockOut.description')} />
+            <SettingsLinkCard to="/settings/stock-opname" icon={ClipboardCheck} title={t('stockOpname.title')} description={t('masterData.stockOpname.description')} />
           </>
         )}
         {(can('manage_expenses') || can('view_expenses')) && (
-          <Link to="/expenses">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><Wallet className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.expenses.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.expenses.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/expenses" icon={Wallet} iconClass="bg-warning/10 text-warning" title={t('transactionsAndStock.expenses.title')} description={t('transactionsAndStock.expenses.description')} />
         )}
         {can('view_reports') && (
-          <Link to="/stock-report">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Package className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.stockReport.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.stockReport.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/stock-report" icon={Package} title={t('transactionsAndStock.stockReport.title')} description={t('transactionsAndStock.stockReport.description')} className="" />
         )}
       </div>
 
@@ -551,40 +480,13 @@ export default function Pengaturan() {
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.people')}</h2>
           {can('manage_customers') && (
-            <Link to="/customers">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
-                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.customers.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.customers.description')}</p></div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
+            <SettingsLinkCard to="/customers" icon={UsersIcon} title={t('transactionsAndStock.customers.title')} description={t('transactionsAndStock.customers.description')} />
           )}
           {can('manage_customers') && storeSettings?.allowDebt && (
-            <Link to="/debts">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><HandCoins className="w-4 h-4" /></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">{t('transactionsAndStock.debts.title')}</p>
-                    <p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.debts.description', { count: activeDebts?.length ?? 0 })}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
+            <SettingsLinkCard to="/debts" icon={HandCoins} iconClass="bg-warning/10 text-warning" title={t('transactionsAndStock.debts.title')} description={t('transactionsAndStock.debts.description', { count: activeDebts?.length ?? 0 })} />
           )}
           {can('manage_supplier') && (
-            <Link to="/supplier">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Truck className="w-4 h-4" /></div>
-                  <div className="flex-1"><p className="text-sm font-semibold">{t('transactionsAndStock.supplier.title')}</p><p className="text-[10px] text-muted-foreground">{t('transactionsAndStock.supplier.description')}</p></div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            </Link>
+            <SettingsLinkCard to="/supplier" icon={Truck} iconClass="bg-accent/10 text-accent" title={t('transactionsAndStock.supplier.title')} description={t('transactionsAndStock.supplier.description')} className="" />
           )}
         </div>
       )}
@@ -631,18 +533,7 @@ export default function Pengaturan() {
             </Card>
           ) : (
             <>
-              <Link to="/users">
-                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><UsersIcon className="w-4 h-4" /></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">{t('employees.manage.title')}</p>
-                      <p className="text-[10px] text-muted-foreground">{t('employees.manage.description', { count: usersCount ?? 0 })}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
+              <SettingsLinkCard to="/users" icon={UsersIcon} title={t('employees.manage.title')} description={t('employees.manage.description', { count: usersCount ?? 0 })} />
               <Card className="border-0 shadow-sm mb-2">
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
@@ -676,73 +567,25 @@ export default function Pengaturan() {
         )}
 
         {can('manage_categories_payments') && (
-          <Link to="/settings/payment-methods" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><CreditCard className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.paymentMethods.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.paymentMethods.description', { count: paymentMethods?.length ?? 0 })}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/payment-methods" icon={CreditCard} title={t('masterData.paymentMethods.title')} description={t('masterData.paymentMethods.description', { count: paymentMethods?.length ?? 0 })} />
         )}
 
         {can('manage_categories_payments') && (
-          <Link to="/settings/product-category" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Tag className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.productCategory.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.productCategory.description', { count: categories?.length ?? 0 })}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/product-category" icon={Tag} iconClass="bg-accent/10 text-accent" title={t('masterData.productCategory.title')} description={t('masterData.productCategory.description', { count: categories?.length ?? 0 })} />
         )}
 
         {can('manage_categories_payments') && (
-          <Link to="/settings/expense-category" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><Wallet className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.expenseCategory.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.expenseCategory.description', { count: expenseCategories?.length ?? 0 })}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/expense-category" icon={Wallet} iconClass="bg-warning/10 text-warning" title={t('masterData.expenseCategory.title')} description={t('masterData.expenseCategory.description', { count: expenseCategories?.length ?? 0 })} />
         )}
 
-        <Link to="/settings/units" className="block">
-          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Ruler className="w-4 h-4" /></div>
-              <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.units.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.units.description', { count: units?.length ?? 0 })}</p></div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
+        <SettingsLinkCard to="/settings/units" icon={Ruler} title={t('masterData.units.title')} description={t('masterData.units.description', { count: units?.length ?? 0 })} />
 
         {can('manage_store_settings') && (
-          <Link to="/settings/receipt" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Receipt className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.receiptFooter.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.receiptFooter.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/receipt" icon={Receipt} title={t('masterData.receiptFooter.title')} description={t('masterData.receiptFooter.description')} />
         )}
 
         {can('manage_store_settings') && (
-          <Link to="/settings/theme" className="block">
-            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-2">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Palette className="w-4 h-4" /></div>
-                <div className="flex-1"><p className="text-sm font-semibold">{t('masterData.theme.title')}</p><p className="text-[10px] text-muted-foreground">{t('masterData.theme.description')}</p></div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+          <SettingsLinkCard to="/settings/theme" icon={Palette} iconClass="bg-accent/10 text-accent" title={t('masterData.theme.title')} description={t('masterData.theme.description')} />
         )}
 
         <Card className="border-0 shadow-sm mb-2">
