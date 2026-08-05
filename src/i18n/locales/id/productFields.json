@@ -1,0 +1,93 @@
+{
+  "title": "Jenis Toko",
+  "subtitle": "Pilih jenis tokomu — form produk menyesuaikan otomatis",
+  "types": {
+    "general": {
+      "name": "Toko Umum",
+      "desc": "Tanpa kolom khusus"
+    },
+    "shoes": {
+      "name": "Toko Sepatu",
+      "desc": "Size, brand, kategori, kondisi, dll"
+    },
+    "cosmetics": {
+      "name": "Toko Kosmetik",
+      "desc": "BPOM, Halal, tanggal kadaluarsa"
+    },
+    "other": {
+      "name": "Jenis Lain",
+      "desc": "Buat kolom khusus sendiri"
+    }
+  },
+  "fields": {
+    "shoes": {
+      "brand": "Merek / Brand",
+      "size": "Ukuran (Size)",
+      "insole": "Ukuran Insole",
+      "category": "Kategori Sepatu",
+      "madeIn": "Made In",
+      "condition": "Baru / Bekas",
+      "conditionDetail": "Kondisi"
+    },
+    "cosmetics": {
+      "bpomNumber": "Nomor BPOM",
+      "halalNumber": "Nomor Halal",
+      "expiryDate": "Tanggal Kadaluarsa"
+    }
+  },
+  "options": {
+    "shoes": {
+      "category": {
+        "Basket": "Basket",
+        "Boots": "Boots",
+        "Formal": "Formal",
+        "Running": "Running",
+        "Sneakers": "Sneakers",
+        "Sandal": "Sandal",
+        "Lainnya": "Lainnya"
+      },
+      "condition": {
+        "new": "Baru",
+        "used": "Bekas"
+      },
+      "conditionDetail": {
+        "seperti_baru": "Seperti baru",
+        "sangat_baik": "Sangat baik",
+        "baik": "Baik",
+        "cukup": "Cukup"
+      }
+    }
+  },
+  "custom": {
+    "sectionTitle": "Kolom Khusus",
+    "sectionDesc": "Kolom tambahan yang tampil di form produk",
+    "addButton": "Tambah Kolom",
+    "label": "Nama Kolom",
+    "labelPlaceholder": "Contoh: Warna",
+    "type": "Tipe",
+    "typeText": "Teks",
+    "typeNumber": "Angka",
+    "typeSelect": "Pilihan",
+    "typeDate": "Tanggal",
+    "typeBoolean": "Ya/Tidak",
+    "required": "Wajib diisi",
+    "options": "Pilihan (pisahkan dengan koma)",
+    "optionsPlaceholder": "Merah, Biru, Hijau",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "remove": "Hapus",
+    "empty": "Belum ada kolom khusus"
+  },
+  "toast": {
+    "required": "Lengkapi kolom khusus wajib: {{fields}}",
+    "saved": "Jenis toko disimpan",
+    "customSaved": "Kolom khusus disimpan",
+    "customRemoved": "Kolom khusus dihapus"
+  },
+  "settings": {
+    "title": "Jenis Toko",
+    "desc": "Kolom form produk menyesuaikan jenis toko",
+    "change": "Ubah",
+    "current": "Jenis saat ini"
+  }
+}

@@ -38,6 +38,7 @@
     "nameLabel": "Nama Produk",
     "namePlaceholder": "Contoh: Nasi Goreng",
     "skuLabel": "SKU",
+    "skuPlaceholder": "Contoh: SKU, mis. NG001",
     "scanCamera": "Scan dengan kamera",
     "categoryLabel": "Kategori",
     "categoryPlaceholder": "Pilih kategori",

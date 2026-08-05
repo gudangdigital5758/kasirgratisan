@@ -1,0 +1,93 @@
+{
+  "title": "Store Type",
+  "subtitle": "Choose your store type — the product form adapts automatically",
+  "types": {
+    "general": {
+      "name": "General Store",
+      "desc": "No special columns"
+    },
+    "shoes": {
+      "name": "Shoe Store",
+      "desc": "Size, brand, category, condition, etc."
+    },
+    "cosmetics": {
+      "name": "Cosmetics Store",
+      "desc": "BPOM, Halal, expiry date"
+    },
+    "other": {
+      "name": "Other Type",
+      "desc": "Create your own custom fields"
+    }
+  },
+  "fields": {
+    "shoes": {
+      "brand": "Brand",
+      "size": "Size",
+      "insole": "Insole Size",
+      "category": "Shoe Category",
+      "madeIn": "Made In",
+      "condition": "New / Used",
+      "conditionDetail": "Condition"
+    },
+    "cosmetics": {
+      "bpomNumber": "BPOM Number",
+      "halalNumber": "Halal Number",
+      "expiryDate": "Expiry Date"
+    }
+  },
+  "options": {
+    "shoes": {
+      "category": {
+        "Basket": "Basket",
+        "Boots": "Boots",
+        "Formal": "Formal",
+        "Running": "Running",
+        "Sneakers": "Sneakers",
+        "Sandal": "Sandal",
+        "Lainnya": "Others"
+      },
+      "condition": {
+        "new": "New",
+        "used": "Used"
+      },
+      "conditionDetail": {
+        "seperti_baru": "Like new",
+        "sangat_baik": "Very good",
+        "baik": "Good",
+        "cukup": "Fair"
+      }
+    }
+  },
+  "custom": {
+    "sectionTitle": "Custom Fields",
+    "sectionDesc": "Extra columns shown in the product form",
+    "addButton": "Add Field",
+    "label": "Field Name",
+    "labelPlaceholder": "Example: Color",
+    "type": "Type",
+    "typeText": "Text",
+    "typeNumber": "Number",
+    "typeSelect": "Select",
+    "typeDate": "Date",
+    "typeBoolean": "Yes/No",
+    "required": "Required",
+    "options": "Options (comma separated)",
+    "optionsPlaceholder": "Red, Blue, Green",
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "empty": "No custom fields yet"
+  },
+  "toast": {
+    "required": "Please fill required custom fields: {{fields}}",
+    "saved": "Store type saved",
+    "customSaved": "Custom field saved",
+    "customRemoved": "Custom field removed"
+  },
+  "settings": {
+    "title": "Store Type",
+    "desc": "Product form columns follow the store type",
+    "change": "Change",
+    "current": "Current type"
+  }
+}

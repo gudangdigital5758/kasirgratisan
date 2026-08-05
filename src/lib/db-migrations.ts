@@ -534,6 +534,38 @@ export class PosDatabase extends Dexie {
       deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
       cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
     });
+
+    // Version 16 — Jenis toko (PRODUCT-TYPES): storeType default 'general'.
+    // Tidak ada index baru; upgrade hanya backfill untuk storeSettings existing.
+    this.version(16).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+    }).upgrade(async (tx) => {
+      // Backfill: toko existing dianggap "umum" (tanpa kolom khusus) agar
+      // tidak ada perubahan perilaku untuk user lama.
+      await tx.table<StoreSettings, number>('storeSettings').toCollection().modify((s) => {
+        if (!s.storeType) s.storeType = 'general';
+      });
+    });
   }
 }
 

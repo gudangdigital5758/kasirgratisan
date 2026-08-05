@@ -24,6 +24,14 @@ import { downloadOrShareFile } from '@/lib/file-utils';
 import { calcMarginPercent, calcProfitPerUnit, marginTone, priceFromMargin } from '@/lib/pricing';
 import { CURRENCY_SYMBOL, NUMBER_LOCALES } from '@/lib/format';
 import { validateImportRow, type ParsedRow } from '@/lib/product-import';
+import {
+  getVisibleFields,
+  getMissingRequiredFields,
+  cleanAttributes,
+  getDisplayAttributes,
+  normalizeStoreType,
+  type ProductFieldDef,
+} from '@/lib/product-fields';
 
 export default function Produk() {
   const { currentUser, can } = useAuth();
@@ -61,11 +69,15 @@ export default function Produk() {
   const [barcode, setBarcode] = useState('');
   const [description, setDescription] = useState('');
   const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const [attributes, setAttributes] = useState<Record<string, unknown>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const products = useLiveQuery(() => db.products.where('isDeleted').equals(0).toArray());
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
   const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
+  const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const storeType = normalizeStoreType(storeSettings?.storeType);
+  const customFields = storeSettings?.customFields;
 
   // Compose dropdown options: active master units + current product's unit if it has been deleted/renamed
   const unitOptions = (() => {
@@ -95,13 +107,13 @@ export default function Produk() {
       return;
     }
     setEditProduct(null);
-    setName(''); setSku(''); setCategoryId(categories[0]?.id?.toString() ?? ''); setPrice(''); setHpp(''); setStock(''); setTrackStock(true); setUnit('pcs'); setBarcode(''); setDescription(''); setPhoto(undefined);
+    setName(''); setSku(''); setCategoryId(categories[0]?.id?.toString() ?? ''); setPrice(''); setHpp(''); setStock(''); setTrackStock(true); setUnit('pcs'); setBarcode(''); setDescription(''); setPhoto(undefined); setAttributes({});
     setDialogOpen(true);
   };
 
   const openEdit = (p: Product) => {
     setEditProduct(p);
-    setName(p.name); setSku(p.sku); setCategoryId(p.categoryId.toString()); setPrice(p.price.toString()); setHpp(p.hpp.toString()); setStock(p.stock.toString()); setTrackStock(isStockManaged(p)); setUnit(p.unit); setBarcode(p.barcode ?? ''); setDescription(p.description ?? ''); setPhoto(p.photo);
+    setName(p.name); setSku(p.sku); setCategoryId(p.categoryId.toString()); setPrice(p.price.toString()); setHpp(p.hpp.toString()); setStock(p.stock.toString()); setTrackStock(isStockManaged(p)); setUnit(p.unit); setBarcode(p.barcode ?? ''); setDescription(p.description ?? ''); setPhoto(p.photo); setAttributes(p.attributes ?? {});
     setDialogOpen(true);
   };
 
@@ -136,6 +148,15 @@ export default function Produk() {
       return;
     }
 
+    // Validasi kolom khusus wajib (PRODUCT-TYPES)
+    const missing = getMissingRequiredFields(storeType, attributes, customFields);
+    if (missing.length > 0) {
+      toast.error(t('productFields:toast.required', {
+        fields: missing.map(f => f.label ?? t(f.labelKey ?? '')).join(', '),
+      }));
+      return;
+    }
+
     const data = {
       name: name.trim(),
       sku: sku.trim(),
@@ -148,6 +169,7 @@ export default function Produk() {
       description: description.trim() || undefined,
       barcode: barcode.trim() || undefined,
       photo: photo || undefined,
+      attributes: cleanAttributes(attributes),
       updatedAt: new Date(),
       updatedBy: currentUser?.id,
     };
@@ -178,6 +200,75 @@ export default function Produk() {
       setDeleteId(null);
     }
   };
+
+  // === Kolom khusus (PRODUCT-TYPES) ===
+  const setAttr = (key: string, value: unknown) =>
+    setAttributes(prev => ({ ...prev, [key]: value }));
+
+  const renderProductField = (field: ProductFieldDef) => {
+    const value = attributes[field.key];
+    const label = field.label ?? t(field.labelKey ?? '');
+    const labelEl = (
+      <Label className="flex items-center gap-1">
+        {label}
+        {field.required && <span className="text-destructive">*</span>}
+      </Label>
+    );
+    switch (field.type) {
+      case 'select':
+        return (
+          <div key={field.key} className="space-y-1.5">
+            {labelEl}
+            <Select value={typeof value === 'string' ? value : ''} onValueChange={v => setAttr(field.key, v)}>
+              <SelectTrigger className="h-11"><SelectValue placeholder={field.placeholderKey ? t(field.placeholderKey) : undefined} /></SelectTrigger>
+              <SelectContent>
+                {(field.options ?? []).map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.labelKey ? t(o.labelKey) : o.value}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case 'date':
+        return (
+          <div key={field.key} className="space-y-1.5">
+            {labelEl}
+            <Input type="date" value={typeof value === 'string' ? value : ''} onChange={e => setAttr(field.key, e.target.value)} className="h-11" />
+          </div>
+        );
+      case 'boolean':
+        return (
+          <div key={field.key} className="flex items-center justify-between rounded-xl border border-border p-3">
+            <Label className="text-sm">{label}{field.required && <span className="text-destructive"> *</span>}</Label>
+            <Switch checked={value === true} onCheckedChange={v => setAttr(field.key, v)} />
+          </div>
+        );
+      case 'number':
+        return (
+          <div key={field.key} className="space-y-1.5">
+            {labelEl}
+            <Input
+              type="number"
+              value={typeof value === 'number' ? String(value) : typeof value === 'string' ? value : ''}
+              onChange={e => setAttr(field.key, e.target.value === '' ? '' : Number(e.target.value))}
+              className="h-11"
+            />
+          </div>
+        );
+      default:
+        return (
+          <div key={field.key} className="space-y-1.5">
+            {labelEl}
+            <Input
+              value={typeof value === 'string' ? value : value == null ? '' : String(value)}
+              onChange={e => setAttr(field.key, e.target.value)}
+              className="h-11"
+            />
+          </div>
+        );
+    }
+  };
+
 
   const downloadTemplate = async () => {
     try {
@@ -592,6 +683,23 @@ export default function Produk() {
                         </span>
                       )}
                     </div>
+                    {(() => {
+                      const attrs = getDisplayAttributes(storeType, p.attributes, customFields);
+                      if (attrs.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {attrs.map(({ field, value }) => {
+                            const opt = field.type === 'select' ? field.options?.find(o => o.value === value) : undefined;
+                            const val = opt ? (opt.labelKey ? t(opt.labelKey) : opt.value) : String(value);
+                            return (
+                              <span key={field.key} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                {field.label ?? t(field.labelKey ?? '')}: {val}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-col gap-1">
                     {canManage ? (
@@ -846,6 +954,15 @@ export default function Produk() {
               />
               <p className="text-[10px] text-muted-foreground text-right">{description.length}{t('dialog.descriptionCounter')}</p>
             </div>
+            {/* Kolom khusus sesuai jenis toko (PRODUCT-TYPES) */}
+            {getVisibleFields(storeType, attributes, customFields).length > 0 && (
+              <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('productFields:custom.sectionTitle')}
+                </p>
+                {getVisibleFields(storeType, attributes, customFields).map(field => renderProductField(field))}
+              </div>
+            )}
             <Button className="w-full h-12 text-base font-semibold" onClick={handleSave} disabled={!name.trim() || !categoryId || !sku.trim()}>
               {editProduct ? t('saveButton.edit') : t('saveButton.add')}
             </Button>

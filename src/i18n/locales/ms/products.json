@@ -38,6 +38,7 @@
     "nameLabel": "Nama Produk",
     "namePlaceholder": "Cth: Nasi Goreng",
     "skuLabel": "SKU",
+    "skuPlaceholder": "Cth: SKU, mis. NG001",
     "scanCamera": "Imbas melalui kamera",
     "categoryLabel": "Kategori",
     "categoryPlaceholder": "Pilih kategori",

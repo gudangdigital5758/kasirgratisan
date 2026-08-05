@@ -69,6 +69,9 @@ export interface Product {
   description?: string; // deskripsi/catatan produk (opsional, multi-line)
   photo?: string; // base64 or blob URL
   barcode?: string;
+  /** Nilai kolom khusus sesuai jenis toko (PRODUCT-TYPES). Key mengikuti
+   * definisi di src/lib/product-fields.ts; disimpan sebagai JSON. */
+  attributes?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
   isDeleted: number; // 0 = active, 1 = deleted
@@ -308,6 +311,15 @@ export interface CashierShift {
   syncedAt?: Date | null;
 }
 
+/** Kolom khusus buatan user untuk jenis toko "Lainnya" (PRODUCT-TYPES). */
+export interface StoreCustomField {
+  key: string; // slug unik (mis. "warna")
+  label: string;
+  type: 'text' | 'number' | 'select' | 'date' | 'boolean';
+  required?: boolean;
+  options?: string[]; // untuk type select
+}
+
 export interface StoreSettings {
   id?: number;
   storeName: string;
@@ -328,6 +340,10 @@ export interface StoreSettings {
   cloudStoreId?: string | null; // cloud store ID yang di-bind ke device ini untuk sync
   printLogo?: boolean; // toggle to print store logo on ESC/POS receipt
   hideWatermark?: boolean; // toggle to hide Profitku.my.id credit/watermark on ESC/POS receipt
+  /** Jenis toko (PRODUCT-TYPES): 'general' | 'shoes' | 'cosmetics' | 'other'. */
+  storeType?: string;
+  /** Custom fields untuk jenis toko "other" (opsional). */
+  customFields?: StoreCustomField[];
 }
 
 // === Database ===

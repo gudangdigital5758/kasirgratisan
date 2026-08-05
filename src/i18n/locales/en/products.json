@@ -38,6 +38,7 @@
     "nameLabel": "Product Name",
     "namePlaceholder": "e.g. Fried Rice",
     "skuLabel": "SKU",
+    "skuPlaceholder": "e.g. SKU: NG001",
     "scanCamera": "Scan via camera",
     "categoryLabel": "Category",
     "categoryPlaceholder": "Select category",

@@ -1,0 +1,93 @@
+{
+  "title": "Jenis Kedai",
+  "subtitle": "Pilih jenis kedai anda — borang produk menyesuaikan secara automatik",
+  "types": {
+    "general": {
+      "name": "Kedai Am",
+      "desc": "Tiada kolum khas"
+    },
+    "shoes": {
+      "name": "Kedai Kasut",
+      "desc": "Saiz, jenama, kategori, keadaan, dll"
+    },
+    "cosmetics": {
+      "name": "Kedai Kosmetik",
+      "desc": "BPOM, Halal, tarikh luput"
+    },
+    "other": {
+      "name": "Jenis Lain",
+      "desc": "Buat kolum khas sendiri"
+    }
+  },
+  "fields": {
+    "shoes": {
+      "brand": "Jenama",
+      "size": "Saiz",
+      "insole": "Saiz Insole",
+      "category": "Kategori Kasut",
+      "madeIn": "Made In",
+      "condition": "Baharu / Terpakai",
+      "conditionDetail": "Keadaan"
+    },
+    "cosmetics": {
+      "bpomNumber": "Nombor BPOM",
+      "halalNumber": "Nombor Halal",
+      "expiryDate": "Tarikh Luput"
+    }
+  },
+  "options": {
+    "shoes": {
+      "category": {
+        "Basket": "Basket",
+        "Boots": "Boots",
+        "Formal": "Formal",
+        "Running": "Running",
+        "Sneakers": "Sneakers",
+        "Sandal": "Sandal",
+        "Lainnya": "Lain-lain"
+      },
+      "condition": {
+        "new": "Baharu",
+        "used": "Terpakai"
+      },
+      "conditionDetail": {
+        "seperti_baru": "Macam baharu",
+        "sangat_baik": "Sangat baik",
+        "baik": "Baik",
+        "cukup": "Sederhana"
+      }
+    }
+  },
+  "custom": {
+    "sectionTitle": "Kolum Khas",
+    "sectionDesc": "Kolum tambahan yang dipaparkan dalam borang produk",
+    "addButton": "Tambah Kolum",
+    "label": "Nama Kolum",
+    "labelPlaceholder": "Cth: Warna",
+    "type": "Jenis",
+    "typeText": "Teks",
+    "typeNumber": "Nombor",
+    "typeSelect": "Pilihan",
+    "typeDate": "Tarikh",
+    "typeBoolean": "Ya/Tidak",
+    "required": "Wajib diisi",
+    "options": "Pilihan (asingkan dengan koma)",
+    "optionsPlaceholder": "Merah, Biru, Hijau",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "remove": "Padam",
+    "empty": "Tiada kolum khas lagi"
+  },
+  "toast": {
+    "required": "Sila lengkapkan kolum khas wajib: {{fields}}",
+    "saved": "Jenis kedai disimpan",
+    "customSaved": "Kolum khas disimpan",
+    "customRemoved": "Kolum khas dipadam"
+  },
+  "settings": {
+    "title": "Jenis Kedai",
+    "desc": "Kolum borang produk mengikut jenis kedai",
+    "change": "Tukar",
+    "current": "Jenis semasa"
+  }
+}

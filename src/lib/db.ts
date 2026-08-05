@@ -28,6 +28,7 @@ export type {
   DeletedRecord,
   CashierShift,
   StoreSettings,
+  StoreCustomField,
 } from './db-schema';
 
 export const db = new PosDatabase();

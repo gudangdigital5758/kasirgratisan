@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { db, type StoreCustomField } from '@/lib/db';
+import { STORE_TYPES, DEFAULT_STORE_TYPE, normalizeStoreType, type StoreType, type ProductFieldType } from '@/lib/product-fields';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle, Bell } from 'lucide-react';
 import {
@@ -33,6 +34,7 @@ import { Printer } from 'lucide-react';
 import { APP_VERSION } from '@/lib/app-version';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { cn } from '@/lib/utils';
 import { fetchAppSetting, type AppSetting } from '@/lib/cloud-api';
 import { BRAND } from '@/lib/brand';
 
@@ -226,6 +228,73 @@ export default function Pengaturan() {
     }
     if (logoInputRef.current) logoInputRef.current.value = '';
   };
+
+  // === Jenis toko & kolom khusus (PRODUCT-TYPES) ===
+  const [storeTypeDialog, setStoreTypeDialog] = useState(false);
+  const [storeTypeSel, setStoreTypeSel] = useState<StoreType>(DEFAULT_STORE_TYPE);
+  const [customFields, setCustomFields] = useState<StoreCustomField[]>([]);
+  const [newCustomLabel, setNewCustomLabel] = useState('');
+  const [newCustomType, setNewCustomType] = useState<ProductFieldType>('text');
+  const [newCustomRequired, setNewCustomRequired] = useState(false);
+  const [newCustomOptions, setNewCustomOptions] = useState('');
+  const [savingStoreType, setSavingStoreType] = useState(false);
+
+  const customTypeLabel = (ty: ProductFieldType) => {
+    const map: Record<ProductFieldType, string> = {
+      text: t('productFields:custom.typeText'),
+      number: t('productFields:custom.typeNumber'),
+      select: t('productFields:custom.typeSelect'),
+      date: t('productFields:custom.typeDate'),
+      boolean: t('productFields:custom.typeBoolean'),
+    };
+    return map[ty];
+  };
+
+  const openStoreTypeDialog = () => {
+    setStoreTypeSel(normalizeStoreType(storeSettings?.storeType));
+    setCustomFields(storeSettings?.customFields ?? []);
+    setNewCustomLabel('');
+    setNewCustomType('text');
+    setNewCustomRequired(false);
+    setNewCustomOptions('');
+    setStoreTypeDialog(true);
+  };
+
+  const addCustomField = () => {
+    const label = newCustomLabel.trim();
+    if (!label) return;
+    let key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `f_${Date.now()}`;
+    const used = new Set(customFields.map(cf => cf.key));
+    while (used.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
+    const field: StoreCustomField = { key, label, type: newCustomType, required: newCustomRequired };
+    if (newCustomType === 'select') {
+      const opts = newCustomOptions.split(',').map(s => s.trim()).filter(Boolean);
+      if (opts.length > 0) field.options = opts;
+    }
+    setCustomFields([...customFields, field]);
+    setNewCustomLabel('');
+    setNewCustomOptions('');
+  };
+
+  const removeCustomField = (idx: number) => {
+    setCustomFields(customFields.filter((_, i) => i !== idx));
+  };
+
+  const saveStoreType = async () => {
+    if (!storeSettings?.id) return;
+    setSavingStoreType(true);
+    try {
+      await db.storeSettings.update(storeSettings.id, {
+        storeType: normalizeStoreType(storeTypeSel),
+        customFields: storeTypeSel === 'other' && customFields.length > 0 ? customFields : undefined,
+      });
+      toast.success(t('productFields:toast.saved'));
+      setStoreTypeDialog(false);
+    } finally {
+      setSavingStoreType(false);
+    }
+  };
+
 
   // === Multi-user activation ===
 
@@ -579,6 +648,23 @@ export default function Pengaturan() {
         )}
 
         <SettingsLinkCard to="/settings/units" icon={Ruler} title={t('masterData.units.title')} description={t('masterData.units.description', { count: units?.length ?? 0 })} />
+
+        {can('manage_store_settings') && (
+          <Card className="border-0 shadow-sm mb-2">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                <Store className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('productFields:settings.title')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('productFields:settings.desc')}</p>
+              </div>
+              <Button size="sm" className="h-8 text-xs" onClick={openStoreTypeDialog}>
+                {t('productFields:settings.change')}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {can('manage_store_settings') && (
           <SettingsLinkCard to="/settings/receipt" icon={Receipt} title={t('masterData.receiptFooter.title')} description={t('masterData.receiptFooter.description')} />
@@ -1064,6 +1150,99 @@ export default function Pengaturan() {
             <div className="space-y-1.5"><Label>{t('storeDialog.address')}</Label><Input value={storeAddr} onChange={e => setStoreAddr(e.target.value)} className="h-11" /></div>
             <div className="space-y-1.5"><Label>{t('storeDialog.phone')}</Label><Input value={storePhone} onChange={e => setStorePhone(e.target.value)} className="h-11" type="tel" /></div>
             <Button className="w-full h-11" onClick={saveStore}>{t('common:save')}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Jenis Toko & Kolom Khusus Dialog (PRODUCT-TYPES) */}
+      <Dialog open={storeTypeDialog} onOpenChange={setStoreTypeDialog}>
+        <DialogContent className="max-w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('productFields:settings.title')}</DialogTitle>
+            <DialogDescription className="text-xs">{t('productFields:settings.desc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-2">
+              {STORE_TYPES.map((st) => (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => setStoreTypeSel(st.value)}
+                  className={cn(
+                    'flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-all',
+                    storeTypeSel === st.value
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:border-primary/30 hover:bg-muted/50'
+                  )}
+                >
+                  <span className="text-xl">{st.icon}</span>
+                  <span className="text-xs font-semibold leading-tight">{t(st.labelKey)}</span>
+                  <span className="text-[10px] text-muted-foreground leading-snug">{t(st.descKey)}</span>
+                </button>
+              ))}
+            </div>
+
+            {storeTypeSel === 'other' && (
+              <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('productFields:custom.sectionTitle')}
+                </p>
+                {customFields.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t('productFields:custom.empty')}</p>
+                ) : (
+                  customFields.map((cf, i) => (
+                    <div key={cf.key} className="flex items-center justify-between gap-2 rounded-lg border bg-background p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{cf.label}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {customTypeLabel(cf.type)}{cf.required ? ` · ${t('productFields:custom.required')}` : ''}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeCustomField(i)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+                <div className="space-y-2 rounded-lg border border-dashed p-3">
+                  <Input
+                    value={newCustomLabel}
+                    onChange={e => setNewCustomLabel(e.target.value)}
+                    placeholder={t('productFields:custom.labelPlaceholder')}
+                    className="h-10"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={newCustomType} onValueChange={(v) => setNewCustomType(v as ProductFieldType)}>
+                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(['text', 'number', 'select', 'date', 'boolean'] as const).map(ty => (
+                          <SelectItem key={ty} value={ty}>{customTypeLabel(ty)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2 px-1">
+                      <Label className="text-xs">{t('productFields:custom.required')}</Label>
+                      <Switch checked={newCustomRequired} onCheckedChange={setNewCustomRequired} />
+                    </div>
+                  </div>
+                  {newCustomType === 'select' && (
+                    <Input
+                      value={newCustomOptions}
+                      onChange={e => setNewCustomOptions(e.target.value)}
+                      placeholder={t('productFields:custom.optionsPlaceholder')}
+                      className="h-10"
+                    />
+                  )}
+                  <Button size="sm" className="h-9 w-full" onClick={addCustomField} disabled={!newCustomLabel.trim()}>
+                    {t('productFields:custom.addButton')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Button className="w-full h-11" onClick={saveStoreType} disabled={savingStoreType}>
+              {savingStoreType ? t('common:saving') : t('productFields:custom.save')}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
