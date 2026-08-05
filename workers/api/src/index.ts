@@ -52,6 +52,7 @@ import {
   resolveListPrice,
   validateVoucherForUser,
 } from './lib/vouchers';
+import { rateLimit, rateLimitKey } from './lib/rate-limit';
 
 type Variables = {
   userId: string | null;
@@ -119,6 +120,25 @@ async function bearerAuth(c: {
 
 app.use('/api/*', bearerAuth);
 app.use('/admin/api/*', bearerAuth);
+
+/** Rate limit per user/IP untuk route terautentikasi (membatasi penyalahgunaan ringan). */
+async function rateLimitMiddleware(c: {
+  get: (k: 'userId') => string | null;
+  req: { header: (n: string) => string | undefined };
+  json: (b: unknown, s?: number, h?: Record<string, string>) => Response;
+}, next: () => Promise<void>) {
+  const key = rateLimitKey(c.get('userId'), c);
+  const { allowed, retryAfterSeconds } = rateLimit(key, 120, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Terlalu banyak permintaan. Coba lagi sebentar lagi.' }, 429, {
+      'Retry-After': String(retryAfterSeconds),
+    });
+  }
+  await next();
+}
+
+app.use('/api/*', rateLimitMiddleware);
+app.use('/admin/api/*', rateLimitMiddleware);
 
 /** Staff admin console API */
 app.route('/admin/api', adminRoutes);
@@ -1103,6 +1123,13 @@ app.get('/webhook/latest-version', (c) => {
 });
 
 app.post('/webhook/issue-report', async (c) => {
+  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 10, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Terlalu banyak laporan. Coba lagi nanti.' }, 429, {
+      'Retry-After': String(retryAfterSeconds),
+    });
+  }
+
   const contentLength = Number(c.req.header('content-length') || 0);
   if (Number.isFinite(contentLength) && contentLength > ISSUE_REPORT_MAX_BYTES) {
     return c.json({ error: 'Laporan terlalu besar' }, 413);
@@ -1129,10 +1156,48 @@ app.post('/webhook/issue-report', async (c) => {
 });
 
 app.post('/webhook/user-type', async (c) => {
+  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 20, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429, {
+      'Retry-After': String(retryAfterSeconds),
+    });
+  }
+
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   // Jangan log isi penuh — bisa berisi identifier device (PII ringan).
   const businessType = typeof body['business-type'] === 'string' ? body['business-type'] : 'unknown';
   console.log('[user-type]', { bytes: JSON.stringify(body).length, businessType });
+  return c.json({ ok: true });
+});
+
+/** Auto-report error client (PWA) → platform_events untuk dilihat admin. */
+app.post('/webhook/client-error', async (c) => {
+  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 20, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Too many' }, 429, { 'Retry-After': String(retryAfterSeconds) });
+  }
+
+  const contentLength = Number(c.req.header('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > 8192) {
+    return c.json({ error: 'Too large' }, 413);
+  }
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body !== 'object') return c.json({ error: 'Invalid' }, 400);
+  if (JSON.stringify(body).length > 8192) return c.json({ error: 'Too large' }, 413);
+
+  // Jangan log isi penuh (bisa berisi stack lokal/PII). Simpan ringkas ke platform_events.
+  const message = typeof body.message === 'string' ? body.message.slice(0, 300) : 'client error';
+  console.log('[client-error]', { type: body.type, bytes: JSON.stringify(body).length });
+  await writeEvent(c.env, {
+    level: 'error',
+    source: 'client',
+    type: 'client_error',
+    message,
+    payload: {
+      ...(body as Record<string, unknown>),
+      stack: typeof body.stack === 'string' ? body.stack.slice(0, 1000) : undefined,
+    },
+  });
   return c.json({ ok: true });
 });
 
@@ -1144,6 +1209,14 @@ app.post('/webhook/user-type', async (c) => {
  * Tidak memakai WEBHOOK_SECRET header — verifikasi via signature_key SHA512.
  */
 app.post('/webhook/payment', async (c) => {
+  // Batas generous (60/menit/IP) — Midtrans bisa kirim retry, tapi tetap dibatasi.
+  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 60, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Terlalu banyak permintaan' }, 429, {
+      'Retry-After': String(retryAfterSeconds),
+    });
+  }
+
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const orderId = String(body.order_id || '');
   const statusCode = String(body.status_code || '');

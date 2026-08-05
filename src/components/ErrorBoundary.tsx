@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import i18n from "@/i18n";
 import { APP_VERSION } from "@/lib/app-version";
+import { reportError } from "@/lib/error-report";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ErrorBoundaryProps {
@@ -28,6 +29,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("[ErrorBoundary] Captured error:", error, errorInfo);
     this.setState({ errorInfo });
+    // Auto-report (throttled 1/menit, production only) — melengkapi laporan manual.
+    reportError("react", error, errorInfo.componentStack);
   }
 
   reset = (): void => {
