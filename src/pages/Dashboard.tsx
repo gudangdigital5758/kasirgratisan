@@ -98,7 +98,10 @@ export default function Dashboard() {
   const txCount = todayTransactions?.length ?? 0;
   const expenseCount = todayExpenses?.length ?? 0;
 
-  const showBackup = !backupDismissed && storeSettings && shouldShowBackupReminder(storeSettings.lastBackupAt) && can('manage_backup');
+  const localAutoOn = (storeSettings?.localAutoBackup ?? 'hourly') !== 'off';
+  // Reminder file-backup hanya relevan bila backup lokal otomatis dimatikan;
+  // saat auto ON (default), data sudah diamankan snapshot otomatis (M0/M2).
+  const showBackup = !backupDismissed && storeSettings && !localAutoOn && shouldShowBackupReminder(storeSettings.lastBackupAt) && can('manage_backup');
 
   const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
   const cloudStoreLinked = !!storeSettings?.cloudStoreId;

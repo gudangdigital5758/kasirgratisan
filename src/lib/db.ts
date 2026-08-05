@@ -4,6 +4,7 @@ import { ALL_PERMISSIONS } from './db-schema';
 import type { Product } from './db-schema';
 import { getActiveStoreKey, DEFAULT_STORE_KEY, dbNameForStore, ensureDefaultStoreEntry } from './store-registry';
 import { newSyncId } from './sync-id';
+import { bumpChangeCounter } from './change-counter';
 
 // Re-export untuk backward compatibility: seluruh import 'from @/lib/db' tetap bekerja.
 export { PosDatabase } from './db-migrations';
@@ -34,6 +35,7 @@ export type {
   StoreSettings,
   StoreCustomField,
   SyncMeta,
+  LocalBackup,
 } from './db-schema';
 
 // === Multi-toko (MULTI-STORE M1): db mengikuti toko aktif ===
@@ -137,6 +139,7 @@ export function setupSyncHooks(db: PosDatabase) {
     const table = db.table<Record<string, unknown>, number>(tableName);
 
     table.hook('creating', (primKey, obj: Record<string, unknown>) => {
+      bumpChangeCounter();
       if (!obj.syncId) {
         obj.syncId = newSyncId();
       }
@@ -149,6 +152,7 @@ export function setupSyncHooks(db: PosDatabase) {
     });
 
     table.hook('updating', (mods: Record<string, unknown>, primKey, obj) => {
+      bumpChangeCounter();
       // If the update explicitly specifies syncedAt or updatedAt, preserve them
       if (mods.syncedAt !== undefined || mods.updatedAt !== undefined) {
         return;
@@ -175,6 +179,7 @@ export function setupSyncHooks(db: PosDatabase) {
   hardDeleteTables.forEach((tableName) => {
     const table = db.table<Record<string, unknown>, number>(tableName);
     table.hook('deleting', (primKey, obj) => {
+      bumpChangeCounter();
       const rec = (obj ?? {}) as Record<string, unknown>;
       setTimeout(() => {
         db.deletedRecords.add({

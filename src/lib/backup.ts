@@ -1,4 +1,4 @@
-import { db, type Product, sanitizeDatabaseDates } from '@/lib/db';
+import { db, type Product, type PosDatabase, sanitizeDatabaseDates } from '@/lib/db';
 
 /**
  * Shared backup/restore core, dipakai oleh:
@@ -15,31 +15,31 @@ export const BACKUP_VERSION = 8;
 export type BackupData = Record<string, any> & { version?: number };
 
 /** Kumpulkan seluruh isi database menjadi satu objek backup. */
-export async function buildBackupData() {
+export async function buildBackupData(target: PosDatabase = db) {
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    categories: await db.categories.toArray(),
-    products: await db.products.toArray(),
-    suppliers: await db.suppliers.toArray(),
-    customers: await db.customers.toArray(),
-    stockIns: await db.stockIns.toArray(),
-    stockOuts: await db.stockOuts.toArray(),
-    hppHistory: await db.hppHistory.toArray(),
-    paymentMethods: await db.paymentMethods.toArray(),
-    transactions: await db.transactions.toArray(),
-    transactionItems: await db.transactionItems.toArray(),
-    storeSettings: await db.storeSettings.toArray(),
-    users: await db.users.toArray(),
-    units: await db.units.toArray(),
-    expenseCategories: await db.expenseCategories.toArray(),
-    expenses: await db.expenses.toArray(),
-    debts: await db.debts.toArray(),
-    debtPayments: await db.debtPayments.toArray(),
-    stockOpnames: await db.stockOpnames.toArray(),
-    stockOpnameItems: await db.stockOpnameItems.toArray(),
-    deletedRecords: await db.deletedRecords.toArray(),
-    cashierShifts: await db.cashierShifts.toArray(),
+    categories: await target.categories.toArray(),
+    products: await target.products.toArray(),
+    suppliers: await target.suppliers.toArray(),
+    customers: await target.customers.toArray(),
+    stockIns: await target.stockIns.toArray(),
+    stockOuts: await target.stockOuts.toArray(),
+    hppHistory: await target.hppHistory.toArray(),
+    paymentMethods: await target.paymentMethods.toArray(),
+    transactions: await target.transactions.toArray(),
+    transactionItems: await target.transactionItems.toArray(),
+    storeSettings: await target.storeSettings.toArray(),
+    users: await target.users.toArray(),
+    units: await target.units.toArray(),
+    expenseCategories: await target.expenseCategories.toArray(),
+    expenses: await target.expenses.toArray(),
+    debts: await target.debts.toArray(),
+    debtPayments: await target.debtPayments.toArray(),
+    stockOpnames: await target.stockOpnames.toArray(),
+    stockOpnameItems: await target.stockOpnameItems.toArray(),
+    deletedRecords: await target.deletedRecords.toArray(),
+    cashierShifts: await target.cashierShifts.toArray(),
   };
 }
 

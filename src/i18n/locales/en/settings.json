@@ -1030,6 +1030,36 @@
     "restoreSuccess": "Data restored successfully!",
     "readError": "Failed to read file"
   },
+  "localAutoBackup": {
+    "title": "Auto Backup (Local)",
+    "description": "Data snapshots are saved automatically on this device, no internet needed. Protects data from corruption or wrong restores.",
+    "intervalLabel": "Schedule",
+    "interval": {
+      "off": "Off",
+      "hourly": "Every 1 hour",
+      "daily": "Daily"
+    },
+    "backupNow": "Create snapshot now",
+    "lastBackup": "Last snapshot: {{time}}",
+    "never": "Never",
+    "snapshotsTitle": "Saved snapshots",
+    "empty": "No snapshots yet. Auto-backup creates them automatically, or tap the button above.",
+    "restore": "Restore",
+    "delete": "Delete",
+    "restoreConfirm": "Restoring this snapshot will overwrite current data. Continue?",
+    "deleteConfirm": "Delete this snapshot?",
+    "note": "Local snapshots protect against data corruption. On Android, physical backup files are also written automatically to the Profitku-backups folder. Clearing browser/phone data will remove the snapshots inside.",
+    "toast": {
+      "saved": "Local snapshot saved",
+      "restored": "Snapshot restored",
+      "deleted": "Snapshot deleted",
+      "restoreFailed": "Failed to restore snapshot",
+      "saveFailed": "Failed to create snapshot",
+      "off": "Local auto backup turned off",
+      "hourly": "Local auto backup every 1 hour",
+      "daily": "Local auto backup daily"
+    }
+  },
   "expenseCategory": {
     "locked": {
       "title": "Expense Categories",

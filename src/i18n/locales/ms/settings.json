@@ -613,6 +613,36 @@
     "restoreSuccess": "Data berjaya di-restore!",
     "readError": "Gagal membaca fail"
   },
+  "localAutoBackup": {
+    "title": "Backup Automatik (Lokal)",
+    "description": "Snapshot data disimpan automatik pada peranti ini, tanpa internet. Melindungi data daripada rosak atau restore yang salah.",
+    "intervalLabel": "Jadual",
+    "interval": {
+      "off": "Nonaktif",
+      "hourly": "Setiap 1 jam",
+      "daily": "Harian"
+    },
+    "backupNow": "Buat snapshot sekarang",
+    "lastBackup": "Snapshot terakhir: {{time}}",
+    "never": "Belum pernah",
+    "snapshotsTitle": "Snapshot tersimpan",
+    "empty": "Belum ada snapshot. Auto-backup akan buat secara automatik, atau sentuh butang di atas.",
+    "restore": "Restore",
+    "delete": "Hapus",
+    "restoreConfirm": "Restore snapshot ini akan menimpa data semasa. Teruskan?",
+    "deleteConfirm": "Hapus snapshot ini?",
+    "note": "Snapshot lokal melindungi daripada kerosakan data. Pada Android, fail backup fizikal juga ditulis automatik ke folder Profitku-backups. Memadam data penyemak imbas/telefon akan memadam snapshot di dalamnya.",
+    "toast": {
+      "saved": "Snapshot lokal disimpan",
+      "restored": "Snapshot berjaya dipulihkan",
+      "deleted": "Snapshot dihapus",
+      "restoreFailed": "Gagal memulihkan snapshot",
+      "saveFailed": "Gagal membuat snapshot",
+      "off": "Backup automatik lokal dimatikan",
+      "hourly": "Backup automatik lokal setiap 1 jam",
+      "daily": "Backup automatik lokal harian"
+    }
+  },
   "expenseCategory": {
     "locked": {
       "title": "Kategori Perbelanjaan",

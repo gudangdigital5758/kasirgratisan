@@ -5,7 +5,7 @@
 
 ## Ringkasan
 
-Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perangkat (IndexedDB). Cloud opsional untuk backup dan auto-backup, langganan, serta notifikasi; sinkronisasi data antar-perangkat belum tersedia.
+Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perangkat (IndexedDB). Cloud opsional untuk backup dan auto-backup, langganan, serta notifikasi; sinkronisasi data antar-perangkat tersedia untuk toko cloud (sync M0–M4).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -34,10 +34,12 @@ Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perang
 | `src/pages/*` | UI fitur (kasir, produk, laporan, settings) |
 | `src/lib/db.ts` | Schema Dexie, migrasi lokal, hooks sync dirty |
 | `src/lib/backup.ts` | Export/import JSON lokal (+ shared cloud payload) |
+| `src/lib/local-backup.ts` | Snapshot backup lokal otomatis (IndexedDB) + export file fisik Android |
+| `src/lib/change-counter.ts` | Counter perubahan data (deteksi dirty snapshot lokal) |
 | `src/lib/cloud-api.ts` | Client thin ke Worker |
 | `src/lib/cloud-auth.ts` + `supabase-client.ts` | Sesi cloud (Supabase Auth) |
 | `src/lib/brand.ts` | Nama, domain, harga paket, flag Play |
-| `src/lib/sync.ts` | Guard sync lintas perangkat (dinonaktifkan sampai push/pull/conflict siap) |
+| `src/lib/sync.ts` | Guard sync lintas perangkat (push/pull LWW + tombstone) |
 | `src/i18n/` | id / en / ms |
 | `workers/api/` | API edge production (`/api/*` user, `/admin/api/*` staff) |
 | `admin/` | Ops SPA → `dashboard.profitku.my.id` (bukan POS) |
@@ -59,6 +61,7 @@ Profitku adalah **POS offline-first** untuk UMKM. Data transaksi hidup di perang
 2. User unduh JSON atau restore lewat UI Settings.
 3. Restore: snapshot → clear → bulkAdd → `sanitizeDatabaseDates` → rollback jika gagal.
 4. `cloudStoreId` di-null-kan setelah restore (device-specific).
+5. **Auto-backup lokal (OFFLINE-BACKUP M0–M2):** snapshot otomatis ke tabel `localBackups` (default tiap 1 jam saat app dibuka/dibuka terus; hanya saat ada perubahan via `change-counter`; rolling maks 5). Di Android, snapshot juga ditulis sebagai file fisik ke `Documents/Profitku-backups` (rolling 5). Restore dari snapshot tersedia di UI Settings → Backup. Default aktif untuk user awam.
 
 ### Backup cloud
 

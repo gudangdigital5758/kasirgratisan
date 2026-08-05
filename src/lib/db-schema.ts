@@ -357,6 +357,19 @@ export interface SyncMeta {
   lastSyncAt: Date | null;
 }
 
+/** Snapshot backup lokal otomatis (OFFLINE-BACKUP M0) — disimpan di IndexedDB. */
+export interface LocalBackup {
+  id?: number;
+  createdAt: Date;
+  /** Seluruh isi DB sebagai JSON string (buildBackupData). */
+  data: string;
+  sizeBytes: number;
+  /** Total baris seluruh tabel saat snapshot (info + deteksi perubahan). */
+  rowCount?: number;
+  /** Nilai change-counter saat snapshot (OFFLINE-BACKUP M1, deteksi perubahan). */
+  changeCounter?: number;
+}
+
 /** Shift kasir — buka/tutup kas, hitung selisih tunai (v2). */
 export interface CashierShift {
   id?: number;
@@ -404,6 +417,9 @@ export interface StoreSettings {
   cloudAutoBackupInterval?: 'off' | 'hourly' | 'daily' | 'weekly'; // auto cloud backup cadence (default off)
   cloudAutoBackupHours?: number; // interval jam bila cloudAutoBackupInterval === 'hourly'
   lastCloudBackupAt?: Date | null; // last successful upload to cloud
+  /** Auto-backup lokal (OFFLINE-BACKUP M0): snapshot otomatis di IndexedDB. Default 'hourly' (on). */
+  localAutoBackup?: 'off' | 'hourly' | 'daily';
+  lastLocalBackupAt?: Date | null; // last successful local snapshot
   allowDebt?: boolean; // opt-in pembayaran sebagian/seluruhnya sebagai hutang
   cloudStoreId?: string | null; // cloud store ID yang di-bind ke device ini untuk sync
   printLogo?: boolean; // toggle to print store logo on ESC/POS receipt

@@ -1030,6 +1030,36 @@
     "restoreSuccess": "Data berhasil di-restore!",
     "readError": "Gagal membaca file"
   },
+  "localAutoBackup": {
+    "title": "Backup Otomatis (Lokal)",
+    "description": "Snapshot data disimpan otomatis di perangkat ini, tanpa internet. Melindungi data dari kerusakan atau restore yang salah.",
+    "intervalLabel": "Jadwal",
+    "interval": {
+      "off": "Nonaktif",
+      "hourly": "Setiap 1 jam",
+      "daily": "Harian"
+    },
+    "backupNow": "Buat snapshot sekarang",
+    "lastBackup": "Terakhir snapshot: {{time}}",
+    "never": "Belum pernah",
+    "snapshotsTitle": "Snapshot tersimpan",
+    "empty": "Belum ada snapshot. Auto-backup membuatnya otomatis, atau sentuh tombol di atas.",
+    "restore": "Restore",
+    "delete": "Hapus",
+    "restoreConfirm": "Restore snapshot ini akan menimpa data saat ini. Lanjutkan?",
+    "deleteConfirm": "Hapus snapshot ini?",
+    "note": "Snapshot lokal melindungi dari kerusakan data. Di Android, file backup fisik juga ditulis otomatis ke folder Profitku-backups. Menghapus data browser/HP akan menghapus snapshot di dalamnya.",
+    "toast": {
+      "saved": "Snapshot lokal tersimpan",
+      "restored": "Snapshot berhasil dipulihkan",
+      "deleted": "Snapshot dihapus",
+      "restoreFailed": "Gagal memulihkan snapshot",
+      "saveFailed": "Gagal membuat snapshot",
+      "off": "Backup otomatis lokal dimatikan",
+      "hourly": "Backup otomatis lokal setiap 1 jam",
+      "daily": "Backup otomatis lokal harian"
+    }
+  },
   "expenseCategory": {
     "locked": {
       "title": "Kategori Pengeluaran",
