@@ -65,7 +65,7 @@ export default function MembersPage() {
               {members.map((m) => (
                 <tr key={m.id}>
                   <td>
-                    <Link to={`/members/${m.id}`} style={{ fontWeight: 600, color: '#0060E0' }}>
+                    <Link to={`/members/${m.id}`} style={{ fontWeight: 600, color: '#0067FD' }}>
                       {m.name || '—'}
                     </Link>
                     <div className="muted">{m.email}</div>

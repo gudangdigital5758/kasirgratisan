@@ -1,14 +1,16 @@
 /**
  * Render logo Profitku — satu sumber untuk semua aset.
  *
- * Varian 1 (mark / app icon): SVG bersih — lingkaran biru + terminal POS + grafik naik,
- *   TANPA teks, safe-zone maskable 80%. Dipakai di favicon, PWA, Android launcher.
+ * Sumber: `Profitku Logo.png` (PNG asli user) — scanner/printer biru flat + kertas
+ * di lingkaran putih + badge centang. Background hitam di luar lingkaran
+ * di-flood-fill jadi transparan.
  *
- * Varian 2 (lockup): PNG asli user (`Profitku Logo.png`) — background hitam di luar
- *   lingkaran di-flood-fill jadi transparan (teks di dalam lingkaran dipertahankan).
- *   Dipakai di header-icon (Onboarding), OG image, header dashboard/market.
+ * Logo ini SATU-SATUNYA identitas (sederhana, tanpa wordmark):
+ * - App icon (favicon/PWA/Android legacy): mark komposit di atas background
+ *   biru rounded-square #0067FD (full-bleed, safe-zone maskable).
+ * - header-icon / OG / cloud lockup: mark transparan (lingkaran putih).
  *
- * Warna brand: biru #0060E0 (dari logo).
+ * Warna brand: biru #0067FD (dari logo).
  */
 import sharp from 'sharp';
 import fs from 'node:fs';
@@ -21,66 +23,10 @@ const RES = path.join(ROOT, 'resources');
 const TMP = path.join(ROOT, 'scripts', '.logo-tmp');
 const ANDROID_RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
 
-const BRAND = '#0060E0'; // biru utama dari logo
-const BRAND_DARK = '#004FC8';
+const BRAND = '#0067FD'; // biru utama dari logo
+const BRAND_DARK = '#0052C9';
 
 fs.mkdirSync(TMP, { recursive: true });
-
-// ─────────────────────────────────────────────────────────────
-// Varian 1 — SVG mark (512 viewBox, safe-zone 80%)
-// ─────────────────────────────────────────────────────────────
-const SVG_MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1E7CF0"/>
-      <stop offset="1" stop-color="${BRAND_DARK}"/>
-    </linearGradient>
-  </defs>
-  <!-- background rounded-square -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- receipt sticking out top -->
-  <rect x="252" y="118" width="76" height="110" rx="10" fill="#FFFFFF"/>
-  <rect x="266" y="136" width="48" height="8" rx="4" fill="#9CC3F5"/>
-  <rect x="266" y="154" width="40" height="8" rx="4" fill="#9CC3F5"/>
-  <rect x="266" y="172" width="48" height="8" rx="4" fill="#9CC3F5"/>
-  <rect x="266" y="190" width="30" height="8" rx="4" fill="#9CC3F5"/>
-  <!-- terminal body -->
-  <rect x="132" y="176" width="248" height="196" rx="20" fill="#FFFFFF"/>
-  <!-- screen -->
-  <rect x="152" y="196" width="208" height="140" rx="12" fill="#EAF2FF"/>
-  <rect x="168" y="212" width="60" height="10" rx="5" fill="#9CC3F5"/>
-  <rect x="168" y="240" width="176" height="10" rx="5" fill="#C7DCFC"/>
-  <rect x="168" y="266" width="150" height="10" rx="5" fill="#C7DCFC"/>
-  <rect x="168" y="292" width="164" height="10" rx="5" fill="#C7DCFC"/>
-  <!-- total bar -->
-  <rect x="168" y="318" width="176" height="10" rx="5" fill="${BRAND}"/>
-  <!-- trend badge overlapping left of terminal -->
-  <circle cx="168" cy="172" r="62" fill="#FFFFFF"/>
-  <path d="M140 188 L166 160 L186 180 L212 148" stroke="${BRAND}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <circle cx="212" cy="148" r="7" fill="${BRAND}"/>
-</svg>`;
-
-// Varian 1 foreground (untuk adaptive icon Android) — mark putih tanpa bg,
-// posisi center, skala ~70%.
-const SVG_FOREGROUND = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <g transform="translate(256 256) scale(0.62) translate(-256 -256)">
-    <rect x="252" y="118" width="76" height="110" rx="10" fill="#FFFFFF"/>
-    <rect x="266" y="136" width="48" height="8" rx="4" fill="#BFD6FF"/>
-    <rect x="266" y="154" width="40" height="8" rx="4" fill="#BFD6FF"/>
-    <rect x="266" y="172" width="48" height="8" rx="4" fill="#BFD6FF"/>
-    <rect x="266" y="190" width="30" height="8" rx="4" fill="#BFD6FF"/>
-    <rect x="132" y="176" width="248" height="196" rx="20" fill="#FFFFFF"/>
-    <rect x="152" y="196" width="208" height="140" rx="12" fill="#4A90E8"/>
-    <rect x="168" y="212" width="60" height="10" rx="5" fill="#BFD6FF"/>
-    <rect x="168" y="240" width="176" height="10" rx="5" fill="#BFD6FF"/>
-    <rect x="168" y="266" width="150" height="10" rx="5" fill="#BFD6FF"/>
-    <rect x="168" y="292" width="164" height="10" rx="5" fill="#BFD6FF"/>
-    <rect x="168" y="318" width="176" height="10" rx="5" fill="#FFFFFF"/>
-    <circle cx="168" cy="172" r="62" fill="#FFFFFF"/>
-    <path d="M140 188 L166 160 L186 180 L212 148" stroke="#4A90E8" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <circle cx="212" cy="148" r="7" fill="#4A90E8"/>
-  </g>
-</svg>`;
 
 // ─────────────────────────────────────────────────────────────
 // Flood fill: hapus background hitam di luar lingkaran (transparan)
@@ -161,16 +107,25 @@ function writeIco(entries, outPath) {
 // Main
 // ─────────────────────────────────────────────────────────────
 async function main() {
-  // 1. render mark SVG ke 1024 (master)
-  const masterPath = path.join(TMP, 'mark-1024.png');
-  await sharp(Buffer.from(SVG_MARK)).resize(1024, 1024).png().toFile(masterPath);
+  // 1. flood fill sumber → mark transparan (lingkaran putih + printer + badge)
+  const markPath = path.join(TMP, 'mark-transparent.png');
+  await floodFillTransparent(SRC, markPath);
+  const mark = sharp(markPath);
 
-  // 2. flood fill lockup asli → transparan
-  const lockupPath = path.join(TMP, 'lockup-transparent.png');
-  await floodFillTransparent(SRC, lockupPath);
-  const lockup = sharp(lockupPath);
+  // 2. app icon master: mark di atas bg biru rounded-square (512, full-bleed)
+  const appSvg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E7CF0"/><stop offset="1" stop-color="${BRAND_DARK}"/>
+    </linearGradient></defs>
+    <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  </svg>`;
+  const mark512 = await mark.clone().resize(452, 452).png().toBuffer();
+  const appMasterPath = path.join(TMP, 'appicon-512.png');
+  await sharp(Buffer.from(appSvg))
+    .composite([{ input: mark512, left: Math.round((512 - 452) / 2), top: Math.round((512 - 452) / 2) }])
+    .png().toFile(appMasterPath);
 
-  // ── PWA / web assets (dari mark) ──
+  // ── PWA / web assets (dari app icon) ──
   const sizes = [
     ['favicon-16x16.png', 16],
     ['favicon-32x32.png', 32],
@@ -180,18 +135,18 @@ async function main() {
     ['kasirgratisan-icon.png', 512],
   ];
   for (const [name, size] of sizes) {
-    await sharp(masterPath).resize(size, size).png().toFile(path.join(PUB, name));
+    await sharp(appMasterPath).resize(size, size).png().toFile(path.join(PUB, name));
   }
 
   // favicon.ico (16 + 32)
-  const png16 = await sharp(masterPath).resize(16, 16).png().toBuffer();
-  const png32 = await sharp(masterPath).resize(32, 32).png().toBuffer();
+  const png16 = await sharp(appMasterPath).resize(16, 16).png().toBuffer();
+  const png32 = await sharp(appMasterPath).resize(32, 32).png().toBuffer();
   writeIco([{ png: png16, size: 16 }, { png: png32, size: 32 }], path.join(PUB, 'favicon.ico'));
 
-  // ── Lockup: header-icon (Onboarding) ──
-  await lockup.clone().resize(256, 256).png().toFile(path.join(PUB, 'header-icon.png'));
+  // ── header-icon (Onboarding): mark transparan ──
+  await mark.clone().resize(256, 256).png().toFile(path.join(PUB, 'header-icon.png'));
 
-  // ── Lockup: OG image 1200x630 ──
+  // ── OG image 1200x630 ──
   const ogSvg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
     <defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#FFFFFF"/>
@@ -199,39 +154,43 @@ async function main() {
     <rect width="1200" height="630" fill="url(#og)"/>
     <text x="600" y="584" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="${BRAND}" text-anchor="middle">profitku.my.id — Kasir POS Gratis untuk UMKM</text>
   </svg>`;
-  const lockupBuf = await lockup.clone().resize(420, 420).png().toBuffer();
+  const markOg = await mark.clone().resize(420, 420).png().toBuffer();
   await sharp(Buffer.from(ogSvg))
-    .composite([{ input: lockupBuf, left: Math.round((1200 - 420) / 2), top: 70 }])
+    .composite([{ input: markOg, left: Math.round((1200 - 420) / 2), top: 70 }])
     .png().toFile(path.join(PUB, 'og-image.png'));
 
-  // ── Lockup transparan untuk cloud apps (dashboard/market header) ──
-  await lockup.clone().resize(256, 256).png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
+  // ── lockup transparan untuk cloud apps ──
+  await mark.clone().resize(256, 256).png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
 
-  // ── Android: legacy icon + round (mark) ──
+  // ── Android: legacy icon + round (app icon biru) ──
   const dens = [
     ['ldpi', 36], ['mdpi', 48], ['hdpi', 72], ['xhdpi', 96], ['xxhdpi', 144], ['xxxhdpi', 192],
   ];
   for (const [d, size] of dens) {
     const dir = path.join(ANDROID_RES, `mipmap-${d}`);
-    await sharp(masterPath).resize(size, size).png().toFile(path.join(dir, 'ic_launcher.png'));
-    await sharp(masterPath).resize(size, size).png().toFile(path.join(dir, 'ic_launcher_round.png'));
+    await sharp(appMasterPath).resize(size, size).png().toFile(path.join(dir, 'ic_launcher.png'));
+    await sharp(appMasterPath).resize(size, size).png().toFile(path.join(dir, 'ic_launcher_round.png'));
   }
 
-  // ── Android: adaptive foreground (mark putih) + background (biru) ──
+  // ── Android: adaptive foreground (mark transparan) + background (biru) ──
   const fgDens = [
     ['ldpi', 81], ['mdpi', 108], ['hdpi', 162], ['xhdpi', 216], ['xxhdpi', 324], ['xxxhdpi', 432],
   ];
-  const fgMaster = await sharp(Buffer.from(SVG_FOREGROUND)).resize(432, 432).png().toBuffer();
+  const fgMaster = await mark.clone().resize(268, 268).png().toBuffer(); // 62% dari 432
   for (const [d, size] of fgDens) {
     const dir = path.join(ANDROID_RES, `mipmap-${d}`);
-    await sharp(fgMaster).resize(size, size).png().toFile(path.join(dir, 'ic_launcher_foreground.png'));
-    // background: solid biru
+    const scale = size / 432;
+    const fgSize = Math.round(268 * scale);
+    const fg = await sharp(fgMaster).resize(fgSize, fgSize).png().toBuffer();
+    await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: fg, left: Math.round((size - fgSize) / 2), top: Math.round((size - fgSize) / 2) }])
+      .png().toFile(path.join(dir, 'ic_launcher_foreground.png'));
     await sharp({ create: { width: size, height: size, channels: 3, background: BRAND } })
       .png().toFile(path.join(dir, 'ic_launcher_background.png'));
   }
 
   // ── resources/icon.png (sumber capacitor) ──
-  await sharp(masterPath).resize(1024, 1024).png().toFile(path.join(RES, 'icon.png'));
+  await sharp(appMasterPath).resize(1024, 1024).png().toFile(path.join(RES, 'icon.png'));
 
   console.log('DONE: semua aset logo dirender.');
 }
