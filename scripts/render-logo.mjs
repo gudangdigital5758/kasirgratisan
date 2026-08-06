@@ -112,18 +112,10 @@ async function main() {
   await floodFillTransparent(SRC, markPath);
   const mark = sharp(markPath);
 
-  // 2. app icon master: mark di atas bg biru rounded-square (512, full-bleed)
-  const appSvg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1E7CF0"/><stop offset="1" stop-color="${BRAND_DARK}"/>
-    </linearGradient></defs>
-    <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  </svg>`;
-  const mark512 = await mark.clone().resize(452, 452).png().toBuffer();
+  // 2. app icon master: mark (lingkaran putih) langsung isi canvas — TANPA bg biru,
+  //    logo terlihat lebih besar, tidak ada ring biru di sekeliling.
   const appMasterPath = path.join(TMP, 'appicon-512.png');
-  await sharp(Buffer.from(appSvg))
-    .composite([{ input: mark512, left: Math.round((512 - 452) / 2), top: Math.round((512 - 452) / 2) }])
-    .png().toFile(appMasterPath);
+  await mark.clone().resize(512, 512).png().toFile(appMasterPath);
 
   // ── PWA / web assets (dari app icon) ──
   const sizes = [
@@ -172,20 +164,21 @@ async function main() {
     await sharp(appMasterPath).resize(size, size).png().toFile(path.join(dir, 'ic_launcher_round.png'));
   }
 
-  // ── Android: adaptive foreground (mark transparan) + background (biru) ──
+  // ── Android: adaptive foreground (mark transparan, besar) + background putih ──
   const fgDens = [
     ['ldpi', 81], ['mdpi', 108], ['hdpi', 162], ['xhdpi', 216], ['xxhdpi', 324], ['xxxhdpi', 432],
   ];
-  const fgMaster = await mark.clone().resize(268, 268).png().toBuffer(); // 62% dari 432
+  const fgMaster = await mark.clone().resize(300, 300).png().toBuffer(); // ~69% dari 432 (safe zone)
   for (const [d, size] of fgDens) {
     const dir = path.join(ANDROID_RES, `mipmap-${d}`);
     const scale = size / 432;
-    const fgSize = Math.round(268 * scale);
+    const fgSize = Math.round(300 * scale);
     const fg = await sharp(fgMaster).resize(fgSize, fgSize).png().toBuffer();
     await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: fg, left: Math.round((size - fgSize) / 2), top: Math.round((size - fgSize) / 2) }])
       .png().toFile(path.join(dir, 'ic_launcher_foreground.png'));
-    await sharp({ create: { width: size, height: size, channels: 3, background: BRAND } })
+    // background putih supaya tidak ada ring biru (lingkaran logo menyatu)
+    await sharp({ create: { width: size, height: size, channels: 3, background: '#FFFFFF' } })
       .png().toFile(path.join(dir, 'ic_launcher_background.png'));
   }
 
