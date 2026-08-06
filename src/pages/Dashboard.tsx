@@ -140,6 +140,10 @@ export default function Dashboard() {
     <div className="px-4 pt-6 space-y-5">
       {/* Header */}
       <div>
+        <div className="flex items-center gap-2 mb-1">
+          <img src="/header-icon.png" alt="Profitku" className="w-6 h-6 rounded-full object-cover bg-white" />
+          <span className="text-[11px] font-semibold text-primary tracking-wide uppercase">Profitku</span>
+        </div>
         <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, d MMMM yyyy', { locale: dateLocale })}</p>
         <h1 className="text-2xl font-bold tracking-tight">{storeSettings?.storeName || t('title.storeNameFallback')}</h1>
       </div>

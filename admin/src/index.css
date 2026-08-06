@@ -3,8 +3,8 @@
   line-height: 1.45;
   color: #0f172a;
   background: #f1f5f9;
-  --primary: #ea580c;
-  --primary-soft: #ffedd5;
+  --primary: #0060E0;
+  --primary-soft: #dbeafe;
   --border: #e2e8f0;
   --muted: #64748b;
   --card: #ffffff;
@@ -54,6 +54,21 @@ textarea {
   color: #e2e8f0;
   padding: 1.25rem 1rem;
   border-right: 1px solid #1e293b;
+}
+
+.brand-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.5rem;
+}
+.brand-head .brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .sidebar h1 {

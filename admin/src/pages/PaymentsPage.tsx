@@ -37,7 +37,7 @@ export default function PaymentsPage() {
               <tr key={p.id}>
                 <td className="muted">{new Date(p.created_at).toLocaleString('id-ID')}</td>
                 <td>
-                  <Link to={`/members/${p.user_id}`} style={{ color: '#ea580c' }}>
+                  <Link to={`/members/${p.user_id}`} style={{ color: '#0060E0' }}>
                     {p.user_id.slice(0, 8)}…
                   </Link>
                 </td>

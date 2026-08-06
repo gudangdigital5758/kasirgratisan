@@ -16,7 +16,10 @@ export default function Shell() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <h1>Profitku Admin</h1>
+        <div className="brand-head">
+          <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" />
+          <h1>Profitku Admin</h1>
+        </div>
         <p className="sub">
           {me?.email}
           <br />

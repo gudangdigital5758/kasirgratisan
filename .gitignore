@@ -53,3 +53,7 @@ keystore.properties
 # Knowledge base files (do not commit)
 Knowledge/
 knowledge/
+
+# Logo render temp (working dir, not committed)
+scripts/.logo-tmp/
+file.png

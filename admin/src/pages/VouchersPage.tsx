@@ -342,7 +342,7 @@ export default function VouchersPage() {
                   <tr key={r.id}>
                     <td className="muted">{new Date(r.redeemed_at).toLocaleString('id-ID')}</td>
                     <td>
-                      <a href={`/members/${r.user_id}`} style={{ color: '#ea580c' }}>
+                      <a href={`/members/${r.user_id}`} style={{ color: '#0060E0' }}>
                         {r.user_id.slice(0, 8)}…
                       </a>
                     </td>

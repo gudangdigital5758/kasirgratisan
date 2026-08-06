@@ -18,7 +18,10 @@ export default function LoginPage() {
     <div className="login-wrap">
       <div className="card login-card stack">
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Profitku Admin</h1>
+          <div className="row" style={{ gap: 10, marginBottom: 8 }}>
+            <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" style={{ width: 40, height: 40, borderRadius: '50%', background: '#fff', objectFit: 'cover' }} />
+            <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Profitku Admin</h1>
+          </div>
           <p className="muted" style={{ margin: '0.35rem 0 0' }}>
             Ops console — members, langganan, events. Bukan app kasir.
           </p>
