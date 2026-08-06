@@ -107,20 +107,16 @@ function writeIco(entries, outPath) {
 // Main
 // ─────────────────────────────────────────────────────────────
 async function main() {
-  // 1. flood fill sumber → mark transparan (lingkaran putih + printer + badge)
-  const markPath = path.join(TMP, 'mark-transparent.png');
-  await floodFillTransparent(SRC, markPath);
-
-  // 2. buang lingkaran putih: piksel terang (lingkaran) → transparan, sisakan
-  //    hanya elemen logo (printer biru + badge centang) tanpa bentuk lingkaran.
+  // 1. sumber (background putih penuh) → buang piksel putih, sisakan elemen logo
+  //    (printer biru + badge centang) di atas transparan — tanpa lingkaran/background.
   const noCirclePath = path.join(TMP, 'mark-nocircle.png');
-  const { data, info } = await sharp(markPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(SRC).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width, height, channels } = info;
   const buf = Buffer.from(data);
   for (let i = 0; i < buf.length; i += channels) {
     const a = buf[i + 3];
     const r = buf[i], g = buf[i + 1], b = buf[i + 2];
-    // threshold: piksel sangat terang (lingkaran putih) → transparan
+    // threshold: piksel sangat terang (background putih) → transparan
     if (a > 0 && r > 235 && g > 235 && b > 235) buf[i + 3] = 0;
   }
   await sharp(buf, { raw: { width, height, channels } }).png().toFile(noCirclePath);
@@ -129,7 +125,7 @@ async function main() {
   const noCircleMeta = await noCircle.metadata();
   const ncW = noCircleMeta.width, ncH = noCircleMeta.height;
 
-  // 3. app icon master: elemen logo (tanpa lingkaran) di atas background PUTIH penuh
+  // 2. app icon master: elemen logo (tanpa lingkaran) di atas background PUTIH penuh
   const appMasterPath = path.join(TMP, 'appicon-512.png');
   const targetSize = 368; // ~72% dari 512
   const scale = Math.min(targetSize / ncW, targetSize / ncH);
