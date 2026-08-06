@@ -110,14 +110,33 @@ async function main() {
   // 1. flood fill sumber → mark transparan (lingkaran putih + printer + badge)
   const markPath = path.join(TMP, 'mark-transparent.png');
   await floodFillTransparent(SRC, markPath);
-  const mark = sharp(markPath);
 
-  // 2. app icon master: mark di atas background PUTIH penuh (opaque, tanpa pojok
-  //    transparan) — semua area di sekitar logo putih, tidak ada hitam saat splash.
+  // 2. buang lingkaran putih: piksel terang (lingkaran) → transparan, sisakan
+  //    hanya elemen logo (printer biru + badge centang) tanpa bentuk lingkaran.
+  const noCirclePath = path.join(TMP, 'mark-nocircle.png');
+  const { data, info } = await sharp(markPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  const buf = Buffer.from(data);
+  for (let i = 0; i < buf.length; i += channels) {
+    const a = buf[i + 3];
+    const r = buf[i], g = buf[i + 1], b = buf[i + 2];
+    // threshold: piksel sangat terang (lingkaran putih) → transparan
+    if (a > 0 && r > 235 && g > 235 && b > 235) buf[i + 3] = 0;
+  }
+  await sharp(buf, { raw: { width, height, channels } }).png().toFile(noCirclePath);
+  // crop ke bounding box elemen logo
+  const noCircle = sharp(noCirclePath).trim();
+  const noCircleMeta = await noCircle.metadata();
+  const ncW = noCircleMeta.width, ncH = noCircleMeta.height;
+
+  // 3. app icon master: elemen logo (tanpa lingkaran) di atas background PUTIH penuh
   const appMasterPath = path.join(TMP, 'appicon-512.png');
-  const mark512 = await mark.clone().resize(486, 486).png().toBuffer();
+  const targetSize = 368; // ~72% dari 512
+  const scale = Math.min(targetSize / ncW, targetSize / ncH);
+  const rw = Math.round(ncW * scale), rh = Math.round(ncH * scale);
+  const noCircleResized = await noCircle.clone().resize(rw, rh).png().toBuffer();
   await sharp({ create: { width: 512, height: 512, channels: 3, background: '#FFFFFF' } })
-    .composite([{ input: mark512, left: Math.round((512 - 486) / 2), top: Math.round((512 - 486) / 2) }])
+    .composite([{ input: noCircleResized, left: Math.round((512 - rw) / 2), top: Math.round((512 - rh) / 2) }])
     .png().toFile(appMasterPath);
 
   // ── PWA / web assets (dari app icon) ──
@@ -138,8 +157,8 @@ async function main() {
   const png32 = await sharp(appMasterPath).resize(32, 32).png().toBuffer();
   writeIco([{ png: png16, size: 16 }, { png: png32, size: 32 }], path.join(PUB, 'favicon.ico'));
 
-  // ── header-icon (Onboarding): mark transparan ──
-  await mark.clone().resize(256, 256).png().toFile(path.join(PUB, 'header-icon.png'));
+  // ── header-icon (Onboarding): elemen logo tanpa lingkaran, transparan ──
+  await noCircle.clone().resize(256, 256).png().toFile(path.join(PUB, 'header-icon.png'));
 
   // ── OG image 1200x630 ──
   const ogSvg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
@@ -149,13 +168,13 @@ async function main() {
     <rect width="1200" height="630" fill="url(#og)"/>
     <text x="600" y="584" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="${BRAND}" text-anchor="middle">profitku.my.id — Kasir POS Gratis untuk UMKM</text>
   </svg>`;
-  const markOg = await mark.clone().resize(420, 420).png().toBuffer();
+  const markOg = await noCircle.clone().resize(300, 300).png().toBuffer();
   await sharp(Buffer.from(ogSvg))
-    .composite([{ input: markOg, left: Math.round((1200 - 420) / 2), top: 70 }])
+    .composite([{ input: markOg, left: Math.round((1200 - 300) / 2), top: 130 }])
     .png().toFile(path.join(PUB, 'og-image.png'));
 
-  // ── lockup transparan untuk cloud apps ──
-  await mark.clone().resize(256, 256).png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
+  // ── lockup transparan untuk cloud apps (elemen logo tanpa lingkaran) ──
+  await noCircle.clone().resize(256, 256).png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
 
   // ── Android: legacy icon + round (app icon biru) ──
   const dens = [
@@ -171,7 +190,7 @@ async function main() {
   const fgDens = [
     ['ldpi', 81], ['mdpi', 108], ['hdpi', 162], ['xhdpi', 216], ['xxhdpi', 324], ['xxxhdpi', 432],
   ];
-  const fgMaster = await mark.clone().resize(300, 300).png().toBuffer(); // ~69% dari 432 (safe zone)
+  const fgMaster = await noCircle.clone().resize(300, 300).png().toBuffer(); // ~69% dari 432 (safe zone)
   for (const [d, size] of fgDens) {
     const dir = path.join(ANDROID_RES, `mipmap-${d}`);
     const scale = size / 432;
