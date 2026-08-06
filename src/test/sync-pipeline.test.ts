@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '@/lib/db';
-import { applyPull, toIso } from '@/lib/sync';
+import { applyPull, countPendingChanges, getSyncStatus, toIso } from '@/lib/sync';
 import type { SyncPullResult } from '@/lib/cloud-api';
 
 describe('Sync applyPull (M2) — LWW + tombstone + FK resolve', () => {
@@ -8,12 +8,16 @@ describe('Sync applyPull (M2) — LWW + tombstone + FK resolve', () => {
     await db.products.clear();
     await db.transactions.clear();
     await db.transactionItems.clear();
+    await db.deletedRecords.clear();
+    await db.syncMeta.clear();
   });
 
   afterEach(async () => {
     await db.products.clear();
     await db.transactions.clear();
     await db.transactionItems.clear();
+    await db.deletedRecords.clear();
+    await db.syncMeta.clear();
   });
 
   it('inserts a new record from pull with syncId and server time', async () => {
@@ -106,5 +110,35 @@ describe('Sync applyPull (M2) — LWW + tombstone + FK resolve', () => {
     const item = await db.transactionItems.filter((r) => r.syncId === 'ti-1').first();
     expect(item?.transactionId).toBe(txId as number);
     void toIso;
+  });
+
+  it('applyPull returns conflict count (LWW server wins + tombstone)', async () => {
+    await db.products.add({
+      name: 'Konflik', sku: 'C1', categoryId: 1, price: 100, hpp: 50, stock: 1, unit: 'pcs',
+      syncId: 'p-c1', isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date('2026-08-05T10:00:00.000Z'),
+    });
+    const conflicts = await applyPull({
+      records: [{
+        table: 'products', syncId: 'p-c1', data: { name: 'Versi Server', sku: 'C1', categoryId: 1, price: 200, hpp: 50, stock: 1, unit: 'pcs', isDeleted: 0, deletedAt: null },
+        updatedAt: '2026-08-05T11:00:00.000Z',
+      }],
+      tombstones: [{ table: 'products', syncId: 'p-c1', deletedAt: '2026-08-05T12:00:00.000Z' }],
+      serverTime: '2026-08-05T12:00:00.000Z',
+    });
+    expect(conflicts).toBe(2);
+  });
+
+  it('countPendingChanges & getSyncStatus mencerminkan dirty state', async () => {
+    await db.products.add({
+      name: 'Dirty', sku: 'D1', categoryId: 1, price: 100, hpp: 50, stock: 1, unit: 'pcs',
+      isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date(),
+    });
+    const pending = await countPendingChanges();
+    expect(pending).toBeGreaterThan(0);
+    const status = await getSyncStatus();
+    expect(status.dirtyCount).toBe(pending);
+    expect(status.lastSyncAt).toBeNull();
+    expect(status.lastSyncError).toBeNull();
+    expect(status.lastConflictCount).toBe(0);
   });
 });

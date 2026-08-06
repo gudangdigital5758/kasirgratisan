@@ -1,9 +1,11 @@
 # Profitku — Desain Sinkronisasi Lintas Perangkat (Phase A)
 
-> Draf teknis untuk review. **Belum diimplementasikan.** Tujuan: membuka
+> **Status: IMPLEMENTED (M0–M4 selesai & ter-deploy).** Phase A membuka
 > `has_sync` (langganan **Rp 25.000/bulan per TOKO**) menjadi sinkronisasi data
-> nyata antar-perangkat, bukan hanya backup. Dokumen ini menentukan keputusan
-> arsitektur sebelum kode.
+> nyata antar-perangkat: push/pull LWW + tombstone (Worker `/api/sync/*`),
+> pipeline client (`src/lib/sync.ts`), gate `SYNC_ENABLED`, observability
+> `platform_events`, dan first-sync otomatis di wizard toko online. Dokumen ini
+> tetap menjadi referensi keputusan arsitektur.
 
 ## 1. Tujuan & lingkup
 

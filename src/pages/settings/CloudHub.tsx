@@ -57,7 +57,7 @@ import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { storeRegistry, getActiveStoreKey } from '@/lib/store-registry';
-import { syncNow } from '@/lib/sync';
+import { syncNow, getSyncStatus } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -92,9 +92,17 @@ export default function CloudHub() {
   const [voucherPreview, setVoucherPreview] = useState<VoucherPreviewResult | null>(null);
   const [voucherBusy, setVoucherBusy] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [lastConflictCount, setLastConflictCount] = useState(0);
+  const [dirtyCount, setDirtyCount] = useState(0);
 
   useEffect(() => {
-    db.syncMeta.get(1).then((m) => setLastSyncAt(m?.lastSyncAt ?? null)).catch(() => {});
+    getSyncStatus().then((s) => {
+      setLastSyncAt(s.lastSyncAt);
+      setLastSyncError(s.lastSyncError);
+      setLastConflictCount(s.lastConflictCount);
+      setDirtyCount(s.dirtyCount);
+    }).catch(() => {});
   }, []);
 
   const handleRealSync = async () => {
@@ -106,8 +114,11 @@ export default function CloudHub() {
       } else {
         toast.error(res.message);
       }
-      const m = await db.syncMeta.get(1);
-      setLastSyncAt(m?.lastSyncAt ?? null);
+      const s = await getSyncStatus();
+      setLastSyncAt(s.lastSyncAt);
+      setLastSyncError(s.lastSyncError);
+      setLastConflictCount(s.lastConflictCount);
+      setDirtyCount(s.dirtyCount);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.syncFailed'));
     } finally {
@@ -625,6 +636,21 @@ export default function CloudHub() {
                     ? t('cloudBackup.realSync.lastSync', { time: lastSyncAt.toLocaleString(numberLocale) })
                     : t('cloudBackup.realSync.never')}
                 </p>
+                {dirtyCount > 0 && (
+                  <p className="text-[10px] text-warning text-center font-medium">
+                    {t('cloudBackup.realSync.dirty', { count: dirtyCount })}
+                  </p>
+                )}
+                {lastConflictCount > 0 && (
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    {t('cloudBackup.realSync.conflicts', { count: lastConflictCount })}
+                  </p>
+                )}
+                {lastSyncError && (
+                  <p className="text-[10px] text-destructive text-center font-medium">
+                    {t('cloudBackup.realSync.error', { message: lastSyncError })}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

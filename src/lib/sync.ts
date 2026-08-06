@@ -121,8 +121,9 @@ async function resolveFk(tableName: string, data: AnyRow, target: PosDatabase = 
   }
 }
 
-/** Terapkan hasil pull (LWW) ke DB lokal. */
-export async function applyPull(result: SyncPullResult, target: PosDatabase = db): Promise<void> {
+/** Terapkan hasil pull (LWW) ke DB lokal. Mengembalikan jumlah konflik LWW. */
+export async function applyPull(result: SyncPullResult, target: PosDatabase = db): Promise<number> {
+  let conflicts = 0;
   for (const rec of result.records) {
     const serverTime = new Date(rec.updatedAt);
     const data = (rec.data ?? {}) as AnyRow;
@@ -139,6 +140,7 @@ export async function applyPull(result: SyncPullResult, target: PosDatabase = db
         updatedAt: serverTime,
         syncedAt: serverTime,
       } as never);
+      conflicts++; // versi server lebih baru → menimpa lokal
     } else {
       await resolveFk(rec.table, data, target);
       await table.add({
@@ -170,11 +172,17 @@ export async function applyPull(result: SyncPullResult, target: PosDatabase = db
     } else {
       await table.delete(existing.id as number);
     }
+    conflicts++;
   }
+  return conflicts;
 }
 
 /** Push data dirty → tandai ack → pull → apply. Return ringkas untuk UI. */
-export async function syncNow(target: PosDatabase = db): Promise<{ ok: boolean; message: string }> {
+export async function syncNow(target: PosDatabase = db): Promise<{
+  ok: boolean;
+  message: string;
+  conflicts?: number;
+}> {
   const settings = await target.storeSettings.toCollection().first();
   const storeId = settings?.cloudStoreId ?? null;
   if (!storeId) return { ok: false, message: 'Hubungkan toko ke cloud terlebih dahulu' };
@@ -185,6 +193,7 @@ export async function syncNow(target: PosDatabase = db): Promise<{ ok: boolean; 
       const pushed = await syncPush(storeId, payload, settings.deviceId);
       await markSynced(payload, pushed.accepted, pushed.serverTime, target);
     } catch (err) {
+      await recordSyncError(target, err);
       return { ok: false, message: err instanceof Error ? err.message : 'Push gagal' };
     }
   }
@@ -193,15 +202,66 @@ export async function syncNow(target: PosDatabase = db): Promise<{ ok: boolean; 
     const meta = await target.syncMeta.get(1);
     const since = meta?.lastPullCursor ?? new Date(0).toISOString();
     const pulled = await syncPull(storeId, since);
-    await applyPull(pulled, target);
-    await target.syncMeta.put({ id: 1, lastPullCursor: pulled.serverTime, lastSyncAt: new Date() });
+    const conflicts = await applyPull(pulled, target);
+    await target.syncMeta.put({
+      id: 1,
+      lastPullCursor: pulled.serverTime,
+      lastSyncAt: new Date(),
+      lastSyncError: null,
+      lastConflictCount: conflicts,
+    });
     return {
       ok: true,
       message: `${pulled.records.length + pulled.tombstones.length} perubahan dari cloud`,
+      conflicts,
     };
   } catch (err) {
+    await recordSyncError(target, err);
     return { ok: false, message: err instanceof Error ? err.message : 'Pull gagal' };
   }
+}
+
+/** Simpan pesan error sync terakhir ke syncMeta (UX: tampil di CloudHub). */
+async function recordSyncError(target: PosDatabase, err: unknown): Promise<void> {
+  try {
+    const meta = await target.syncMeta.get(1);
+    await target.syncMeta.put({
+      ...meta,
+      id: 1,
+      lastSyncError: err instanceof Error ? err.message : String(err),
+    });
+  } catch {
+    /* sinkronisasi meta bukan blocker */
+  }
+}
+
+/** Hitung jumlah record dirty (syncedAt kosong) + tombstone belum terkirim. */
+export async function countPendingChanges(target: PosDatabase = db): Promise<number> {
+  let count = 0;
+  for (const tableName of SYNC_TABLES) {
+    count += await target
+      .table<AnyRow, number>(tableName)
+      .filter((r) => r.syncedAt === null || r.syncedAt === undefined)
+      .count();
+  }
+  count += await target.deletedRecords.filter((r) => r.syncedAt === null && !!r.recordSyncId).count();
+  return count;
+}
+
+/** Status sync ringkas untuk UI (CloudHub). */
+export async function getSyncStatus(target: PosDatabase = db): Promise<{
+  lastSyncAt: Date | null;
+  lastSyncError: string | null;
+  lastConflictCount: number;
+  dirtyCount: number;
+}> {
+  const meta = await target.syncMeta.get(1);
+  return {
+    lastSyncAt: meta?.lastSyncAt ?? null,
+    lastSyncError: meta?.lastSyncError ?? null,
+    lastConflictCount: meta?.lastConflictCount ?? 0,
+    dirtyCount: await countPendingChanges(target),
+  };
 }
 
 /**
@@ -211,4 +271,19 @@ export async function syncNow(target: PosDatabase = db): Promise<{ ok: boolean; 
 export function triggerBackgroundSync(): void {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
   void syncNow().catch((err) => console.warn('[sync] background gagal:', err));
+}
+
+let listenersReady = false;
+
+/**
+ * Daftarkan listener retry: kembali online / app kembali terlihat → coba sync.
+ * Idempotent; aman dipanggil berkali-kali.
+ */
+export function initSyncListeners(): void {
+  if (listenersReady || typeof window === 'undefined') return;
+  listenersReady = true;
+  window.addEventListener('online', () => triggerBackgroundSync());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') triggerBackgroundSync();
+  });
 }

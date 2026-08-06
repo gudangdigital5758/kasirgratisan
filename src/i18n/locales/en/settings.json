@@ -364,7 +364,10 @@
       "title": "Cross-Device Sync",
       "button": "Sync Now",
       "lastSync": "Last data sync: {{time}}",
-      "never": "Cross-device sync never run yet"
+      "never": "Cross-device sync never run yet",
+      "dirty": "{{count}} changes waiting to sync",
+      "conflicts": "{{count}} conflicts resolved (newest version wins)",
+      "error": "Last sync failed: {{message}}"
     },
     "manageFromAnywhere": "Manage store from anywhere",
     "subscription": {

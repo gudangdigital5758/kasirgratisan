@@ -355,6 +355,10 @@ export interface SyncMeta {
   /** Kursor pull terakhir (ISO server time). */
   lastPullCursor: string | null;
   lastSyncAt: Date | null;
+  /** Pesan error sync terakhir (UX: ditampilkan di CloudHub). */
+  lastSyncError?: string | null;
+  /** Jumlah konflik LWW yang ditimpa versi server pada pull terakhir. */
+  lastConflictCount?: number;
 }
 
 /** Snapshot backup lokal otomatis (OFFLINE-BACKUP M0) — disimpan di IndexedDB. */

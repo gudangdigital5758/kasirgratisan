@@ -364,7 +364,10 @@
       "title": "Sinkronisasi Antara Peranti",
       "button": "Sync Sekarang",
       "lastSync": "Terakhir sync data: {{time}}",
-      "never": "Belum pernah sync data antara peranti"
+      "never": "Belum pernah sync data antara peranti",
+      "dirty": "{{count}} perubahan menunggu sinkronisasi",
+      "conflicts": "{{count}} konflik diselesaikan (versi terbaru menang)",
+      "error": "Sync terakhir gagal: {{message}}"
     },
     "manageFromAnywhere": "Urus kedai dari mana saja",
     "subscription": {

@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { uploadBackup, CloudApiError } from '@/lib/cloud-api';
-import { syncNow } from '@/lib/sync';
+import { syncNow, initSyncListeners } from '@/lib/sync';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { toast } from 'sonner';
 
@@ -44,6 +44,9 @@ export function useCloudAutoBackup() {
     if (ranRef.current) return;
     if (!storeSettings) return;
     if (!isLoggedIn || !isSyncSubscribed) return;
+
+    // Retry otomatis saat kembali online / app terlihat lagi (Phase A stabilisasi).
+    initSyncListeners();
 
     // Sync lintas perangkat (M2): jalankan sekali per sesi bila toko terhubung.
     // Fail-silent — jangan ganggu UX; kegagalan tidak menandai data tersinkron.
