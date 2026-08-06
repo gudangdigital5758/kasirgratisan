@@ -86,12 +86,23 @@ credit masuk → admin bisa lihat riwayat / refund / adjust.
   shift. RLS **merchant-scoped** (hanya data toko milik user).
 - UI jujur: tampilkan "data per [last sync]" (bukan klaim realtime streaming).
 
-## 7. Sales (`sales.profitku.my.id`, WA-only)
+## 7. Sales (`sales.profitku.my.id`, WA-only manual)
 
-- Katalog produk dari sync cloud → **share via WhatsApp** (wa.me + ringkasan +
-  gambar).
-- Sales order per customer → kirim ke **WA admin kantor** via Fonnte.
+- Katalog produk dari sync cloud → **share via WhatsApp `wa.me`** (teks: nama +
+  harga + satuan). Belum bisa share gambar lewat link wa.me.
+- Sales order per customer → **generate pesan terformat** → buka
+  `wa.me/<nomor_admin_kantor>?text=<pesan>` → sales kirim **manual**.
+- **Tanpa Fonnte dulu** (menunggu nomor WA Profitku). Desain pesan memakai
+  `buildOrderMessage()` → delivery manual (wa.me) sekarang, ganti ke API Fonnte
+  saat nomor tersedia — tanpa rombak.
 - (Fase berikut) pending-order masuk POS = ubah schema transaksi + sync — ditunda.
+
+## 7b. Status berjalan (update 2026-08-06)
+
+- **AI generate → PENDING** menunggu review **Midtrans** (top-up belum live).
+  Kode P2 siap; uji internal bisa via **top-up manual admin** (Kelola Credit) dan
+  **Midtrans sandbox**. Setelah review + `MSC_API_URL`/`MSC_API_TOKEN`, AI aktif.
+- Sales = **wa.me manual** (poin 7).
 
 ## 8. Urutan implementasi
 

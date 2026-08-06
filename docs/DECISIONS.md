@@ -352,6 +352,23 @@ ekonomi AI berbasis credit yang **terpisah** dari langganan cloud Rp 25rb/bulan.
 
 ---
 
+## 2026-08-06 — Penyesuaian: AI pending + sales WA manual
+
+**Status:** Accepted
+
+1. **AI Profitku → MSC Studio = PENDING** sampai **review Midtrans** selesai
+   (top-up belum live → merchant belum bisa isi credit). Kode P2 tetap, dormant.
+   Uji internal: top-up manual admin + sandbox Midtrans.
+2. **Sales (P4) = share `wa.me` manual** (tanpa Fonnte — menunggu nomor WA
+   Profitku). Katalog → teks wa.me; sales order → pesan terformat ke nomor WA
+   admin kantor, dikirim manual. Abstraksi `buildOrderMessage` agar siap ganti
+   ke API Fonnte nanti.
+
+**Implications:** prioritas lanjutan = P4 sales (jalan), lalu menunggu review
+Midtrans untuk "menyalakan" AI; Fonnte menunggu nomor Profitku.
+
+---
+
 ## Template decision baru
 
 ```markdown
