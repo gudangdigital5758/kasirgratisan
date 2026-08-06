@@ -171,6 +171,9 @@ create table if not exists public.sync_meta (
    **✅ Selesai (2026-08-05)** — flag `SYNC_ENABLED` (Worker var, default `true`;
    `"false"` menonaktifkan push/pull sementara) + `writeEvent` (sync_push/sync_pull)
    + sync pertama otomatis saat wizard toko online membuat store cloud.
+6. **Stabilisasi (2026-08-06):** status sync UX di CloudHub (dirty/konflik/error),
+   retry otomatis saat online/foreground (`initSyncListeners`), doc status.
+   **Uji perangkat nyata:** ikuti `docs/SYNC-QA.md` (7 skenario).
 
 ## 11. Risiko & mitigasi
 

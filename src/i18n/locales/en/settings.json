@@ -32,10 +32,10 @@
       "active": "ACTIVE"
     },
     "desc": {
-      "inactive": "Secure cloud data, access dashboard.profitku.my.id, and list your store on market.profitku.my.id!",
+      "inactive": "Your data is safe in the cloud — connect your store to market.profitku.my.id!",
       "selectStore": "Subscription is active, but the device hasn't been linked to a store. Select a store to sync data.",
       "needsSetup": "Store is linked, but automatic sync isn't enabled yet. Set up a schedule so data syncs regularly.",
-      "active": "Sync is active. Monitor store reports in real-time on dashboard.profitku.my.id from any device."
+      "active": "Sync is active. Your data is safe in the cloud and synced across your devices."
     },
     "lastSync": "Last sync: {{time}}",
     "neverSynced": "Never synced"
@@ -336,10 +336,6 @@
         "title": "No receipt watermark",
         "desc": "An active cloud plan can remove the receipt watermark per plan entitlements."
       },
-      "dashboard": {
-        "title": "Access Web Dashboard",
-        "desc": "Monitor detailed store reports in real-time from any phone or laptop at {{dashboard}}."
-      },
       "market": {
         "title": "Online Menu & Market",
         "desc": "Create an online menu catalog easily so customers can view your products at {{market}}."
@@ -352,7 +348,6 @@
     "loginPrompt": "Get started, login first 👇",
     "continueWithGoogle": "Continue with Google",
     "loginHint": "Safe & fast — no new password needed.",
-    "previewDashboard": "Preview {{dashboard}} →",
     "account": {
       "fallbackName": "Google Account",
       "logout": "Logout"
@@ -372,7 +367,7 @@
     "manageFromAnywhere": "Manage store from anywhere",
     "subscription": {
       "singleTitle": "Profitku Cloud",
-      "description": "One plan at Rp 25,000/month: cloud backup (up to 1 GB), auto-backup, 1-store sync, and reports from other devices. Your data stays safe if the phone is lost or replaced.",
+      "description": "One plan at Rp 25,000/month: cloud backup (up to 1 GB), auto-backup, and cross-device data sync. Your data stays safe if the phone is lost or replaced.",
       "loadingPlans": "Loading plans…",
       "activePlan": "(active)",
       "unlimitedStores": "Unlimited",

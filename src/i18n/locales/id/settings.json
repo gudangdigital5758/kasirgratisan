@@ -32,10 +32,10 @@
       "active": "AKTIF"
     },
     "desc": {
-      "inactive": "Data aman di cloud, akses dashboard.profitku.my.id, dan hubungkan tokomu ke market.profitku.my.id!",
+      "inactive": "Data aman di cloud & hubungkan tokomu ke market.profitku.my.id!",
       "selectStore": "Langganan aktif, tapi perangkat belum terhubung ke toko. Pilih toko agar data bisa disinkronkan.",
       "needsSetup": "Toko sudah terhubung, tapi sinkronisasi otomatis belum dinyalakan. Atur jadwalnya agar data tersinkron rutin.",
-      "active": "Sinkronisasi aktif. Pantau laporan toko real-time di dashboard.profitku.my.id dari perangkat mana saja."
+      "active": "Sinkronisasi aktif. Data aman di cloud & tersinkron antar perangkatmu."
     },
     "lastSync": "Terakhir sync: {{time}}",
     "neverSynced": "Belum pernah disinkronkan"
@@ -336,10 +336,6 @@
         "title": "Tanpa watermark struk",
         "desc": "Langganan cloud aktif dapat menghilangkan watermark sesuai entitlement paket."
       },
-      "dashboard": {
-        "title": "Akses Dashboard Web",
-        "desc": "Pantau laporan detail toko secara real-time dari HP atau laptop mana saja lewat {{dashboard}}."
-      },
       "market": {
         "title": "Menu Online & Market",
         "desc": "Buat katalog menu online dengan mudah agar pelanggan bisa langsung cek produkmu di {{market}}."
@@ -352,7 +348,6 @@
     "loginPrompt": "Mulai sekarang, login dulu yuk 👇",
     "continueWithGoogle": "Lanjut dengan Google",
     "loginHint": "Aman & cepat — tanpa password baru.",
-    "previewDashboard": "Intip {{dashboard}} →",
     "account": {
       "fallbackName": "Akun Google",
       "logout": "Keluar"
@@ -372,7 +367,7 @@
     "manageFromAnywhere": "Kelola toko dari mana saja",
     "subscription": {
       "singleTitle": "Profitku Cloud",
-      "description": "Satu paket Rp 25.000/bulan: backup cloud (hingga 1 GB), auto-backup, sinkron 1 toko, dan akses laporan dari perangkat lain. Data tetap aman walau HP hilang atau ganti perangkat.",
+      "description": "Satu paket Rp 25.000/bulan: backup cloud (hingga 1 GB), auto-backup, dan sinkron data antar perangkat. Data tetap aman walau HP hilang atau ganti perangkat.",
       "loadingPlans": "Memuat paket…",
       "activePlan": "(aktif)",
       "unlimitedStores": "Unlimited",

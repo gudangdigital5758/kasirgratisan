@@ -6,7 +6,8 @@
 ## Prinsip
 
 1. **Kasir offline tetap gratis** — IndexedDB/Dexie di perangkat.
-2. **Cloud berbayar** — backup dan auto-backup satu toko, notifikasi. Sinkronisasi data antar-perangkat belum tersedia.
+2. **Cloud berbayar** — backup dan auto-backup satu toko, notifikasi, dan
+   **sinkronisasi data antar-perangkat** (sync M0–M4: push/pull LWW + tombstone).
 3. **Secret hanya di Worker** — Fonnte, Resend, payment, Supabase service role.
 
 ## Domain
@@ -14,9 +15,12 @@
 | Host | Layanan |
 |------|---------|
 | `profitku.my.id` | Cloudflare Pages (app Vite PWA) |
-| `api.profitku.my.id` | Cloudflare Worker (`workers/api`) |
-| `dashboard.profitku.my.id` | Admin ops SPA (`admin/`) — staff only |
+| `api.profitku.my.id` | Cloudflare Worker (`workers/api`) — POS: auth/backup/sync/subscription |
+| `dashboard.profitku.my.id` | Admin ops SPA (`admin/`) — staff only (pindah ke repo `profitku-cloud`) |
 | `market.profitku.my.id` | (fase berikut) katalog toko publik |
+| `report.profitku.my.id` | (fase berikut, CLOUD-CONSOLE) laporan merchant |
+| `ai.profitku.my.id` | (fase berikut, CLOUD-CONSOLE) generate foto/video AI |
+| `sales.profitku.my.id` | (fase berikut, CLOUD-CONSOLE) aplikasi role sales |
 
 ## Struktur repo
 

@@ -295,6 +295,63 @@ per halaman; v1 tidak menyediakan agregasi data antar toko.
 
 ---
 
+## 2026-08-06 — Cloud Console: middleware + credit AI (Opsi C, MSC cost-only)
+
+**Status:** Accepted (desain: `docs/CLOUD-CONSOLE.md`)
+
+Membangun console cloud terpisah di repo baru (`profitku-cloud`) dengan model
+ekonomi AI berbasis credit yang **terpisah** dari langganan cloud Rp 25rb/bulan.
+
+**Decision:**
+
+1. **Domain (final):**
+   - `dashboard.profitku.my.id` = **Admin ops SPA (staff only)** — pindah ke repo
+     middleware; halaman baru: kelola top-up/riwayat/refund credit merchant.
+   - `ai.profitku.my.id` = generate foto/video AI untuk merchant (langganan cloud).
+   - `report.profitku.my.id` = laporan merchant (berlangganan cloud) — sumber data
+     `sync_records` (RPC agregasi + RLS merchant-scoped).
+   - `sales.profitku.my.id` = aplikasi role sales (katalog share WA + sales order
+     via Fonnte ke WA admin kantor — **WA-only dulu**, pending-order di POS = fase
+     berikutnya).
+   - `market.profitku.my.id` = fase berikut (katalog toko publik).
+   - `profitku.my.id` (POS) + `api.profitku.my.id` (Worker POS) **tetap di repo
+     kasirgratisan**.
+2. **Rantai nilai AI — Opsi C (MSC di cost):**
+   - MSC Studio = **mesin generate cost-only** (konfigurasi provider SnapGen, submit
+     job, polling status, webhook ber-signature, refund on fail). **Tanpa margin,
+     tanpa ledger merchant.**
+   - **Semua margin di Profitku**: price book ×1.5 dihitung di **middleware
+     Profitku**, bukan di MSC.
+   - `merchant_charge_credits = roundUp(snapgen_cost × SNAPGEN_CREDIT_RP / 100 × 1.5)`
+     (asumsi awal `SNAPGEN_CREDIT_RP = 100`; konfirmasi dari billing riil sebelum
+     lock). Contoh `low/2K = 7` → `7 × 1.5 = 10.5 → 11 credit = Rp 1.100`.
+   - Sumber harga: **matrix terukur MSC** (`docs/SNAPGEN_GPT_IMAGE_2_PRICING.md`),
+     bukan docs SnapGen (docs tidak akurat: `medium+4K` diklaim 6, live 29).
+3. **Unit & top-up:**
+   - **1 credit = Rp 100** (satuan internal Profitku); tampilan merchant dalam **Rp**.
+   - Top-up paket Rupiah: Rp 25.000 = 250 credit · Rp 50.000 = 500 (+10) ·
+     Rp 100.000 = 1.000 (+50). Pembayaran via **Midtrans** (webhook idempotent).
+4. **Ledger credit (Supabase, migrasi di repo middleware):**
+   - `credit_accounts`, `credit_transactions` (topup|usage|refund|adjust),
+     `credit_packages`, `ai_jobs`. Debit **hanya saat sukses**; refund saat gagal;
+     saldo tidak negatif; audit trail.
+5. **Arsitektur:** monorepo middleware (4 SPA + 1 Worker Hono) + **dua worker
+   terpisah** (`api.profitku.my.id` POS vs worker middleware). Secret AI/Midtrans
+   hanya di worker middleware. Satu Supabase project; migrasi middleware memakai
+   namespace terpisah (jangan campur folder `supabase/migrations` repo ini).
+6. **Integrasi AI:** lewat **Platform API MSC Studio** (cost-only) — JANGAN
+   scaffold SnapGen di repo mana pun (AGENTS.md: out of scope repo ini).
+
+**Implications:**
+- MSC Studio: ubah pricing ke cost-only; hilangkan `MARGIN_CREDITS=5`/ledger user;
+  ekspos `GET /api/v1/pricing` (cost saja). Tanpa user eksternal → aman diubah global.
+- Copy UI POS yang mengklaim "pantau laporan di dashboard.profitku.my.id" **salah**
+  (dashboard = admin ops) → dihapus sampai `report.profitku.my.id` live.
+- Konflik domain selesai: `dashboard.*` = admin ops permanen; merchant web reports
+  memakai `report.profitku.my.id`.
+
+---
+
 ## Template decision baru
 
 ```markdown

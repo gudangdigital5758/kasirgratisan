@@ -11,9 +11,15 @@ export const BRAND = {
   origin: 'https://profitku.my.id',
   /** API edge (Cloudflare Worker) */
   apiOrigin: 'https://api.profitku.my.id',
-  /** Dashboard web (opsional, fase berikutnya) */
+  /** Admin ops SPA (dashboard.profitku.my.id) — STAFF ONLY. Jangan dipakai untuk klaim merchant. */
   dashboardOrigin: 'https://dashboard.profitku.my.id',
-  /** Katalog toko online (opsional) */
+  /** Laporan merchant web (fase berikut, CLOUD-CONSOLE) — pengganti klaim lama dashboard.* */
+  reportOrigin: 'https://report.profitku.my.id',
+  /** Generate foto/video AI untuk merchant (fase berikut, CLOUD-CONSOLE) */
+  aiOrigin: 'https://ai.profitku.my.id',
+  /** Aplikasi role sales lapangan (fase berikut, CLOUD-CONSOLE) */
+  salesOrigin: 'https://sales.profitku.my.id',
+  /** Katalog toko online (fase berikut) */
   marketOrigin: 'https://market.profitku.my.id',
   /** Android / Capacitor applicationId (siap, listing Play ditunda) */
   appId: 'com.profitku.app',
