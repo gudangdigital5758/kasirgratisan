@@ -112,10 +112,13 @@ async function main() {
   await floodFillTransparent(SRC, markPath);
   const mark = sharp(markPath);
 
-  // 2. app icon master: mark (lingkaran putih) langsung isi canvas — TANPA bg biru,
-  //    logo terlihat lebih besar, tidak ada ring biru di sekeliling.
+  // 2. app icon master: mark di atas background PUTIH penuh (opaque, tanpa pojok
+  //    transparan) — semua area di sekitar logo putih, tidak ada hitam saat splash.
   const appMasterPath = path.join(TMP, 'appicon-512.png');
-  await mark.clone().resize(512, 512).png().toFile(appMasterPath);
+  const mark512 = await mark.clone().resize(486, 486).png().toBuffer();
+  await sharp({ create: { width: 512, height: 512, channels: 3, background: '#FFFFFF' } })
+    .composite([{ input: mark512, left: Math.round((512 - 486) / 2), top: Math.round((512 - 486) / 2) }])
+    .png().toFile(appMasterPath);
 
   // ── PWA / web assets (dari app icon) ──
   const sizes = [
@@ -177,9 +180,21 @@ async function main() {
     await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: fg, left: Math.round((size - fgSize) / 2), top: Math.round((size - fgSize) / 2) }])
       .png().toFile(path.join(dir, 'ic_launcher_foreground.png'));
-    // background putih supaya tidak ada ring biru (lingkaran logo menyatu)
+    // background putih supaya tidak ada ring/hitam (lingkaran logo menyatu)
     await sharp({ create: { width: size, height: size, channels: 3, background: '#FFFFFF' } })
       .png().toFile(path.join(dir, 'ic_launcher_background.png'));
+  }
+
+  // ── Android splash: semua varian (termasuk night) dijadikan putih ──
+  const splashDirs = fs.readdirSync(ANDROID_RES).filter((d) => d.startsWith('drawable'));
+  for (const d of splashDirs) {
+    const splashFile = path.join(ANDROID_RES, d, 'splash.png');
+    if (fs.existsSync(splashFile)) {
+      const img = sharp(splashFile);
+      const meta = await img.metadata();
+      await sharp({ create: { width: meta.width, height: meta.height, channels: 3, background: '#FFFFFF' } })
+        .png().toFile(splashFile);
+    }
   }
 
   // ── resources/icon.png (sumber capacitor) ──
