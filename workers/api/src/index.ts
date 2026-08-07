@@ -53,6 +53,12 @@ import {
   validateVoucherForUser,
 } from './lib/vouchers';
 import { rateLimit, rateLimitKey } from './lib/rate-limit';
+import {
+  getAffiliateSettings,
+  isValidAffiliateCode,
+  loadAffiliateByCode,
+  normalizeAffiliateCode,
+} from './lib/affiliates';
 
 type Variables = {
   userId: string | null;
@@ -387,6 +393,29 @@ app.get('/api/user/profile', async (c) => {
   return c.json(profile);
 });
 
+// --- Affiliate lookup (publik, tanpa auth) ---
+// Dipakai client saat user membuka link ?ref=KODE untuk memvalidasi + menampilkan nama affiliator.
+app.get('/api/affiliate/lookup', async (c) => {
+  const code = normalizeAffiliateCode(c.req.query('code') || '');
+  if (!code) return c.json({ valid: false, error: 'Kode affiliasi wajib' }, 400);
+  if (!isValidAffiliateCode(code)) {
+    return c.json({ valid: false, error: 'Format kode affiliasi tidak valid' }, 400);
+  }
+  try {
+    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const affiliate = await loadAffiliateByCode(c.env, code);
+      if (!affiliate) {
+        return c.json({ valid: false, error: 'Kode affiliasi tidak ditemukan atau nonaktif' });
+      }
+      return c.json({ valid: true, code: affiliate.code, name: affiliate.name });
+    }
+    return c.json({ valid: false, error: 'Layanan affiliasi belum tersedia' }, 503);
+  } catch (err) {
+    console.warn('[affiliate lookup]', err);
+    return c.json({ valid: false, error: 'Gagal memeriksa kode affiliasi' }, 500);
+  }
+});
+
 // --- Voucher preview (auth) ---
 app.post('/api/vouchers/preview', async (c) => {
   const userId = requireUser(c);
@@ -422,8 +451,29 @@ app.post('/api/payments/checkout', async (c) => {
     mobile?: string;
     redirectURL?: string;
     voucherCode?: string;
+    affiliateCode?: string;
   };
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
+
+  // Validasi kode affiliasi (opsional, best-effort). Kode disimpan di payment.raw
+  // agar komisi dicatat otomatis saat payment selesai (termasuk perpanjangan).
+  let affiliateMeta: { code: string; name: string | null } | null = null;
+  const rawAffiliateCode = normalizeAffiliateCode(body.affiliateCode || '');
+  if (rawAffiliateCode) {
+    try {
+      const settings = await getAffiliateSettings(c.env);
+      if (settings.enabled) {
+        const affiliate = await loadAffiliateByCode(c.env, rawAffiliateCode);
+        if (!affiliate) {
+          return c.json({ error: 'Kode affiliasi tidak valid' }, 400);
+        }
+        affiliateMeta = { code: affiliate.code, name: affiliate.name };
+      }
+    } catch (err) {
+      console.warn('[checkout affiliate]', err);
+      // jangan blokir checkout bila validasi gagal
+    }
+  }
 
   const plan = SEED_PLANS.find((p) => p.id === body.planId);
   let amount = plan?.price ?? 0;
@@ -513,6 +563,7 @@ app.post('/api/payments/checkout', async (c) => {
             mobile: body.mobile ?? null,
             redirectURL: body.redirectURL ?? null,
             ...(voucherMeta || {}),
+            ...(affiliateMeta ? { affiliateCode: affiliateMeta.code, affiliateName: affiliateMeta.name } : {}),
           },
         });
         await fulfillCompletedPayment(c.env, {
@@ -599,6 +650,7 @@ app.post('/api/payments/checkout', async (c) => {
           snapToken,
           finishUrl,
           ...(voucherMeta || {}),
+          ...(affiliateMeta ? { affiliateCode: affiliateMeta.code, affiliateName: affiliateMeta.name } : {}),
         },
       });
     }

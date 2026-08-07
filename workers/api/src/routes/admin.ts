@@ -14,6 +14,7 @@ import {
 } from '../lib/admin';
 import { CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
 import adminSettings from './admin-settings';
+import adminAffiliates from './admin-affiliates';
 
 type Variables = {
   userId: string | null;
@@ -24,6 +25,7 @@ type Variables = {
 const admin = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 admin.route('/', adminSettings);
+admin.route('/', adminAffiliates);
 
 function daysFromNow(days: number): string {
   const d = new Date();

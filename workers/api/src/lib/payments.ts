@@ -14,6 +14,7 @@ import {
   type VoucherEffect,
   type VoucherType,
 } from './vouchers';
+import { recordAffiliateCommission } from './affiliates';
 
 type PayRaw = {
   mobile?: string | null;
@@ -133,6 +134,17 @@ export async function fulfillCompletedPayment(
       is_lifetime: period.isLifetime,
       provider,
       provider_ref: opts.providerRef || opts.paymentId,
+    });
+  }
+
+  // Komisi affiliate (berlaku untuk pembelian pertama & perpanjangan).
+  // Idempotent per payment_id; best-effort — tidak menggagalkan fulfillment.
+  if (pay.raw?.affiliateCode) {
+    await recordAffiliateCommission(env, {
+      paymentId: opts.paymentId,
+      userId,
+      affiliateCode: String(pay.raw.affiliateCode),
+      amountPaid: pay.amount,
     });
   }
 

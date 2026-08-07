@@ -319,6 +319,9 @@
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
+    "affiliate": {
+      "referredBy": "💙 Anda direferensikan oleh {{name}} — komisi otomatis untuk affiliator saat langganan aktif."
+    },
     "benefits": {
       "safe": {
         "title": "Backup aman di cloud",

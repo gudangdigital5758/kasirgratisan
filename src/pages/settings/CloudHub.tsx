@@ -53,6 +53,7 @@ import {
 } from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
 import { BRAND } from '@/lib/brand';
+import { getAffiliateRef } from '@/lib/affiliate';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -278,6 +279,7 @@ export default function CloudHub() {
       const result = await checkoutPlan(planId, {
         redirectURL: `${window.location.origin}${CLOUD_ROUTES.hub}`,
         voucherCode,
+        affiliateCode: getAffiliateRef()?.code,
       });
       if (result.completed || result.transaction.status === 'COMPLETED') {
         await refreshProfile();
@@ -759,6 +761,7 @@ export default function CloudHub() {
                 }}
                 onApplyVoucher={() => void handleApplyVoucher()}
                 onClearVoucher={clearVoucher}
+                affiliateRef={getAffiliateRef()}
               />
 
 
@@ -873,6 +876,7 @@ interface SubscriptionSectionProps {
   onVoucherInputChange: (value: string) => void;
   onApplyVoucher: () => void;
   onClearVoucher: () => void;
+  affiliateRef?: { code: string; name?: string } | null;
 }
 
 function SubscriptionSection({
@@ -884,6 +888,7 @@ function SubscriptionSection({
   onVoucherInputChange,
   onApplyVoucher,
   onClearVoucher,
+  affiliateRef,
 }: SubscriptionSectionProps) {
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? id;
@@ -1026,6 +1031,14 @@ function SubscriptionSection({
           <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">{icon}</div>
           <p className="text-sm font-semibold">{title}</p>
         </div>
+
+        {affiliateRef && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] text-muted-foreground leading-snug">
+            {t('cloudBackup.affiliate.referredBy', {
+              name: affiliateRef.name || affiliateRef.code,
+            })}
+          </div>
+        )}
 
         {isActive && subscription ? (
           <>

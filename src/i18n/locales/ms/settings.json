@@ -319,6 +319,9 @@
       "startFrom": "Hanya",
       "perMonth": "/bulan"
     },
+    "affiliate": {
+      "referredBy": "💙 Anda dirujuk oleh {{name}} — komisen automatik untuk afiliasi semasa langganan aktif."
+    },
     "benefits": {
       "safe": {
         "title": "Backup selamat di cloud",

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { lazy, Suspense, useEffect } from "react";
 import { checkVersion } from "@/lib/version-check";
 import { initAnalytics } from "@/lib/analytics";
+import { captureAffiliateRef } from "@/lib/affiliate";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar } from "@capacitor/status-bar";
 import { useAppUpdate } from "@/hooks/use-app-update";
@@ -73,6 +74,8 @@ const App = () => {
   useEffect(() => {
     checkVersion();
     initAnalytics();
+    // Tangkap jalur affiliasi dari URL (?ref=KODE) sekali saat start (best-effort).
+    void captureAffiliateRef();
 
     if (Capacitor.isNativePlatform()) {
       StatusBar.setOverlaysWebView({ overlay: false }).catch(err => {

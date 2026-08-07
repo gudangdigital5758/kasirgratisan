@@ -319,6 +319,9 @@
       "startFrom": "Only",
       "perMonth": "/month"
     },
+    "affiliate": {
+      "referredBy": "💙 You were referred by {{name}} — the affiliate automatically earns a commission when your subscription is active."
+    },
     "benefits": {
       "safe": {
         "title": "Secure cloud backup",

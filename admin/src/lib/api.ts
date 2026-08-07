@@ -185,6 +185,86 @@ export const adminApi = {
     }>(`/admin/api/vouchers/${id}${opts?.force ? '?force=true' : ''}`, {
       method: 'DELETE',
     }),
+
+  // --- Affiliate ---
+
+  affiliateSettings: () =>
+    request<{ settings: AffiliateSettings }>('/admin/api/affiliates/settings'),
+
+  patchAffiliateSettings: (body: Partial<AffiliateSettings>) =>
+    request<{ ok: boolean; settings: AffiliateSettings }>('/admin/api/affiliates/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  affiliates: () =>
+    request<{ affiliates: AffiliateRow[] }>('/admin/api/affiliates'),
+
+  affiliate: (id: string) =>
+    request<{ affiliate: AffiliateRow; commissions: AffiliateCommission[] }>(
+      `/admin/api/affiliates/${id}`,
+    ),
+
+  createAffiliate: (body: {
+    code: string;
+    name: string;
+    userId?: string;
+    userEmail?: string;
+    payoutNote?: string;
+  }) =>
+    request<{ ok: boolean; affiliate: AffiliateRow }>('/admin/api/affiliates', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  patchAffiliate: (id: string, body: { name?: string; payoutNote?: string | null; isActive?: boolean }) =>
+    request<{ ok: boolean; affiliate: AffiliateRow }>(`/admin/api/affiliates/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  markAffiliatePaid: (id: string) =>
+    request<{ ok: boolean; updated: number }>(`/admin/api/affiliates/${id}/mark-paid`, {
+      method: 'POST',
+    }),
+};
+
+export type AffiliateSettings = {
+  enabled: boolean;
+  commission_percent: number;
+  attribution_days: number;
+  min_amount_idr: number;
+};
+
+export type AffiliateRow = {
+  id: string;
+  code: string;
+  name: string;
+  userId: string | null;
+  payoutNote: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  stats?: {
+    referrals: number;
+    referredUsers: number;
+    totalCommissionIdr: number;
+    earnedCommissionIdr: number;
+    paidCommissionIdr: number;
+  };
+};
+
+export type AffiliateCommission = {
+  id: string;
+  affiliateId: string;
+  paymentId: string;
+  userId: string;
+  amountPaid: number;
+  ratePercent: number;
+  commissionIdr: number;
+  status: 'earned' | 'paid' | 'void' | string;
+  paidAt: string | null;
+  createdAt: string;
 };
 
 export type VoucherRow = {

@@ -195,6 +195,13 @@ export interface VerifyResult {
   transaction: { id: string; status: string };
 }
 
+export interface AffiliateLookupResult {
+  valid: boolean;
+  code?: string;
+  name?: string;
+  error?: string;
+}
+
 export interface PaymentTransaction {
   id: string;
   userId?: string;
@@ -357,7 +364,7 @@ export async function deleteBackup(id: string): Promise<void> {
 
 export async function checkoutPlan(
   planId: string,
-  opts?: { mobile?: string; redirectURL?: string; voucherCode?: string },
+  opts?: { mobile?: string; redirectURL?: string; voucherCode?: string; affiliateCode?: string },
 ): Promise<CheckoutResult> {
   const res = await fetch(`${BASE_URL}/api/payments/checkout`, {
     method: 'POST',
@@ -366,6 +373,19 @@ export async function checkoutPlan(
   });
   if (!res.ok) await parseError(res);
   return res.json();
+}
+
+/** Validasi kode affiliasi (publik) — dipakai saat menangkap link ?ref=KODE. */
+export async function lookupAffiliate(code: string): Promise<AffiliateLookupResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/lookup?code=${encodeURIComponent(code)}`);
+  if (!res.ok) {
+    try {
+      return (await res.json()) as AffiliateLookupResult;
+    } catch {
+      return { valid: false, error: 'Gagal memeriksa kode affiliasi' };
+    }
+  }
+  return res.json() as Promise<AffiliateLookupResult>;
 }
 
 /** Preview efek kode voucher (harga dihitung server). */
