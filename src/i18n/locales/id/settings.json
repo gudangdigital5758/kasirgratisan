@@ -179,7 +179,12 @@
     "theme": {
       "title": "Warna Tema",
       "description": "Sesuaikan warna aksen aplikasi",
-      "permissionLabel": "Kelola Pengaturan Toko"
+      "permissionLabel": "Kelola Pengaturan Toko",
+      "color": "Warna Aksen",
+      "darkMode": "Mode Tampilan",
+      "darkModeLight": "Terang",
+      "darkModeDark": "Gelap",
+      "darkModeSystem": "Sistem"
     },
     "backup": {
       "title": "Backup & Restore",

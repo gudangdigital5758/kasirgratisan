@@ -3,6 +3,8 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 import { initErrorReporting } from "./lib/error-report";
+import { db } from "./lib/db";
+import { applyDarkMode } from "./hooks/use-dark-mode";
 
 // Global handlers for errors that React's ErrorBoundary cannot catch:
 //  - unhandled promise rejections (async code)
@@ -25,5 +27,12 @@ if (typeof window !== "undefined") {
   // Remote error monitoring (production only, throttled, via platform_events).
   initErrorReporting();
 }
+
+// Terapkan dark mode tersimpan (atau preferensi sistem) sebelum render pertama.
+db.storeSettings
+  .toCollection()
+  .first()
+  .then((s) => applyDarkMode(s?.darkMode ?? null))
+  .catch(() => applyDarkMode(null));
 
 createRoot(document.getElementById("root")!).render(<App />);

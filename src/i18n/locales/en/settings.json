@@ -179,7 +179,12 @@
     "theme": {
       "title": "Theme Color",
       "description": "Customize the app accent color",
-      "permissionLabel": "Manage Store Settings"
+      "permissionLabel": "Manage Store Settings",
+      "color": "Accent Color",
+      "darkMode": "Appearance",
+      "darkModeLight": "Light",
+      "darkModeDark": "Dark",
+      "darkModeSystem": "System"
     },
     "backup": {
       "title": "Backup & Restore",

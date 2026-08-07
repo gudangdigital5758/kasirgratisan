@@ -179,7 +179,12 @@
     "theme": {
       "title": "Warna Tema",
       "description": "Sesuaikan warna aksen aplikasi",
-      "permissionLabel": "Urus Tetapan Kedai"
+      "permissionLabel": "Urus Tetapan Kedai",
+      "color": "Warna Aksen",
+      "darkMode": "Mod Paparan",
+      "darkModeLight": "Cerah",
+      "darkModeDark": "Gelap",
+      "darkModeSystem": "Sistem"
     },
     "backup": {
       "title": "Backup & Restore",
