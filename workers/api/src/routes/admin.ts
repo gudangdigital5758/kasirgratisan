@@ -25,7 +25,9 @@ type Variables = {
 const admin = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 admin.route('/', adminSettings);
-admin.route('/', adminAffiliates);
+// Mount di path spesifik: route `/:id` di sub-router TIDAK boleh membayangi
+// /me, /overview, /members, /payments, /events, /vouchers (route inline di bawah).
+admin.route('/affiliates', adminAffiliates);
 
 function daysFromNow(days: number): string {
   const d = new Date();
