@@ -46,14 +46,22 @@ textarea {
   .sidebar {
     border-right: none !important;
     border-bottom: 1px solid var(--border);
+    position: static;
+    height: auto;
+    overflow: visible;
   }
 }
 
+/* Sidebar sticky full-height dengan scrollbar sendiri; konten utama tetap scroll normal. */
 .sidebar {
   background: #0f172a;
   color: #e2e8f0;
   padding: 1.25rem 1rem;
   border-right: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .brand-head {
