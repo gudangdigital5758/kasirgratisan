@@ -7,6 +7,7 @@
 import type { Env } from '../env';
 import { sendEmail, sendPush, sendWhatsApp } from './notify';
 import { sbGet, sbPost } from './supabase';
+import { isDunningEnabled } from './platform-settings';
 
 const APP = 'https://profitku.my.id';
 
@@ -256,6 +257,12 @@ export async function runDunningCron(env: Env): Promise<{ checked: number; sent:
     return { checked: 0, sent: 0 };
   }
 
+  // Flag dunning_enabled=false → hitung kandidat tapi jangan kirim apa pun.
+  const enabled = await isDunningEnabled(env);
+  if (!enabled) {
+    console.log('[dunning] dunning_enabled=false — tidak mengirim pengingat');
+  }
+
   type Sub = {
     id: string;
     user_id: string;
@@ -272,6 +279,10 @@ export async function runDunningCron(env: Env): Promise<{ checked: number; sent:
     env,
     `subscriptions?status=in.(active,trialing)&current_period_end=gte.${now.toISOString()}&current_period_end=lte.${in4d.toISOString()}&select=id,user_id,plan_id,current_period_end,plans(name)`,
   );
+
+  if (!enabled) {
+    return { checked: subs.length, sent: 0 };
+  }
 
   let sent = 0;
   for (const s of subs) {

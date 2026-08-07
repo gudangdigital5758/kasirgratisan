@@ -36,7 +36,8 @@ import { notifySubscriptionActivated, runDunningCron } from './lib/lifecycle';
 import { exchangeGoogleIdToken } from './lib/auth-google';
 import { CLOUD_PLAN_PRICE_IDR } from './data/seed-plans';
 import adminRoutes from './routes/admin';
-import { writeEvent } from './lib/admin';
+import { resolveAdmin, writeEvent } from './lib/admin';
+import { isMaintenanceMode } from './lib/platform-settings';
 import {
   createSnapTransaction,
   getTransactionStatus,
@@ -126,6 +127,47 @@ async function bearerAuth(c: {
 
 app.use('/api/*', bearerAuth);
 app.use('/admin/api/*', bearerAuth);
+
+/**
+ * Maintenance mode: saat platform_settings.maintenance_mode=true, tolak request
+ * user (/api/* dan /admin/api/*) dengan 503. Pengecualian:
+ *  - /api/cron/* — job terjadwal tetap jalan.
+ *  - staff admin terautentikasi — agar bisa mematikan maintenance dari admin UI.
+ * /health dan /webhook/* tidak di-mount di middleware ini sehingga tetap terbuka.
+ */
+async function maintenanceMiddleware(c: {
+  env: Env;
+  get: (k: 'userId' | 'userEmail' | 'bearer') => string | null;
+  req: { path: string };
+  json: (b: unknown, s?: number, h?: Record<string, string>) => Response;
+}, next: () => Promise<void>) {
+  const path = c.req.path;
+  if (path.startsWith('/api/cron/')) return next();
+  let maintenance = false;
+  try {
+    maintenance = await isMaintenanceMode(c.env);
+  } catch {
+    maintenance = false;
+  }
+  if (!maintenance) return next();
+  const userId = c.get('userId');
+  if (userId) {
+    try {
+      const admin = await resolveAdmin(c.env, userId, c.get('userEmail'));
+      if (admin) return next();
+    } catch {
+      /* lanjut tolak */
+    }
+  }
+  return c.json(
+    { error: 'Platform sedang dalam perbaikan. Silakan coba lagi nanti.' },
+    503,
+    { 'Retry-After': '3600' },
+  );
+}
+
+app.use('/api/*', maintenanceMiddleware);
+app.use('/admin/api/*', maintenanceMiddleware);
 
 /** Rate limit per user/IP untuk route terautentikasi (membatasi penyalahgunaan ringan). */
 async function rateLimitMiddleware(c: {
