@@ -125,9 +125,10 @@ async function main() {
   const noCircleMeta = await noCircle.metadata();
   const ncW = noCircleMeta.width, ncH = noCircleMeta.height;
 
-  // 2. app icon master: elemen logo (tanpa lingkaran) di atas background PUTIH penuh
+  // 2. app icon master: elemen logo di atas background PUTIH penuh, ukuran
+  //    proporsional (~56% canvas) supaya tidak sesak di launcher.
   const appMasterPath = path.join(TMP, 'appicon-512.png');
-  const targetSize = 368; // ~72% dari 512
+  const targetSize = 290; // ~57% dari 512 — ruang putih di sekeliling logo
   const scale = Math.min(targetSize / ncW, targetSize / ncH);
   const rw = Math.round(ncW * scale), rh = Math.round(ncH * scale);
   const noCircleResized = await noCircle.clone().resize(rw, rh).png().toBuffer();
@@ -153,8 +154,14 @@ async function main() {
   const png32 = await sharp(appMasterPath).resize(32, 32).png().toBuffer();
   writeIco([{ png: png16, size: 16 }, { png: png32, size: 32 }], path.join(PUB, 'favicon.ico'));
 
-  // ── header-icon (Onboarding): elemen logo tanpa lingkaran, transparan ──
-  await noCircle.clone().resize(256, 256).png().toFile(path.join(PUB, 'header-icon.png'));
+  // ── header-icon (Onboarding): elemen logo ~62% di canvas transparan (padding) ──
+  {
+    const hs = 256, ls = 158; // logo 62% dari 256
+    const logoBuf = await noCircle.clone().resize(ls, ls).png().toBuffer();
+    await sharp({ create: { width: hs, height: hs, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: logoBuf, left: Math.round((hs - ls) / 2), top: Math.round((hs - ls) / 2) }])
+      .png().toFile(path.join(PUB, 'header-icon.png'));
+  }
 
   // ── OG image 1200x630 ──
   const ogSvg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
@@ -164,13 +171,19 @@ async function main() {
     <rect width="1200" height="630" fill="url(#og)"/>
     <text x="600" y="584" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="${BRAND}" text-anchor="middle">profitku.my.id — Kasir POS Gratis untuk UMKM</text>
   </svg>`;
-  const markOg = await noCircle.clone().resize(300, 300).png().toBuffer();
+  const markOg = await noCircle.clone().resize(240, 240).png().toBuffer();
   await sharp(Buffer.from(ogSvg))
-    .composite([{ input: markOg, left: Math.round((1200 - 300) / 2), top: 130 }])
+    .composite([{ input: markOg, left: Math.round((1200 - 240) / 2), top: 170 }])
     .png().toFile(path.join(PUB, 'og-image.png'));
 
-  // ── lockup transparan untuk cloud apps (elemen logo tanpa lingkaran) ──
-  await noCircle.clone().resize(256, 256).png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
+  // ── lockup transparan untuk cloud apps (logo ~66% di canvas, padding) ──
+  {
+    const hs = 256, ls = 170; // logo 66% dari 256
+    const logoBuf = await noCircle.clone().resize(ls, ls).png().toBuffer();
+    await sharp({ create: { width: hs, height: hs, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: logoBuf, left: Math.round((hs - ls) / 2), top: Math.round((hs - ls) / 2) }])
+      .png().toFile(path.join(TMP, 'profitku-lockup-256.png'));
+  }
 
   // ── Android: legacy icon + round (app icon biru) ──
   const dens = [
@@ -186,7 +199,7 @@ async function main() {
   const fgDens = [
     ['ldpi', 81], ['mdpi', 108], ['hdpi', 162], ['xhdpi', 216], ['xxhdpi', 324], ['xxxhdpi', 432],
   ];
-  const fgMaster = await noCircle.clone().resize(300, 300).png().toBuffer(); // ~69% dari 432 (safe zone)
+  const fgMaster = await noCircle.clone().resize(240, 240).png().toBuffer(); // ~56% dari 432 (safe zone)
   for (const [d, size] of fgDens) {
     const dir = path.join(ANDROID_RES, `mipmap-${d}`);
     const scale = size / 432;
