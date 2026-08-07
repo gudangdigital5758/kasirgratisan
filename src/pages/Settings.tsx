@@ -1,6 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type StoreCustomField } from '@/lib/db';
-import { STORE_TYPES, DEFAULT_STORE_TYPE, normalizeStoreType, type StoreType, type ProductFieldType } from '@/lib/product-fields';
+import {
+  STORE_TYPES,
+  DEFAULT_STORE_TYPE,
+  normalizeStoreType,
+  resolveStoreType,
+  BUSINESS_CATEGORIES,
+  type StoreType,
+  type ProductFieldType,
+  type BusinessCategory,
+} from '@/lib/product-fields';
+import BusinessCategoryPicker from '@/components/BusinessCategoryPicker';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Settings, Store, CreditCard, Tag, Download, Edit2, Info, Truck, ArrowDownToLine, ArrowUpFromLine, ChevronRight, Receipt, Palette, HardDrive, Package, Camera, X, Ruler, Users as UsersIcon, UserCog, ShieldCheck, LogOut, Smartphone, CheckCircle2, Globe, Share2, Wallet, Sparkles, LineChart, Cloud, HandCoins, ClipboardCheck, LayoutGrid, Send, AlertTriangle, Bell } from 'lucide-react';
 import {
@@ -34,6 +44,7 @@ import { Printer } from 'lucide-react';
 import { APP_VERSION } from '@/lib/app-version';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { syncStoreEntryFromSettings } from '@/lib/store-registry';
 import { cn } from '@/lib/utils';
 import { fetchAppSetting, type AppSetting } from '@/lib/cloud-api';
 import { BRAND } from '@/lib/brand';
@@ -208,6 +219,7 @@ export default function Pengaturan() {
   const saveStore = async () => {
     if (storeSettings?.id) {
       await db.storeSettings.update(storeSettings.id, { storeName: storeName.trim(), address: storeAddr.trim(), phone: storePhone.trim(), logo: storeLogo || undefined });
+      await syncStoreEntryFromSettings({ storeName: storeName.trim() });
       toast.success(t('storeDialog.saveSuccess'));
       setStoreDialog(false);
     }
@@ -232,6 +244,7 @@ export default function Pengaturan() {
   // === Jenis toko & kolom khusus (PRODUCT-TYPES) ===
   const [storeTypeDialog, setStoreTypeDialog] = useState(false);
   const [storeTypeSel, setStoreTypeSel] = useState<StoreType>(DEFAULT_STORE_TYPE);
+  const [storeCategory, setStoreCategory] = useState<BusinessCategory | null>(null);
   const [customFields, setCustomFields] = useState<StoreCustomField[]>([]);
   const [newCustomLabel, setNewCustomLabel] = useState('');
   const [newCustomType, setNewCustomType] = useState<ProductFieldType>('text');
@@ -251,13 +264,23 @@ export default function Pengaturan() {
   };
 
   const openStoreTypeDialog = () => {
-    setStoreTypeSel(normalizeStoreType(storeSettings?.storeType));
+    setStoreCategory(
+      storeSettings?.businessCategory
+        ? (BUSINESS_CATEGORIES.find((c) => c.id === storeSettings.businessCategory) ?? null)
+        : null,
+    );
+    setStoreTypeSel(resolveStoreType(storeSettings?.businessCategory, storeSettings?.storeType));
     setCustomFields(storeSettings?.customFields ?? []);
     setNewCustomLabel('');
     setNewCustomType('text');
     setNewCustomRequired(false);
     setNewCustomOptions('');
     setStoreTypeDialog(true);
+  };
+
+  const pickStoreCategory = (cat: BusinessCategory) => {
+    setStoreCategory(cat);
+    setStoreTypeSel(cat.profile); // profil field produk ikut kategori
   };
 
   const addCustomField = () => {
@@ -286,7 +309,12 @@ export default function Pengaturan() {
     try {
       await db.storeSettings.update(storeSettings.id, {
         storeType: normalizeStoreType(storeTypeSel),
+        businessCategory: storeCategory?.id,
         customFields: storeTypeSel === 'other' && customFields.length > 0 ? customFields : undefined,
+      });
+      await syncStoreEntryFromSettings({
+        businessCategory: storeCategory?.id,
+        storeType: normalizeStoreType(storeTypeSel),
       });
       toast.success(t('productFields:toast.saved'));
       setStoreTypeDialog(false);
@@ -1167,6 +1195,22 @@ export default function Pengaturan() {
             <DialogDescription className="text-xs">{t('productFields:settings.desc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>{t('productFields:catTitle')}</Label>
+              <BusinessCategoryPicker
+                selectedId={storeCategory?.id ?? null}
+                onSelect={pickStoreCategory}
+              />
+              {storeCategory && (
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <span>{storeCategory.icon}</span>
+                  {t('productFields:catProfileHint', {
+                    profile: t(`productFields:types.${storeCategory.profile}.name`),
+                  })}
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               {STORE_TYPES.map((st) => (
                 <button

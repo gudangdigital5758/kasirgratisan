@@ -1,6 +1,11 @@
 {
   "title": "Jenis Toko",
   "subtitle": "Pilih jenis tokomu — form produk menyesuaikan otomatis",
+  "catTitle": "Kategori Usaha",
+  "catSearch": "Cari Kategori",
+  "catEmpty": "Kategori tidak ditemukan",
+  "catRequired": "Pilih kategori usaha dulu",
+  "catProfileHint": "Kolom produk: {{profile}}",
   "types": {
     "general": {
       "name": "Toko Umum",
@@ -13,6 +18,38 @@
     "cosmetics": {
       "name": "Toko Kosmetik",
       "desc": "BPOM, Halal, tanggal kadaluarsa"
+    },
+    "fashion": {
+      "name": "Toko Fashion",
+      "desc": "Ukuran, bahan, merek, kondisi"
+    },
+    "food": {
+      "name": "Makanan & Minuman",
+      "desc": "Kedaluwarsa, halal, berat, produksi"
+    },
+    "fresh": {
+      "name": "Segar & Pertanian",
+      "desc": "Berat, asal, panen, kedaluwarsa"
+    },
+    "electronics": {
+      "name": "Elektronik",
+      "desc": "Merek, model, garansi, kondisi"
+    },
+    "automotive": {
+      "name": "Otomotif & Bengkel",
+      "desc": "Merek, no. part, kondisi, kompatibilitas"
+    },
+    "service": {
+      "name": "Jasa & Layanan",
+      "desc": "Durasi, perlu janji temu"
+    },
+    "pet": {
+      "name": "Hewan Peliharaan",
+      "desc": "Jenis, ras, usia, kondisi"
+    },
+    "furniture": {
+      "name": "Perabotan",
+      "desc": "Bahan, dimensi, kondisi"
     },
     "other": {
       "name": "Jenis Lain",
@@ -33,7 +70,117 @@
       "bpomNumber": "Nomor BPOM",
       "halalNumber": "Nomor Halal",
       "expiryDate": "Tanggal Kadaluarsa"
+    },
+    "fashion": {
+      "size": "Ukuran",
+      "material": "Bahan",
+      "brand": "Merek / Brand",
+      "condition": "Baru / Bekas"
+    },
+    "food": {
+      "expiryDate": "Tanggal Kedaluwarsa",
+      "halalNumber": "Nomor Halal",
+      "weight": "Berat",
+      "productionDate": "Tanggal Produksi"
+    },
+    "fresh": {
+      "weight": "Berat",
+      "origin": "Asal",
+      "harvestDate": "Tanggal Panen",
+      "expiryDate": "Tanggal Kedaluwarsa"
+    },
+    "electronics": {
+      "brand": "Merek / Brand",
+      "model": "Model",
+      "warranty": "Garansi",
+      "condition": "Baru / Bekas"
+    },
+    "automotive": {
+      "brand": "Merek / Brand",
+      "partNo": "No. Part",
+      "condition": "Baru / Bekas",
+      "compatibility": "Kesesuaian Kendaraan"
+    },
+    "service": {
+      "duration": "Durasi Layanan",
+      "byAppointment": "Perlu Janji Temu"
+    },
+    "pet": {
+      "species": "Jenis Hewan",
+      "breed": "Ras",
+      "age": "Usia",
+      "condition": "Baru / Bekas"
+    },
+    "furniture": {
+      "material": "Bahan",
+      "dimension": "Dimensi",
+      "condition": "Baru / Bekas"
     }
+  },
+  "cats": {
+    "sembako": "Toko Sembako",
+    "kelontong": "Toko Kelontong",
+    "makanan_minuman": "Makanan & Minuman",
+    "restoran_kafe": "Restoran & Kafe",
+    "katering": "Katering",
+    "kuliner_kaki_lima": "Kuliner Kaki Lima",
+    "toko_roti": "Toko Roti",
+    "toko_manisan": "Toko Manisan",
+    "produk_susu": "Produk Susu",
+    "buah_sayuran": "Buah & Sayuran",
+    "perikanan": "Perikanan",
+    "pertanian": "Pertanian",
+    "unggas": "Unggas",
+    "pembibitan": "Pembibitan",
+    "rumah_segar": "Rumah Segar (Beku)",
+    "kosmetik": "Kosmetik",
+    "salon_kecantikan": "Salon Kecantikan",
+    "pakaian": "Pakaian",
+    "aksesoris_fashion": "Aksesoris Fashion",
+    "perhiasan": "Perhiasan",
+    "tekstil": "Tekstil",
+    "penjahitan": "Penjahitan",
+    "alas_kaki": "Alas Kaki / Sepatu",
+    "elektronik": "Elektronik",
+    "ponsel_aksesoris": "Ponsel & Aksesoris",
+    "layanan_komputer": "Layanan Komputer",
+    "teknologi_informasi": "Teknologi Informasi",
+    "otomotif_suku_cadang": "Otomotif / Suku Cadang",
+    "bengkel": "Bengkel",
+    "perkakas": "Perkakas",
+    "perabotan": "Perabotan",
+    "peralatan_dapur": "Peralatan Dapur",
+    "toko_hewan_peliharaan": "Toko Hewan Peliharaan",
+    "laundry": "Laundry",
+    "studio_foto": "Studio Foto",
+    "layanan_hukum": "Layanan Hukum",
+    "layanan_pemeliharaan": "Layanan Pemeliharaan",
+    "konsultasi": "Konsultasi",
+    "pendidikan": "Pendidikan",
+    "medis_kesehatan": "Medis & Kesehatan",
+    "dokter_hewan": "Dokter Hewan",
+    "olahraga_kebugaran": "Olahraga & Kebugaran",
+    "layanan_keuangan": "Layanan Keuangan",
+    "tur_perjalanan": "Tur & Perjalanan",
+    "transportasi": "Transportasi",
+    "hotel": "Hotel",
+    "percetakan": "Percetakan",
+    "hadiah_mainan": "Hadiah & Mainan",
+    "kerajinan_tangan": "Kerajinan Tangan",
+    "alat_tulis": "Alat Tulis",
+    "bahan_bakar": "Bahan Bakar",
+    "air_galon": "Air Galon",
+    "toko_keagamaan": "Toko Keagamaan",
+    "musik": "Musik",
+    "hiburan": "Hiburan",
+    "pabrik": "Pabrik",
+    "nirlaba": "Nirlaba",
+    "toko_online": "Toko Online",
+    "konstruksi": "Konstruksi",
+    "layanan_keamanan": "Layanan Keamanan",
+    "pengumpulan_sampah": "Pengumpulan Sampah",
+    "operator_kabel": "Operator Kabel",
+    "lainnya": "Lainnya"
   },
   "options": {
     "shoes": {

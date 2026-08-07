@@ -18,7 +18,8 @@ export interface LocalStoreEntry {
   mode: StoreMode;              // offline-only vs terhubung cloud
   cloudStoreId?: string | null; // cloud store (mode = 'cloud')
   dbName: string;               // 'kasirgratisan-db' (default) atau 'kasirgratisan-db-<storeKey>'
-  storeType?: string;           // dari PRODUCT-TYPES (per toko)
+  storeType?: string;           // profil field produk (PRODUCT-TYPES)
+  businessCategory?: string;    // kategori usaha (BUSINESS_CATEGORIES id)
   createdAt: Date;
   lastOpenedAt: Date | null;
 }
@@ -98,6 +99,7 @@ export async function addStore(input: {
   mode: StoreMode;
   cloudStoreId?: string | null;
   storeType?: string;
+  businessCategory?: string;
 }): Promise<LocalStoreEntry> {
   const storeKey = newStoreKey();
   const entry: LocalStoreEntry = {
@@ -107,6 +109,7 @@ export async function addStore(input: {
     cloudStoreId: input.cloudStoreId ?? null,
     dbName: dbNameForStore(storeKey),
     storeType: input.storeType,
+    businessCategory: input.businessCategory,
     createdAt: new Date(),
     lastOpenedAt: null,
   };
@@ -116,6 +119,24 @@ export async function addStore(input: {
 
 export async function updateStore(storeKey: string, patch: Partial<LocalStoreEntry>): Promise<void> {
   await storeRegistry.stores.where('storeKey').equals(storeKey).modify(patch);
+}
+
+/**
+ * Sinkronkan entry registry toko AKTIF dari storeSettings (nama/kategori/tipe).
+ * Dipanggil setelah onboarding / edit nama toko / ubah kategori usaha, agar
+ * dropdown toko di Beranda ikut ter-update (nama, emoji kategori, tipe produk).
+ */
+export async function syncStoreEntryFromSettings(settings: {
+  storeName?: string;
+  businessCategory?: string;
+  storeType?: string;
+}): Promise<void> {
+  await ensureDefaultStoreEntry(settings.storeName);
+  const patch: Partial<LocalStoreEntry> = {};
+  if (settings.storeName?.trim()) patch.name = settings.storeName.trim();
+  if (settings.businessCategory !== undefined) patch.businessCategory = settings.businessCategory;
+  if (settings.storeType !== undefined) patch.storeType = settings.storeType;
+  await updateStore(getActiveStoreKey(), patch);
 }
 
 export async function removeStore(storeKey: string): Promise<void> {

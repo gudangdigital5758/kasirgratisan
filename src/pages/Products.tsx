@@ -29,7 +29,7 @@ import {
   getMissingRequiredFields,
   cleanAttributes,
   getDisplayAttributes,
-  normalizeStoreType,
+  resolveStoreType,
   type ProductFieldDef,
 } from '@/lib/product-fields';
 
@@ -76,7 +76,7 @@ export default function Produk() {
   const categories = useLiveQuery(() => db.categories.where('isDeleted').equals(0).toArray());
   const units = useLiveQuery(() => db.units.where('isDeleted').equals(0).toArray());
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
-  const storeType = normalizeStoreType(storeSettings?.storeType);
+  const storeType = resolveStoreType(storeSettings?.businessCategory, storeSettings?.storeType);
   const customFields = storeSettings?.customFields;
 
   // Compose dropdown options: active master units + current product's unit if it has been deleted/renamed

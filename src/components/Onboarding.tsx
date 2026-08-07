@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { db, type Product } from '@/lib/db';
-import { STORE_TYPES, DEFAULT_STORE_TYPE, normalizeStoreType, type StoreType } from '@/lib/product-fields';
+import { profileForCategory, type BusinessCategory } from '@/lib/product-fields';
+import { syncStoreEntryFromSettings } from '@/lib/store-registry';
+import BusinessCategoryPicker from '@/components/BusinessCategoryPicker';
 import { markAllFeaturesSeen } from '@/lib/whats-new';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -75,7 +77,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [themeColor, setThemeColorState] = useState('215');
-  const [storeType, setStoreType] = useState<StoreType>(DEFAULT_STORE_TYPE);
+  const [category, setCategory] = useState<BusinessCategory | null>(null);
   const { isLoggedIn: cloudLoggedIn, login: cloudLogin, googleUser: cloudUser, logout: cloudLogout } = useCloudAuth();
   const [showCloud, setShowCloud] = useState(false);
   const [cloudBackups, setCloudBackups] = useState<CloudBackup[]>([]);
@@ -228,6 +230,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         deviceId: crypto.randomUUID(),
       });
     }
+    // Sinkronkan nama/kategori/tipe ke registry toko aktif (dropdown Beranda).
+    const st = await db.storeSettings.toCollection().first();
+    await syncStoreEntryFromSettings({
+      storeName: st?.storeName,
+      businessCategory: st?.businessCategory,
+      storeType: st?.storeType,
+    });
     await markAllFeaturesSeen();
     toast.success(successMsg);
     onComplete();
@@ -276,6 +285,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   const handleFinish = async () => {
     if (!storeName.trim()) return;
+    if (!category) {
+      toast.error(t('productFields:catRequired'));
+      return;
+    }
     setSaving(true);
     try {
       const existing = await db.storeSettings.toCollection().first();
@@ -286,7 +299,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           phone: phone.trim(),
           onboardingDone: true,
           themeColor,
-          storeType: normalizeStoreType(storeType),
+          storeType: profileForCategory(category?.id),
+          businessCategory: category?.id,
         });
       } else {
         await db.storeSettings.add({
@@ -299,9 +313,17 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           lastBackupAt: null,
           deviceId: crypto.randomUUID(),
           themeColor,
-          storeType: normalizeStoreType(storeType),
+          storeType: profileForCategory(category?.id),
+          businessCategory: category?.id,
         });
       }
+
+      // Sinkronkan nama/kategori/tipe ke registry toko aktif (dropdown Beranda).
+      await syncStoreEntryFromSettings({
+        storeName: storeName.trim(),
+        businessCategory: category?.id,
+        storeType: profileForCategory(category?.id),
+      });
 
       if (loadDummy) {
         await seedDummyData();
@@ -612,27 +634,17 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5" />
-                  {t('productFields:title')} <span className="text-destructive">*</span>
+                  {t('productFields:catTitle')} <span className="text-destructive">*</span>
                 </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {STORE_TYPES.map((st) => (
-                    <button
-                      key={st.value}
-                      type="button"
-                      onClick={() => setStoreType(st.value)}
-                      className={cn(
-                        'flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-all',
-                        storeType === st.value
-                          ? 'border-primary bg-primary/5 shadow-sm'
-                          : 'border-border hover:border-primary/30 hover:bg-muted/50'
-                      )}
-                    >
-                      <span className="text-xl">{st.icon}</span>
-                      <span className="text-xs font-semibold leading-tight">{t(st.labelKey)}</span>
-                      <span className="text-[10px] text-muted-foreground leading-snug">{t(st.descKey)}</span>
-                    </button>
-                  ))}
-                </div>
+                <BusinessCategoryPicker selectedId={category?.id ?? null} onSelect={setCategory} />
+                {category && (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <span>{category.icon}</span>
+                    {t('productFields:catProfileHint', {
+                      profile: t(`productFields:types.${category.profile}.name`),
+                    })}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

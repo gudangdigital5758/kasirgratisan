@@ -428,8 +428,10 @@ export interface StoreSettings {
   cloudStoreId?: string | null; // cloud store ID yang di-bind ke device ini untuk sync
   printLogo?: boolean; // toggle to print store logo on ESC/POS receipt
   hideWatermark?: boolean; // toggle to hide Profitku.my.id credit/watermark on ESC/POS receipt
-  /** Jenis toko (PRODUCT-TYPES): 'general' | 'shoes' | 'cosmetics' | 'other'. */
+  /** Profil field produk (PRODUCT-TYPES): 'general' | 'shoes' | 'cosmetics' | dll. */
   storeType?: string;
+  /** Kategori usaha (BUSINESS_CATEGORIES id) — dipilih saat membuat toko. */
+  businessCategory?: string;
   /** Custom fields untuk jenis toko "other" (opsional). */
   customFields?: StoreCustomField[];
 }

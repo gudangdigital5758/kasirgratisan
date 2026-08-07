@@ -16,6 +16,7 @@ import type { PermissionKey } from '@/lib/db';
 import { useTranslation } from 'react-i18next';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { cn } from '@/lib/utils';
+import StoreSwitcher from '@/components/StoreSwitcher';
 
 export default function Dashboard() {
   const { can } = useAuth();
@@ -23,6 +24,26 @@ export default function Dashboard() {
   const { t, i18n } = useTranslation('dashboard');
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  // Jam live (24 jam) di header Beranda. `new Date()` memakai jam lokal perangkat
+  // (HP sinkron dengan jam provider seluler). Update TEPAT di pergantian menit
+  // (realtime, tanpa render berlebihan tiap detik).
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const align = () => {
+      const d = new Date();
+      const msToNextMinute = (60 - d.getSeconds()) * 1000 - d.getMilliseconds();
+      timer = setTimeout(() => {
+        setNow(new Date());
+        align();
+      }, Math.max(250, msToNextMinute));
+    };
+    align();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   const dateLocale = dateLocaleFor(i18n.language);
   const numberLocale = numberLocaleFor(i18n.language);
@@ -138,14 +159,22 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 pt-6 space-y-5">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
+      {/* Header + Store Switcher (dropdown ganti/tambah toko) */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
           <img src="/header-icon.png" alt="Profitku" className="w-6 h-6 rounded-full object-cover bg-white" />
           <span className="text-[11px] font-semibold text-primary tracking-wide uppercase">Profitku</span>
         </div>
-        <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, d MMMM yyyy', { locale: dateLocale })}</p>
-        <h1 className="text-2xl font-bold tracking-tight">{storeSettings?.storeName || t('title.storeNameFallback')}</h1>
+        {/* Hari, tanggal & jam (format 24 jam) — di atas dropdown toko */}
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            {format(now, 'EEEE, d MMMM yyyy', { locale: dateLocale })}
+          </p>
+          <p className="text-sm font-semibold text-foreground tabular-nums">
+            {format(now, 'HH:mm')}
+          </p>
+        </div>
+        <StoreSwitcher />
       </div>
 
       {/* Backup Reminder */}

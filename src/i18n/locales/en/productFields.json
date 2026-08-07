@@ -1,6 +1,11 @@
 {
   "title": "Store Type",
   "subtitle": "Choose your store type — the product form adapts automatically",
+  "catTitle": "Business Category",
+  "catSearch": "Search Category",
+  "catEmpty": "Category not found",
+  "catRequired": "Please choose a business category first",
+  "catProfileHint": "Product fields: {{profile}}",
   "types": {
     "general": {
       "name": "General Store",
@@ -13,6 +18,38 @@
     "cosmetics": {
       "name": "Cosmetics Store",
       "desc": "BPOM, Halal, expiry date"
+    },
+    "fashion": {
+      "name": "Fashion Store",
+      "desc": "Size, material, brand, condition"
+    },
+    "food": {
+      "name": "Food & Beverage",
+      "desc": "Expiry, halal, weight, production date"
+    },
+    "fresh": {
+      "name": "Fresh & Agriculture",
+      "desc": "Weight, origin, harvest, expiry"
+    },
+    "electronics": {
+      "name": "Electronics",
+      "desc": "Brand, model, warranty, condition"
+    },
+    "automotive": {
+      "name": "Automotive & Workshop",
+      "desc": "Brand, part no., condition, compatibility"
+    },
+    "service": {
+      "name": "Services",
+      "desc": "Duration, by appointment"
+    },
+    "pet": {
+      "name": "Pet Store",
+      "desc": "Species, breed, age, condition"
+    },
+    "furniture": {
+      "name": "Furniture",
+      "desc": "Material, dimension, condition"
     },
     "other": {
       "name": "Other Type",
@@ -33,7 +70,117 @@
       "bpomNumber": "BPOM Number",
       "halalNumber": "Halal Number",
       "expiryDate": "Expiry Date"
+    },
+    "fashion": {
+      "size": "Size",
+      "material": "Material",
+      "brand": "Brand",
+      "condition": "New / Used"
+    },
+    "food": {
+      "expiryDate": "Expiry Date",
+      "halalNumber": "Halal Number",
+      "weight": "Weight",
+      "productionDate": "Production Date"
+    },
+    "fresh": {
+      "weight": "Weight",
+      "origin": "Origin",
+      "harvestDate": "Harvest Date",
+      "expiryDate": "Expiry Date"
+    },
+    "electronics": {
+      "brand": "Brand",
+      "model": "Model",
+      "warranty": "Warranty",
+      "condition": "New / Used"
+    },
+    "automotive": {
+      "brand": "Brand",
+      "partNo": "Part No.",
+      "condition": "New / Used",
+      "compatibility": "Vehicle Compatibility"
+    },
+    "service": {
+      "duration": "Service Duration",
+      "byAppointment": "By Appointment"
+    },
+    "pet": {
+      "species": "Animal Type",
+      "breed": "Breed",
+      "age": "Age",
+      "condition": "New / Used"
+    },
+    "furniture": {
+      "material": "Material",
+      "dimension": "Dimension",
+      "condition": "New / Used"
     }
+  },
+  "cats": {
+    "sembako": "Grocery",
+    "kelontong": "Convenience Store",
+    "makanan_minuman": "Food & Beverage",
+    "restoran_kafe": "Restaurant & Cafe",
+    "katering": "Catering",
+    "kuliner_kaki_lima": "Street Food",
+    "toko_roti": "Bakery",
+    "toko_manisan": "Candy Store",
+    "produk_susu": "Dairy",
+    "buah_sayuran": "Fruits & Vegetables",
+    "perikanan": "Fisheries",
+    "pertanian": "Agriculture",
+    "unggas": "Poultry",
+    "pembibitan": "Nursery",
+    "rumah_segar": "Frozen Foods",
+    "kosmetik": "Cosmetics",
+    "salon_kecantikan": "Beauty Salon",
+    "pakaian": "Clothing",
+    "aksesoris_fashion": "Fashion Accessories",
+    "perhiasan": "Jewelry",
+    "tekstil": "Textiles",
+    "penjahitan": "Tailoring",
+    "alas_kaki": "Footwear / Shoes",
+    "elektronik": "Electronics",
+    "ponsel_aksesoris": "Phones & Accessories",
+    "layanan_komputer": "Computer Services",
+    "teknologi_informasi": "IT Services",
+    "otomotif_suku_cadang": "Automotive / Spare Parts",
+    "bengkel": "Auto Workshop",
+    "perkakas": "Tools & Hardware",
+    "perabotan": "Furniture",
+    "peralatan_dapur": "Kitchenware",
+    "toko_hewan_peliharaan": "Pet Store",
+    "laundry": "Laundry",
+    "studio_foto": "Photo Studio",
+    "layanan_hukum": "Legal Services",
+    "layanan_pemeliharaan": "Maintenance Services",
+    "konsultasi": "Consulting",
+    "pendidikan": "Education",
+    "medis_kesehatan": "Medical & Health",
+    "dokter_hewan": "Veterinarian",
+    "olahraga_kebugaran": "Sports & Fitness",
+    "layanan_keuangan": "Financial Services",
+    "tur_perjalanan": "Travel & Tours",
+    "transportasi": "Transportation",
+    "hotel": "Hotel",
+    "percetakan": "Printing",
+    "hadiah_mainan": "Gifts & Toys",
+    "kerajinan_tangan": "Handicrafts",
+    "alat_tulis": "Stationery",
+    "bahan_bakar": "Fuel",
+    "air_galon": "Gallon Water",
+    "toko_keagamaan": "Religious Store",
+    "musik": "Music",
+    "hiburan": "Entertainment",
+    "pabrik": "Factory",
+    "nirlaba": "Nonprofit",
+    "toko_online": "Online Store",
+    "konstruksi": "Construction",
+    "layanan_keamanan": "Security Services",
+    "pengumpulan_sampah": "Waste Collection",
+    "operator_kabel": "Cable Operator",
+    "lainnya": "Others"
   },
   "options": {
     "shoes": {

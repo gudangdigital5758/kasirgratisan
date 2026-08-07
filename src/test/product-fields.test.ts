@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   PRODUCT_FIELDS,
   STORE_TYPES,
+  BUSINESS_CATEGORIES,
   cleanAttributes,
   getDisplayAttributes,
   getMissingRequiredFields,
   getProductFields,
   getVisibleFields,
   normalizeStoreType,
+  profileForCategory,
+  resolveStoreType,
 } from '@/lib/product-fields';
 
 describe('product-fields — normalizeStoreType', () => {
@@ -27,8 +30,35 @@ describe('product-fields — normalizeStoreType', () => {
 });
 
 describe('product-fields — schemas', () => {
-  it('STORE_TYPES covers exactly 4 types', () => {
-    expect(STORE_TYPES.map(s => s.value).sort()).toEqual(['cosmetics', 'general', 'other', 'shoes']);
+  it('STORE_TYPES covers all profiles', () => {
+    expect(STORE_TYPES.map(s => s.value).sort()).toEqual([
+      'automotive', 'cosmetics', 'electronics', 'fashion', 'food', 'fresh',
+      'furniture', 'general', 'other', 'pet', 'service', 'shoes',
+    ]);
+  });
+
+  it('every business category maps to a valid profile', () => {
+    const profiles = new Set(STORE_TYPES.map(s => s.value));
+    expect(BUSINESS_CATEGORIES.length).toBeGreaterThan(30);
+    for (const c of BUSINESS_CATEGORIES) {
+      expect(profiles.has(c.profile)).toBe(true);
+      expect(c.id.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('profileForCategory returns general for unknown and maps known ids', () => {
+    expect(profileForCategory(undefined)).toBe('general');
+    expect(profileForCategory('bogus')).toBe('general');
+    expect(profileForCategory('kosmetik')).toBe('cosmetics');
+    expect(profileForCategory('alas_kaki')).toBe('shoes');
+    expect(profileForCategory('makanan_minuman')).toBe('food');
+  });
+
+  it('resolveStoreType prefers businessCategory over legacy storeType', () => {
+    expect(resolveStoreType('makanan_minuman', 'general')).toBe('food');
+    expect(resolveStoreType(undefined, 'shoes')).toBe('shoes');
+    expect(resolveStoreType(undefined, undefined)).toBe('general');
+    expect(resolveStoreType(null, 'bogus')).toBe('general');
   });
 
   it('general has no special columns', () => {

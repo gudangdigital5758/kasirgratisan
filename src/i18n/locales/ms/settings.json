@@ -1086,6 +1086,9 @@
     "switch": "Guna Kedai Ini",
     "empty": "Tiada kedai lagi.",
     "lockedPermission": "Perlu akses urus tetapan kedai",
+    "switcherLabel": "Kedai Aktif",
+    "switcherTitle": "Tukar Kedai",
+    "fallbackName": "Kedai Saya",
     "wizard": {
       "title": "Tambah Kedai",
       "desc": "Buat kedai baharu pada peranti ini (data terasing dari kedai lain).",
@@ -1101,7 +1104,8 @@
       "create": "Buat & Buka Kedai",
       "saving": "Membuat…",
       "failed": "Gagal membuat kedai",
-      "nameRequired": "Nama kedai wajib diisi"
+      "nameRequired": "Nama kedai wajib diisi",
+      "categoryRequired": "Sila pilih kategori perniagaan dahulu"
     }
   },
   "backupReminder": {

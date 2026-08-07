@@ -1502,6 +1502,9 @@
     "switch": "Use This Store",
     "empty": "No stores yet.",
     "lockedPermission": "Requires manage store settings access",
+    "switcherLabel": "Active Store",
+    "switcherTitle": "Switch Store",
+    "fallbackName": "My Store",
     "wizard": {
       "title": "Add Store",
       "desc": "Create a new store on this device (data isolated from other stores).",
@@ -1517,7 +1520,8 @@
       "create": "Create & Open Store",
       "saving": "Creating…",
       "failed": "Failed to create store",
-      "nameRequired": "Store name is required"
+      "nameRequired": "Store name is required",
+      "categoryRequired": "Please choose a business category first"
     }
   },
   "backupReminder": {

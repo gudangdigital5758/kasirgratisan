@@ -1503,6 +1503,9 @@
     "switch": "Pakai Toko Ini",
     "empty": "Belum ada toko.",
     "lockedPermission": "Perlu akses kelola pengaturan toko",
+    "switcherLabel": "Toko Aktif",
+    "switcherTitle": "Ganti Toko",
+    "fallbackName": "Toko Saya",
     "wizard": {
       "title": "Tambah Toko",
       "desc": "Buat toko baru di perangkat ini (data terpisah dari toko lain).",
@@ -1518,7 +1521,8 @@
       "create": "Buat & Buka Toko",
       "saving": "Membuat…",
       "failed": "Gagal membuat toko",
-      "nameRequired": "Nama toko wajib diisi"
+      "nameRequired": "Nama toko wajib diisi",
+      "categoryRequired": "Pilih kategori usaha dulu"
     }
   },
   "backupReminder": {
