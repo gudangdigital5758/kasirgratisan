@@ -121,7 +121,7 @@ function Section({ title, rows }: { title: string; rows: Record<string, unknown>
             fontSize: 11,
             overflow: 'auto',
             maxHeight: 220,
-            background: '#f8fafc',
+            background: 'var(--code-bg)',
             padding: 8,
             borderRadius: 8,
           }}

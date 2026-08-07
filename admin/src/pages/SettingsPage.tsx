@@ -139,7 +139,7 @@ export default function SettingsPage() {
 
       <div className="card stack">
         <strong>Health</strong>
-        <pre style={{ margin: 0, fontSize: 12, background: '#f8fafc', padding: 8, borderRadius: 8 }}>
+        <pre style={{ margin: 0, fontSize: 12, background: 'var(--code-bg)', padding: 8, borderRadius: 8 }}>
           {JSON.stringify(health, null, 2)}
         </pre>
         <p className="muted">{note}</p>
@@ -174,7 +174,7 @@ export default function SettingsPage() {
         </p>
 
         {/* What's New */}
-        <div style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <div style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 8 }}>
           <label className="row">
             <input
               type="checkbox"
@@ -192,7 +192,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Request Feature */}
-        <div style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <div style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 8 }}>
           <label className="row">
             <input
               type="checkbox"
@@ -226,7 +226,7 @@ export default function SettingsPage() {
               width: '100%',
               marginTop: 8,
               padding: '8px 12px',
-              border: '1px solid #cbd5e1',
+              border: '1px solid var(--border)',
               borderRadius: 6,
               fontSize: 13,
             }}
@@ -234,7 +234,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Donate */}
-        <div style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <div style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 8 }}>
           <label className="row">
             <input
               type="checkbox"
@@ -268,7 +268,7 @@ export default function SettingsPage() {
               width: '100%',
               marginTop: 8,
               padding: '8px 12px',
-              border: '1px solid #cbd5e1',
+              border: '1px solid var(--border)',
               borderRadius: 6,
               fontSize: 13,
             }}
@@ -276,7 +276,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Telegram */}
-        <div style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <div style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 8 }}>
           <label className="row">
             <input
               type="checkbox"
@@ -313,7 +313,7 @@ export default function SettingsPage() {
               width: '100%',
               marginTop: 8,
               padding: '8px 12px',
-              border: '1px solid #cbd5e1',
+              border: '1px solid var(--border)',
               borderRadius: 6,
               fontSize: 13,
             }}
@@ -326,7 +326,7 @@ export default function SettingsPage() {
             disabled={actionButtonsLoading}
             style={{
               padding: '10px 20px',
-              background: actionButtonsLoading ? '#94a3b8' : '#10b981',
+              background: actionButtonsLoading ? 'var(--muted)' : 'var(--ok)',
               color: 'white',
               border: 'none',
               borderRadius: 6,

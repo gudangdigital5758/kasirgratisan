@@ -1,15 +1,49 @@
 :root {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   line-height: 1.45;
-  color: #0f172a;
-  background: #f1f5f9;
+  color-scheme: light;
+  /* Tema Profitku (brand blue #0067FD ≈ primary POS hsl(215 100% 50%)) */
   --primary: #0067FD;
   --primary-soft: #dbeafe;
   --border: #e2e8f0;
   --muted: #64748b;
   --card: #ffffff;
+  --bg: #f1f5f9;
+  --text: #0f172a;
   --danger: #dc2626;
   --ok: #16a34a;
+  --badge-bg: #e2e8f0;
+  --badge-text: #334155;
+  --badge-ok-bg: #dcfce7;
+  --badge-ok-text: #166534;
+  --badge-warn-bg: #ffedd5;
+  --badge-warn-text: #9a3412;
+  --code-bg: #f8fafc;
+  --input-bg: #ffffff;
+  --shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
+/* Dark mode — selaras palet dark Profitku (slate) */
+html.dark {
+  color-scheme: dark;
+  --primary: #0067FD;
+  --primary-soft: #1e3a8a;
+  --border: #334155;
+  --muted: #94a3b8;
+  --card: #1e293b;
+  --bg: #0f172a;
+  --text: #e2e8f0;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --badge-bg: #334155;
+  --badge-text: #cbd5e1;
+  --badge-ok-bg: #14532d;
+  --badge-ok-text: #bbf7d0;
+  --badge-warn-bg: #7c2d12;
+  --badge-warn-text: #fed7aa;
+  --code-bg: #0b1220;
+  --input-bg: #0f172a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%);
 }
 
 * {
@@ -19,6 +53,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
 }
 
 a {
@@ -33,35 +69,189 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.7rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+code {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* ===== Layout mobile-first ===== */
 .layout {
-  display: grid;
-  grid-template-columns: 220px 1fr;
   min-height: 100vh;
 }
 
-@media (max-width: 800px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    border-right: none !important;
-    border-bottom: 1px solid var(--border);
-    position: static;
-    height: auto;
-    overflow: visible;
-  }
+/* Topbar (mobile) — hamburger + brand */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem;
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.hamburger {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 6px;
+}
+.hamburger:hover {
+  background: #1e293b;
+}
+.hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+}
+.topbar .brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+}
+.topbar-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+}
+.theme-toggle {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.theme-toggle:hover {
+  background: #1e293b;
+}
+.theme-toggle-side {
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0.25rem 0 0.5rem;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+.theme-toggle-side:hover {
+  background: #1e293b;
+  color: #fff;
 }
 
-/* Sidebar sticky full-height dengan scrollbar sendiri; konten utama tetap scroll normal. */
+/* Backdrop (mobile) */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 0.5);
+  z-index: 45;
+}
+
+/* Sidebar = drawer off-canvas (mobile default) */
 .sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(280px, 82vw);
+  z-index: 50;
   background: #0f172a;
   color: #e2e8f0;
   padding: 1.25rem 1rem;
-  border-right: 1px solid #1e293b;
-  position: sticky;
-  top: 0;
-  height: 100vh;
   overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  box-shadow: 0 0 30px rgb(0 0 0 / 0.35);
+}
+.sidebar.open {
+  transform: translateX(0);
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.sidebar-head .brand-head {
+  margin-bottom: 0;
+}
+.sidebar-close {
+  background: transparent;
+  border: 0;
+  color: #cbd5e1;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.sidebar-close:hover {
+  background: #1e293b;
+  color: #fff;
+}
+
+/* Desktop (min-width 801px) */
+@media (min-width: 801px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .topbar,
+  .backdrop,
+  .sidebar-close {
+    display: none;
+  }
+  /* Sidebar sticky full-height dengan scrollbar sendiri; konten utama scroll normal. */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: auto;
+    z-index: auto;
+    transform: none;
+    transition: none;
+    box-shadow: none;
+    border-right: 1px solid #1e293b;
+  }
 }
 
 .brand-head {
@@ -107,7 +297,12 @@ textarea {
 }
 
 .main {
-  padding: 1.25rem 1.5rem 2.5rem;
+  padding: 1rem 1rem 2.25rem;
+}
+@media (min-width: 801px) {
+  .main {
+    padding: 1.25rem 1.5rem 2.5rem;
+  }
 }
 
 .card {
@@ -115,7 +310,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 1rem 1.1rem;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+  box-shadow: var(--shadow);
 }
 
 .grid {
@@ -179,7 +374,7 @@ th {
 
 .btn.ghost {
   background: transparent;
-  color: #0f172a;
+  color: var(--text);
   border: 1px solid var(--border);
 }
 
@@ -192,7 +387,8 @@ th {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 0.55rem 0.7rem;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .muted {
@@ -206,19 +402,19 @@ th {
   font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--badge-bg);
+  color: var(--badge-text);
   text-transform: uppercase;
 }
 
 .badge.ok {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--badge-ok-bg);
+  color: var(--badge-ok-text);
 }
 
 .badge.warn {
-  background: #ffedd5;
-  color: #9a3412;
+  background: var(--badge-warn-bg);
+  color: var(--badge-warn-text);
 }
 
 .login-wrap {
@@ -259,7 +455,7 @@ th {
   border-left: 3px solid var(--primary);
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.5rem;
-  background: #fff;
+  background: var(--card);
   border-radius: 0 0.5rem 0.5rem 0;
   border: 1px solid var(--border);
   border-left-width: 3px;

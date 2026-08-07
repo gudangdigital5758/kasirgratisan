@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './lib/auth';
+import { applyAdminTheme } from './lib/theme';
 import './index.css';
+
+// Terapkan tema tersimpan sebelum render (hindari flash).
+applyAdminTheme();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

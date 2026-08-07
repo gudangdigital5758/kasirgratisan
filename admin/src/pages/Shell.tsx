@@ -1,5 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../lib/auth';
+import { useAdminTheme } from '../lib/theme';
 
 const links = [
   { to: '/', end: true, label: 'Overview' },
@@ -13,13 +15,67 @@ const links = [
 
 export default function Shell() {
   const { me, logout } = useAdminAuth();
+  const { dark, toggle } = useAdminTheme();
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  // Tutup drawer saat pindah halaman (mobile).
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  // Tutup dengan tombol Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const close = () => setOpen(false);
 
   return (
     <div className="layout">
-      <aside className="sidebar">
-        <div className="brand-head">
-          <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" />
-          <h1>Profitku Admin</h1>
+      {/* Topbar mobile — hamburger + brand */}
+      <header className="topbar">
+        <button
+          type="button"
+          className="hamburger"
+          onClick={() => setOpen(true)}
+          aria-label="Buka menu"
+          aria-expanded={open}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" />
+        <span className="topbar-title">Profitku Admin</span>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={toggle}
+          aria-label={dark ? 'Mode terang' : 'Mode gelap'}
+          title={dark ? 'Mode terang' : 'Mode gelap'}
+        >
+          {dark ? '☀️' : '🌙'}
+        </button>
+      </header>
+
+      {/* Backdrop (mobile) */}
+      {open && <div className="backdrop" onClick={close} aria-hidden="true" />}
+
+      <aside className={`sidebar${open ? ' open' : ''}`}>
+        <div className="sidebar-head">
+          <div className="brand-head">
+            <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" />
+            <h1>Profitku Admin</h1>
+          </div>
+          <button type="button" className="sidebar-close" onClick={close} aria-label="Tutup menu">
+            ×
+          </button>
         </div>
         <p className="sub">
           {me?.email}
@@ -28,6 +84,9 @@ export default function Shell() {
             {me?.role}
           </span>
         </p>
+        <button type="button" className="btn ghost theme-toggle-side" onClick={toggle}>
+          {dark ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
+        </button>
         <nav>
           {links.map((l) => (
             <NavLink
@@ -49,6 +108,7 @@ export default function Shell() {
           Keluar
         </button>
       </aside>
+
       <main className="main">
         <Outlet />
       </main>
