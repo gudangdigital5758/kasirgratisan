@@ -41,10 +41,27 @@ type AffiliateRow = {
   name: string;
   user_id: string | null;
   payout_note: string | null;
+  bank_name: string | null;
+  bank_account_no: string | null;
+  bank_account_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at?: string;
 };
+
+const mapAffiliate = (r: AffiliateRow) => ({
+  id: r.id,
+  code: r.code,
+  name: r.name,
+  userId: r.user_id,
+  payoutNote: r.payout_note,
+  bankName: r.bank_name,
+  bankAccountNo: r.bank_account_no,
+  bankAccountName: r.bank_account_name,
+  isActive: r.is_active,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at ?? r.created_at,
+});
 
 const mapCommission = (c: CommissionRow) => ({
   id: c.id,
@@ -166,14 +183,7 @@ affiliates.get('/', async (c) => {
       const paid = cm.filter((x) => x.status === 'paid');
       const referredUsers = new Set(cm.map((x) => x.user_id)).size;
       return {
-        id: r.id,
-        code: r.code,
-        name: r.name,
-        userId: r.user_id,
-        payoutNote: r.payout_note,
-        isActive: r.is_active,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at ?? r.created_at,
+        ...mapAffiliate(r),
         stats: {
           referrals: cm.length,
           referredUsers,
@@ -205,6 +215,9 @@ affiliates.post('/', async (c) => {
     userId?: string;
     userEmail?: string;
     payoutNote?: string;
+    bankName?: string;
+    bankAccountNo?: string;
+    bankAccountName?: string;
   };
   const code = normalizeAffiliateCode(body.code || '');
   const name = (body.name || '').trim();
@@ -239,6 +252,9 @@ affiliates.post('/', async (c) => {
       name,
       user_id: userId,
       payout_note: (body.payoutNote || '').trim() || null,
+      bank_name: (body.bankName || '').trim() || null,
+      bank_account_no: (body.bankAccountNo || '').trim() || null,
+      bank_account_name: (body.bankAccountName || '').trim() || null,
       is_active: true,
     });
     const row = rows[0];
@@ -248,6 +264,7 @@ affiliates.post('/', async (c) => {
       code,
       name,
       userId,
+      bank: row.bank_name ?? null,
     });
     await writeEvent(c.env, {
       type: 'admin.affiliate.create',
@@ -259,14 +276,7 @@ affiliates.post('/', async (c) => {
     return c.json({
       ok: true,
       affiliate: {
-        id: row.id,
-        code: row.code,
-        name: row.name,
-        userId: row.user_id,
-        payoutNote: row.payout_note,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at ?? row.created_at,
+        ...mapAffiliate(row),
         stats: { referrals: 0, referredUsers: 0, totalCommissionIdr: 0, earnedCommissionIdr: 0, paidCommissionIdr: 0 },
       },
     });
@@ -296,16 +306,7 @@ affiliates.get('/:id', async (c) => {
     ).catch(() => [] as CommissionRow[]);
 
     return c.json({
-      affiliate: {
-        id: row.id,
-        code: row.code,
-        name: row.name,
-        userId: row.user_id,
-        payoutNote: row.payout_note,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at ?? row.created_at,
-      },
+      affiliate: mapAffiliate(row),
       commissions: commissions.map(mapCommission),
     });
   } catch (err) {
@@ -325,6 +326,9 @@ affiliates.patch('/:id', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string;
     payoutNote?: string | null;
+    bankName?: string | null;
+    bankAccountNo?: string | null;
+    bankAccountName?: string | null;
     isActive?: boolean;
   };
 
@@ -336,6 +340,15 @@ affiliates.patch('/:id', async (c) => {
   }
   if (body.payoutNote !== undefined) {
     update.payout_note = (body.payoutNote || '').trim() || null;
+  }
+  if (body.bankName !== undefined) {
+    update.bank_name = (body.bankName || '').trim() || null;
+  }
+  if (body.bankAccountNo !== undefined) {
+    update.bank_account_no = (body.bankAccountNo || '').trim() || null;
+  }
+  if (body.bankAccountName !== undefined) {
+    update.bank_account_name = (body.bankAccountName || '').trim() || null;
   }
   if (body.isActive !== undefined) {
     if (typeof body.isActive !== 'boolean') {
@@ -351,16 +364,7 @@ affiliates.patch('/:id', async (c) => {
     await writeAudit(c.env, a as AdminContext, 'affiliate.update', 'affiliates', id, update);
     return c.json({
       ok: true,
-      affiliate: {
-        id: row.id,
-        code: row.code,
-        name: row.name,
-        userId: row.user_id,
-        payoutNote: row.payout_note,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at ?? row.created_at,
-      },
+      affiliate: mapAffiliate(row),
     });
   } catch (err) {
     console.error('[admin affiliate update]', err);

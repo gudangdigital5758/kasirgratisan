@@ -211,13 +211,26 @@ export const adminApi = {
     userId?: string;
     userEmail?: string;
     payoutNote?: string;
+    bankName?: string;
+    bankAccountNo?: string;
+    bankAccountName?: string;
   }) =>
     request<{ ok: boolean; affiliate: AffiliateRow }>('/admin/api/affiliates', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
-  patchAffiliate: (id: string, body: { name?: string; payoutNote?: string | null; isActive?: boolean }) =>
+  patchAffiliate: (
+    id: string,
+    body: {
+      name?: string;
+      payoutNote?: string | null;
+      bankName?: string | null;
+      bankAccountNo?: string | null;
+      bankAccountName?: string | null;
+      isActive?: boolean;
+    },
+  ) =>
     request<{ ok: boolean; affiliate: AffiliateRow }>(`/admin/api/affiliates/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
@@ -242,6 +255,9 @@ export type AffiliateRow = {
   name: string;
   userId: string | null;
   payoutNote: string | null;
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankAccountName: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

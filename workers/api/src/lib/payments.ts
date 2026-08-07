@@ -145,6 +145,8 @@ export async function fulfillCompletedPayment(
       userId,
       affiliateCode: String(pay.raw.affiliateCode),
       amountPaid: pay.amount,
+      capturedAt:
+        typeof pay.raw?.affiliateCapturedAt === 'string' ? pay.raw.affiliateCapturedAt : null,
     });
   }
 

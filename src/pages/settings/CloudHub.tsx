@@ -280,6 +280,7 @@ export default function CloudHub() {
         redirectURL: `${window.location.origin}${CLOUD_ROUTES.hub}`,
         voucherCode,
         affiliateCode: getAffiliateRef()?.code,
+        affiliateCapturedAt: getAffiliateRef()?.capturedAt,
       });
       if (result.completed || result.transaction.status === 'COMPLETED') {
         await refreshProfile();

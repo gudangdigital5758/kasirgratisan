@@ -13,12 +13,29 @@ const defaultSettings: AffiliateSettings = {
   min_amount_idr: 0,
 };
 
-const emptyForm = { code: '', name: '', userEmail: '', payoutNote: '' };
+const emptyForm = {
+  code: '',
+  name: '',
+  userEmail: '',
+  bankName: '',
+  bankAccountNo: '',
+  bankAccountName: '',
+  payoutNote: '',
+};
 
 const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
+/** Field angka disimpan sebagai string agar bisa dikosongkan (tanpa paksa 0 / leading zero). */
+const emptyCfg = { enabled: true, commission_percent: '', attribution_days: '', min_amount_idr: '' };
+
+const toNum = (v: string, fallback = 0, min = 0, max = Infinity) => {
+  const n = Number(v.trim());
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+};
+
 export default function AffiliatesPage() {
-  const [settings, setSettings] = useState<AffiliateSettings>(defaultSettings);
+  const [cfg, setCfg] = useState(emptyCfg);
   const [rows, setRows] = useState<AffiliateRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -38,8 +55,15 @@ export default function AffiliatesPage() {
   const loadSettings = useCallback(() => {
     adminApi
       .affiliateSettings()
-      .then((r) => setSettings(r.settings))
-      .catch(() => setSettings(defaultSettings));
+      .then((r) =>
+        setCfg({
+          enabled: r.settings.enabled,
+          commission_percent: String(r.settings.commission_percent),
+          attribution_days: String(r.settings.attribution_days),
+          min_amount_idr: String(r.settings.min_amount_idr),
+        }),
+      )
+      .catch(() => setCfg({ ...emptyCfg, enabled: defaultSettings.enabled }));
   }, []);
 
   useEffect(() => {
@@ -55,12 +79,17 @@ export default function AffiliatesPage() {
     setOk(null);
     try {
       const res = await adminApi.patchAffiliateSettings({
-        enabled: settings.enabled,
-        commission_percent: Number(settings.commission_percent),
-        attribution_days: Number(settings.attribution_days),
-        min_amount_idr: Number(settings.min_amount_idr) || 0,
+        enabled: cfg.enabled,
+        commission_percent: toNum(cfg.commission_percent, 0, 0, 100),
+        attribution_days: toNum(cfg.attribution_days, 90, 1, 3650),
+        min_amount_idr: toNum(cfg.min_amount_idr, 0, 0),
       });
-      setSettings(res.settings);
+      setCfg({
+        enabled: res.settings.enabled,
+        commission_percent: String(res.settings.commission_percent),
+        attribution_days: String(res.settings.attribution_days),
+        min_amount_idr: String(res.settings.min_amount_idr),
+      });
       setOk('Settings affiliate disimpan');
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Gagal simpan settings');
@@ -79,6 +108,9 @@ export default function AffiliatesPage() {
         code: form.code,
         name: form.name,
         userEmail: form.userEmail.trim() || undefined,
+        bankName: form.bankName,
+        bankAccountNo: form.bankAccountNo,
+        bankAccountName: form.bankAccountName,
         payoutNote: form.payoutNote,
       });
       setOk(`Affiliator ${form.code.toUpperCase()} dibuat — link: https://profitku.my.id/?ref=${form.code.toUpperCase()}`);
@@ -132,6 +164,11 @@ export default function AffiliatesPage() {
   const statusLabel = (s: string) =>
     s === 'paid' ? 'paid' : s === 'void' ? 'void' : 'earned';
 
+  const bankText = (a: AffiliateRow) => {
+    const parts = [a.bankName, a.bankAccountNo, a.bankAccountName].filter(Boolean);
+    return parts.length ? parts.join(' · ') : null;
+  };
+
   return (
     <div className="stack">
       <div>
@@ -149,28 +186,26 @@ export default function AffiliatesPage() {
       <form className="card stack" onSubmit={(e) => void saveSettings(e)}>
         <h3 style={{ margin: 0, fontSize: '1rem' }}>Settings komisi</h3>
         <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
-          <label className="stack" style={{ flex: '0 1 180px' }}>
+          <label className="stack" style={{ flex: '0 1 160px' }}>
             <span className="muted">Komisi (%)</span>
             <input
               type="number"
               min={0}
               max={100}
-              value={settings.commission_percent}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, commission_percent: Number(e.target.value) }))
-              }
+              value={cfg.commission_percent}
+              onChange={(e) => setCfg((s) => ({ ...s, commission_percent: e.target.value }))}
+              placeholder="10"
             />
           </label>
-          <label className="stack" style={{ flex: '0 1 160px' }}>
+          <label className="stack" style={{ flex: '0 1 150px' }}>
             <span className="muted">Atribusi (hari)</span>
             <input
               type="number"
               min={1}
               max={3650}
-              value={settings.attribution_days}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, attribution_days: Number(e.target.value) }))
-              }
+              value={cfg.attribution_days}
+              onChange={(e) => setCfg((s) => ({ ...s, attribution_days: e.target.value }))}
+              placeholder="90"
             />
           </label>
           <label className="stack" style={{ flex: '0 1 170px' }}>
@@ -178,23 +213,27 @@ export default function AffiliatesPage() {
             <input
               type="number"
               min={0}
-              value={settings.min_amount_idr}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, min_amount_idr: Number(e.target.value) || 0 }))
-              }
+              value={cfg.min_amount_idr}
+              onChange={(e) => setCfg((s) => ({ ...s, min_amount_idr: e.target.value }))}
+              placeholder="0"
             />
           </label>
           <label className="stack" style={{ flex: '0 1 150px' }}>
             <span className="muted">Aktif</span>
             <select
-              value={settings.enabled ? '1' : '0'}
-              onChange={(e) => setSettings((s) => ({ ...s, enabled: e.target.value === '1' }))}
+              value={cfg.enabled ? '1' : '0'}
+              onChange={(e) => setCfg((s) => ({ ...s, enabled: e.target.value === '1' }))}
             >
               <option value="1">Ya</option>
               <option value="0">Tidak</option>
             </select>
           </label>
         </div>
+        <p className="muted" style={{ margin: 0, fontSize: '0.75rem', maxWidth: 640 }}>
+          <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus berlangganan dalam X hari
+          sejak mengklik link affiliator, kalau lewat komisi tidak berlaku. Kosongkan Komisi (%) lalu
+          simpan untuk komisi 0 (jalur referral tetap terekam).
+        </p>
         <div className="row" style={{ gap: '0.5rem' }}>
           <button type="submit" className="btn" disabled={busy}>
             {busy ? 'Menyimpan…' : 'Simpan settings'}
@@ -234,12 +273,38 @@ export default function AffiliatesPage() {
             />
           </label>
         </div>
+        <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+          <label className="stack" style={{ flex: '1 1 160px' }}>
+            <span className="muted">Nama bank (opsional)</span>
+            <input
+              value={form.bankName}
+              onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+              placeholder="BCA / Mandiri / DANA"
+            />
+          </label>
+          <label className="stack" style={{ flex: '1 1 180px' }}>
+            <span className="muted">No. rekening (opsional)</span>
+            <input
+              value={form.bankAccountNo}
+              onChange={(e) => setForm((f) => ({ ...f, bankAccountNo: e.target.value }))}
+              placeholder="1234567890"
+            />
+          </label>
+          <label className="stack" style={{ flex: '1 1 180px' }}>
+            <span className="muted">Atas nama (opsional)</span>
+            <input
+              value={form.bankAccountName}
+              onChange={(e) => setForm((f) => ({ ...f, bankAccountName: e.target.value }))}
+              placeholder="Budi Santoso"
+            />
+          </label>
+        </div>
         <label className="stack">
           <span className="muted">Catatan payout (opsional)</span>
           <input
             value={form.payoutNote}
             onChange={(e) => setForm((f) => ({ ...f, payoutNote: e.target.value }))}
-            placeholder="Rekening / e-wallet / kontak"
+            placeholder="Catatan tambahan: e-wallet / kontak"
           />
         </label>
         <div className="row" style={{ gap: '0.5rem' }}>
@@ -254,6 +319,7 @@ export default function AffiliatesPage() {
           <thead>
             <tr>
               <th>Kode / Nama</th>
+              <th>Bank</th>
               <th>Referral</th>
               <th>Komisi (earned)</th>
               <th>Komisi (paid)</th>
@@ -264,28 +330,37 @@ export default function AffiliatesPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="muted">
+                <td colSpan={7} className="muted">
                   Belum ada affiliator
                 </td>
               </tr>
             ) : (
-              rows.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <code>{a.code}</code>
-                    <div>{a.name}</div>
-                    {a.payoutNote && (
+              rows.map((a) => {
+                const bank = bankText(a);
+                return (
+                  <tr key={a.id}>
+                    <td>
+                      <code>{a.code}</code>
+                      <div>{a.name}</div>
+                      {a.payoutNote && (
+                        <div className="muted" style={{ fontSize: 11 }}>
+                          {a.payoutNote}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      {bank ? (
+                        <div style={{ fontSize: 12 }}>{bank}</div>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {a.stats?.referrals ?? 0}
                       <div className="muted" style={{ fontSize: 11 }}>
-                        {a.payoutNote}
+                        {a.stats?.referredUsers ?? 0} user
                       </div>
-                    )}
-                  </td>
-                  <td>
-                    {a.stats?.referrals ?? 0}
-                    <div className="muted" style={{ fontSize: 11 }}>
-                      {a.stats?.referredUsers ?? 0} user
-                    </div>
-                  </td>
+                    </td>
                   <td>{rp(a.stats?.earnedCommissionIdr ?? 0)}</td>
                   <td>{rp(a.stats?.paidCommissionIdr ?? 0)}</td>
                   <td>
@@ -302,7 +377,8 @@ export default function AffiliatesPage() {
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -325,8 +401,13 @@ export default function AffiliatesPage() {
           </div>
           <p className="muted" style={{ margin: 0 }}>
             Link: <code>https://profitku.my.id/?ref={detail?.affiliate.code}</code>
-            {detail?.affiliate.payoutNote ? ` · Payout: ${detail.affiliate.payoutNote}` : ''}
           </p>
+          {detail?.affiliate && bankText(detail.affiliate) && (
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              💳 Bank: {bankText(detail.affiliate)}
+              {detail.affiliate.payoutNote ? ` · Catatan: ${detail.affiliate.payoutNote}` : ''}
+            </p>
+          )}
           <div style={{ overflowX: 'auto' }}>
             <table>
               <thead>

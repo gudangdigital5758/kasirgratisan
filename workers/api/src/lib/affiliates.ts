@@ -28,6 +28,9 @@ export type AffiliateRow = {
   name: string;
   user_id: string | null;
   payout_note: string | null;
+  bank_name: string | null;
+  bank_account_no: string | null;
+  bank_account_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at?: string;
@@ -80,7 +83,7 @@ export async function loadAffiliateByCode(
   if (!isValidAffiliateCode(normalized)) return null;
   const rows = await sbGet<AffiliateRow[]>(
     env,
-    `affiliates?code=eq.${encodeURIComponent(normalized)}&is_active=eq.true&select=id,code,name,user_id,payout_note,is_active,created_at,updated_at&limit=1`,
+    `affiliates?code=eq.${encodeURIComponent(normalized)}&is_active=eq.true&select=id,code,name,user_id,payout_note,bank_name,bank_account_no,bank_account_name,is_active,created_at,updated_at&limit=1`,
   );
   return rows[0] ?? null;
 }
@@ -99,15 +102,32 @@ export function computeCommission(
  * Catat komisi untuk satu payment selesai. Idempotent (unique payment_id).
  * Best-effort — kegagalan di sini TIDAK menggagalkan fulfillment langganan.
  * Berfungsi juga untuk perpanjangan karena dipanggil dari fulfillCompletedPayment.
+ *
+ * Atribusi: bila `capturedAt` diberikan dan lebih tua dari `attribution_days`,
+ * kode dianggap kedaluwarsa dan komisi TIDAK dicatat.
  */
 export async function recordAffiliateCommission(
   env: Env,
-  opts: { paymentId: string; userId: string; affiliateCode: string; amountPaid: number },
+  opts: {
+    paymentId: string;
+    userId: string;
+    affiliateCode: string;
+    amountPaid: number;
+    capturedAt?: string | null;
+  },
 ): Promise<boolean> {
   try {
     const settings = await getAffiliateSettings(env);
     if (!settings.enabled) return false;
     if (opts.amountPaid < settings.min_amount_idr) return false;
+
+    // Jendela atribusi: klik link → berlangganan dalam N hari.
+    if (opts.capturedAt) {
+      const captured = new Date(opts.capturedAt).getTime();
+      if (!Number.isFinite(captured) || Date.now() - captured > settings.attribution_days * 86400000) {
+        return false;
+      }
+    }
 
     const affiliate = await loadAffiliateByCode(env, opts.affiliateCode);
     if (!affiliate) return false;

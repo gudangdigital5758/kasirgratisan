@@ -452,13 +452,20 @@ app.post('/api/payments/checkout', async (c) => {
     redirectURL?: string;
     voucherCode?: string;
     affiliateCode?: string;
+    affiliateCapturedAt?: string;
   };
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
 
   // Validasi kode affiliasi (opsional, best-effort). Kode disimpan di payment.raw
   // agar komisi dicatat otomatis saat payment selesai (termasuk perpanjangan).
-  let affiliateMeta: { code: string; name: string | null } | null = null;
+  // Atribusi: bila capturedAt diberikan dan lebih tua dari attribution_days,
+  // kode diabaikan (komisi tidak berlaku untuk transaksi di luar jendela).
+  let affiliateMeta: { code: string; name: string | null; capturedAt: string | null } | null = null;
   const rawAffiliateCode = normalizeAffiliateCode(body.affiliateCode || '');
+  const rawAffiliateCapturedAt =
+    typeof body.affiliateCapturedAt === 'string' && body.affiliateCapturedAt.trim()
+      ? new Date(body.affiliateCapturedAt).toISOString()
+      : null;
   if (rawAffiliateCode) {
     try {
       const settings = await getAffiliateSettings(c.env);
@@ -467,7 +474,17 @@ app.post('/api/payments/checkout', async (c) => {
         if (!affiliate) {
           return c.json({ error: 'Kode affiliasi tidak valid' }, 400);
         }
-        affiliateMeta = { code: affiliate.code, name: affiliate.name };
+        if (rawAffiliateCapturedAt) {
+          const captured = new Date(rawAffiliateCapturedAt).getTime();
+          if (!Number.isFinite(captured) || Date.now() - captured > settings.attribution_days * 86400000) {
+            // jalur kedaluwarsa — jangan ikat komisi
+            affiliateMeta = null;
+          } else {
+            affiliateMeta = { code: affiliate.code, name: affiliate.name, capturedAt: rawAffiliateCapturedAt };
+          }
+        } else {
+          affiliateMeta = { code: affiliate.code, name: affiliate.name, capturedAt: null };
+        }
       }
     } catch (err) {
       console.warn('[checkout affiliate]', err);
@@ -563,7 +580,13 @@ app.post('/api/payments/checkout', async (c) => {
             mobile: body.mobile ?? null,
             redirectURL: body.redirectURL ?? null,
             ...(voucherMeta || {}),
-            ...(affiliateMeta ? { affiliateCode: affiliateMeta.code, affiliateName: affiliateMeta.name } : {}),
+            ...(affiliateMeta
+              ? {
+                  affiliateCode: affiliateMeta.code,
+                  affiliateName: affiliateMeta.name,
+                  affiliateCapturedAt: affiliateMeta.capturedAt,
+                }
+              : {}),
           },
         });
         await fulfillCompletedPayment(c.env, {
@@ -650,7 +673,13 @@ app.post('/api/payments/checkout', async (c) => {
           snapToken,
           finishUrl,
           ...(voucherMeta || {}),
-          ...(affiliateMeta ? { affiliateCode: affiliateMeta.code, affiliateName: affiliateMeta.name } : {}),
+          ...(affiliateMeta
+            ? {
+                affiliateCode: affiliateMeta.code,
+                affiliateName: affiliateMeta.name,
+                affiliateCapturedAt: affiliateMeta.capturedAt,
+              }
+            : {}),
         },
       });
     }

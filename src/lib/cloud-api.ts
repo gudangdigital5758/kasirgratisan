@@ -364,7 +364,13 @@ export async function deleteBackup(id: string): Promise<void> {
 
 export async function checkoutPlan(
   planId: string,
-  opts?: { mobile?: string; redirectURL?: string; voucherCode?: string; affiliateCode?: string },
+  opts?: {
+    mobile?: string;
+    redirectURL?: string;
+    voucherCode?: string;
+    affiliateCode?: string;
+    affiliateCapturedAt?: string;
+  },
 ): Promise<CheckoutResult> {
   const res = await fetch(`${BASE_URL}/api/payments/checkout`, {
     method: 'POST',
