@@ -108,6 +108,24 @@ affiliateRoutes.get('/lookup', async (c) => {
   }
 });
 
+// --- Settings (publik, tanpa auth) — dipakai landing affiliate.profitku.my.id ---
+// Mengembalikan persen komisi per tier yang sedang aktif (diatur admin), agar
+// landing otomatis menampilkan nilai terkini tanpa redeploy.
+affiliateRoutes.get('/settings', async (c) => {
+  try {
+    const settings = await getAffiliateSettings(c.env);
+    return c.json({
+      settings: {
+        enabled: settings.enabled,
+        tiers: settings.tiers,
+      },
+    });
+  } catch (err) {
+    console.warn('[affiliate settings public]', err);
+    return c.json({ error: 'Gagal memuat settings affiliasi' }, 500);
+  }
+});
+
 // --- Register (auth) ---
 // Siapa pun bisa daftar jadi affiliator (tidak wajib berlangganan). Kode REF
 // dibuat otomatis di server. `refCode` (opsional) mengikat ke parent → pohon tier.
