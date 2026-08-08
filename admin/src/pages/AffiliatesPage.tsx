@@ -172,6 +172,10 @@ export default function AffiliatesPage() {
     return parts.length ? parts.join(' · ') : null;
   };
 
+  // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
+  const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
+  const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
+
   return (
     <div className="stack">
       <div>
@@ -238,9 +242,12 @@ export default function AffiliatesPage() {
         </div>
         <p className="muted" style={{ margin: 0, fontSize: '0.75rem', maxWidth: 640 }}>
           <b>Komisi 5 tier</b> (persen dari nominal pembayaran): tier 1 = referrer langsung,
-          tier 2–5 = ancestor di atasnya. Set 0 untuk menonaktifkan tier tertentu. Total maks
-          31% (20+5+3+2+1). <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus
-          berlangganan dalam X hari sejak mengklik link, kalau lewat komisi tidak berlaku.
+          tier 2–5 = ancestor di atasnya. Set 0 untuk menonaktifkan tier tertentu. Total maks{' '}
+          <b>
+            {totalTiersPercent}% ({tierValues.join('+')})
+          </b>
+          . <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus berlangganan dalam X
+          hari sejak mengklik link, kalau lewat komisi tidak berlaku.
         </p>
         <div className="row" style={{ gap: '0.5rem' }}>
           <button type="submit" className="btn" disabled={busy}>
