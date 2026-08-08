@@ -38,19 +38,8 @@ export default function Shell() {
 
   return (
     <div className="layout">
-      {/* Topbar mobile — hamburger + brand */}
+      {/* Topbar mobile — brand + hamburger kanan atas */}
       <header className="topbar">
-        <button
-          type="button"
-          className="hamburger"
-          onClick={() => setOpen(true)}
-          aria-label="Buka menu"
-          aria-expanded={open}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
         <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" />
         <span className="topbar-title">Profitku Admin</span>
         <button
@@ -61,6 +50,17 @@ export default function Shell() {
           title={dark ? 'Mode terang' : 'Mode gelap'}
         >
           {dark ? '☀️' : '🌙'}
+        </button>
+        <button
+          type="button"
+          className="hamburger"
+          onClick={() => setOpen(true)}
+          aria-label="Buka menu"
+          aria-expanded={open}
+        >
+          <span />
+          <span />
+          <span />
         </button>
       </header>
 
