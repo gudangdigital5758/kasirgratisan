@@ -263,7 +263,7 @@ export default function VouchersPage() {
             ) : (
               rows.map((v) => (
                 <tr key={v.id}>
-                  <td>
+                  <td data-label="Kode">
                     <code>{v.code}</code>
                     {v.note && (
                       <div className="muted" style={{ fontSize: 11 }}>
@@ -271,21 +271,21 @@ export default function VouchersPage() {
                       </div>
                     )}
                   </td>
-                  <td>{typeLabel(v.type, v.value)}</td>
-                  <td>
+                  <td data-label="Efek">{typeLabel(v.type, v.value)}</td>
+                  <td data-label="Kuota">
                     {v.redemptionCount ?? 0}
                     {v.max_redemptions != null ? ` / ${v.max_redemptions}` : ' / ∞'}
                     <div className="muted" style={{ fontSize: 11 }}>
                       max {v.max_per_user}/user
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`badge ${v.is_active ? 'ok' : ''}`}>
                       {v.is_active ? 'aktif' : 'nonaktif'}
                     </span>
                   </td>
-                  <td className="muted">{new Date(v.created_at).toLocaleString('id-ID')}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td data-label="Dibuat" className="muted">{new Date(v.created_at).toLocaleString('id-ID')}</td>
+                  <td className="actions">
                     <button type="button" className="btn ghost" onClick={() => void openDetail(v.id)}>
                       Usage
                     </button>{' '}
@@ -340,13 +340,13 @@ export default function VouchersPage() {
               ) : (
                 redemptions.map((r) => (
                   <tr key={r.id}>
-                    <td className="muted">{new Date(r.redeemed_at).toLocaleString('id-ID')}</td>
-                    <td>
+                    <td data-label="Waktu" className="muted">{new Date(r.redeemed_at).toLocaleString('id-ID')}</td>
+                    <td data-label="User">
                       <a href={`/members/${r.user_id}`} style={{ color: 'var(--primary)' }}>
                         {r.user_id.slice(0, 8)}…
                       </a>
                     </td>
-                    <td>
+                    <td data-label="Amount">
                       {r.amount_before != null && r.amount_after != null
                         ? `Rp ${r.amount_before.toLocaleString('id-ID')} → Rp ${r.amount_after.toLocaleString('id-ID')}`
                         : '—'}

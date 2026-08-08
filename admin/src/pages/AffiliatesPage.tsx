@@ -362,7 +362,7 @@ export default function AffiliatesPage() {
                 const bank = bankText(a);
                 return (
                   <tr key={a.id}>
-                    <td>
+                    <td data-label="Kode / Nama">
                       <code>{a.code}</code>
                       <div>{a.name}</div>
                       {a.referredByCode && (
@@ -376,27 +376,27 @@ export default function AffiliatesPage() {
                         </div>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Bank">
                       {bank ? (
                         <div style={{ fontSize: 12 }}>{bank}</div>
                       ) : (
                         <span className="muted">—</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Referral">
                       {a.stats?.referrals ?? 0}
                       <div className="muted" style={{ fontSize: 11 }}>
                         {a.stats?.referredUsers ?? 0} user
                       </div>
                     </td>
-                  <td>{rp(a.stats?.earnedCommissionIdr ?? 0)}</td>
-                  <td>{rp(a.stats?.paidCommissionIdr ?? 0)}</td>
-                  <td>
+                  <td data-label="Komisi (earned)">{rp(a.stats?.earnedCommissionIdr ?? 0)}</td>
+                  <td data-label="Komisi (paid)">{rp(a.stats?.paidCommissionIdr ?? 0)}</td>
+                  <td data-label="Status">
                     <span className={`badge ${a.isActive ? 'ok' : ''}`}>
                       {a.isActive ? 'aktif' : 'nonaktif'}
                     </span>
                   </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
+                  <td className="actions">
                     <button type="button" className="btn ghost" onClick={() => void openDetail(a.id)}>
                       Komisi
                     </button>{' '}
@@ -459,17 +459,17 @@ export default function AffiliatesPage() {
                 ) : (
                   detail!.commissions.map((cm) => (
                     <tr key={cm.id}>
-                      <td className="muted">{new Date(cm.createdAt).toLocaleString('id-ID')}</td>
-                      <td>
+                      <td data-label="Tanggal" className="muted">{new Date(cm.createdAt).toLocaleString('id-ID')}</td>
+                      <td data-label="Payment">
                         <code>{cm.paymentId.slice(0, 8)}</code>
                       </td>
-                      <td>Tier {cm.tier ?? 1}</td>
-                      <td>{rp(cm.amountPaid)}</td>
-                      <td>{cm.ratePercent}%</td>
-                      <td>
+                      <td data-label="Tier">Tier {cm.tier ?? 1}</td>
+                      <td data-label="Dibayar">{rp(cm.amountPaid)}</td>
+                      <td data-label="Rate">{cm.ratePercent}%</td>
+                      <td data-label="Komisi">
                         <b>{rp(cm.commissionIdr)}</b>
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <span className={`badge ${cm.status === 'paid' ? 'ok' : ''}`}>
                           {statusLabel(cm.status)}
                         </span>

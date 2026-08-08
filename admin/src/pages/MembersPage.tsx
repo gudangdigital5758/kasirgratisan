@@ -64,13 +64,13 @@ export default function MembersPage() {
             <tbody>
               {members.map((m) => (
                 <tr key={m.id}>
-                  <td>
+                  <td data-label="Nama / email">
                     <Link to={`/members/${m.id}`} style={{ fontWeight: 600, color: 'var(--primary)' }}>
                       {m.name || '—'}
                     </Link>
                     <div className="muted">{m.email}</div>
                   </td>
-                  <td>
+                  <td data-label="Langganan">
                     {m.subscription?.active ? (
                       <>
                         <span className="badge ok">{m.subscription.status}</span>
@@ -82,7 +82,7 @@ export default function MembersPage() {
                       <span className="badge">inactive</span>
                     )}
                   </td>
-                  <td className="muted">
+                  <td data-label="Daftar" className="muted">
                     {m.createdAt ? new Date(m.createdAt).toLocaleDateString('id-ID') : '—'}
                   </td>
                 </tr>

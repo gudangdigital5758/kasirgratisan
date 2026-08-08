@@ -470,3 +470,103 @@ th {
   font-size: 0.75rem;
   color: var(--muted);
 }
+
+/* ===== Mobile-first: tabel → kartu bertumpuk (max-width 800px) ===== */
+@media (max-width: 800px) {
+  .main {
+    padding: 0.75rem 0.75rem 2rem;
+  }
+
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tr {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    box-shadow: var(--shadow);
+    padding: 0.6rem 0.7rem;
+    margin-bottom: 0.6rem;
+  }
+
+  td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    border: none;
+    padding: 0.32rem 0;
+  }
+
+  td > * {
+    min-width: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  /* Kolom aksi tanpa label → konten rata kanan */
+  td:not([data-label]) {
+    justify-content: flex-end;
+  }
+  td:not([data-label])::before {
+    content: none;
+  }
+
+  /* Baris kosong (colspan) — jangan dijadikan kartu */
+  tr:has(td[colspan]) {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0.25rem;
+  }
+  tr:has(td[colspan]) td {
+    justify-content: flex-start;
+  }
+
+  /* Aksi dalam kartu: tombol wrap */
+  td.actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  /* Form: isi lebar penuh di layar kecil (override inline flex/width) */
+  .row > * {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+  .row > input,
+  .row > select,
+  .row > textarea,
+  .row > .input {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Touch target lebih besar */
+  .btn {
+    min-height: 2.6rem;
+  }
+  .sidebar nav a {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+}

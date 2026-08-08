@@ -35,15 +35,15 @@ export default function PaymentsPage() {
           <tbody>
             {rows.map((p) => (
               <tr key={p.id}>
-                <td className="muted">{new Date(p.created_at).toLocaleString('id-ID')}</td>
-                <td>
+                <td data-label="Waktu" className="muted">{new Date(p.created_at).toLocaleString('id-ID')}</td>
+                <td data-label="User">
                   <Link to={`/members/${p.user_id}`} style={{ color: 'var(--primary)' }}>
                     {p.user_id.slice(0, 8)}…
                   </Link>
                 </td>
-                <td>{p.plan_id}</td>
-                <td>Rp {(p.amount || 0).toLocaleString('id-ID')}</td>
-                <td>
+                <td data-label="Plan">{p.plan_id}</td>
+                <td data-label="Amount">Rp {(p.amount || 0).toLocaleString('id-ID')}</td>
+                <td data-label="Status">
                   <span className={`badge ${p.status === 'COMPLETED' ? 'ok' : ''}`}>{p.status}</span>
                 </td>
               </tr>
