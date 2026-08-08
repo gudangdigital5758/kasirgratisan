@@ -24,7 +24,7 @@ export default function ThemeSettings() {
   const modes = [
     { value: false as const, label: t('masterData.theme.darkModeLight') },
     { value: true as const, label: t('masterData.theme.darkModeDark') },
-    { value: null as const, label: t('masterData.theme.darkModeSystem') },
+    { value: null, label: t('masterData.theme.darkModeSystem') },
   ];
 
   return (
