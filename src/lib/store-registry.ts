@@ -143,3 +143,30 @@ export async function removeStore(storeKey: string): Promise<void> {
   await storeRegistry.stores.where('storeKey').equals(storeKey).delete();
   if (getActiveStoreKey() === storeKey) setActiveStoreKey(DEFAULT_STORE_KEY);
 }
+
+/**
+ * Hapus data lokal toko SEPENUHNYA: entry registry + database IndexedDB-nya.
+ * - storeKey aktif otomatis di-reset ke toko default (removeStore).
+ * - Untuk toko default, `kasirgratisan-db` ikut dihapus (data toko awal user).
+ * - Perangkat lain tidak terpengaruh; data cloud dihapus terpisah (worker).
+ */
+export async function deleteLocalStoreData(storeKey: string): Promise<void> {
+  await removeStore(storeKey);
+  const dbName = dbNameForStore(storeKey);
+  try {
+    await Dexie.delete(dbName);
+  } catch (err) {
+    console.warn(`[store-registry] gagal menghapus DB lokal ${dbName}:`, err);
+  }
+}
+
+/** Hapus toko lokal yang terhubung ke cloud store id (dipakai saat toko cloud dihapus). */
+export async function removeStoreByCloudId(cloudStoreId: string): Promise<{
+  deleted: boolean;
+  storeKey?: string;
+}> {
+  const entry = await storeRegistry.stores.where('cloudStoreId').equals(cloudStoreId).first();
+  if (!entry) return { deleted: false };
+  await deleteLocalStoreData(entry.storeKey);
+  return { deleted: true, storeKey: entry.storeKey };
+}

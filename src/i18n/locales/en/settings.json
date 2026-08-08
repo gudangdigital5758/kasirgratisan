@@ -601,7 +601,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "connect": "Connect",
-    "deleteConfirm": "Delete \"{{name}}\"? All sync data (products, transactions, etc.) will be permanently deleted from the cloud.",
+    "deleteConfirm": "Delete \"{{name}}\"? All sync data (products, transactions, etc.) and its cloud backups will be permanently deleted. Data of this store on this device (if any) will also be removed.",
     "yesDelete": "Yes, delete",
     "stats": {
       "stores": "stores",
@@ -1528,6 +1528,17 @@
     "active": "Active",
     "current": "In use",
     "switch": "Use This Store",
+    "delete": "Delete",
+    "deleteTitle": "Delete store?",
+    "deleteConfirmDesc": "Delete \"{{name}}\"? All local data of this store on this device will be permanently deleted and cannot be restored.",
+    "deleteCloudNote": "Cloud data for this store (subscription, backups, sync) will also be deleted.",
+    "yesDelete": "Yes, delete",
+    "cancel": "Cancel",
+    "toast": {
+      "deleted": "Store deleted.",
+      "deleteFailed": "Failed to delete store",
+      "cloudNotDeleted": "Local store deleted, but cloud data could not be deleted."
+    },
     "empty": "No stores yet.",
     "lockedPermission": "Requires manage store settings access",
     "switcherLabel": "Active Store",

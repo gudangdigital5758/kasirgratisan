@@ -600,7 +600,7 @@
     "cancel": "Batal",
     "delete": "Padam",
     "connect": "Sambung",
-    "deleteConfirm": "Padam \"{{name}}\"? Semua data sync (produk, transaksi, dll.) akan dipadam kekal dari cloud.",
+    "deleteConfirm": "Padam \"{{name}}\"? Semua data sync (produk, transaksi, dll.) dan sandaran awannya akan dipadam kekal. Data kedai ini pada peranti (jika ada) turut dipadam.",
     "yesDelete": "Ya, padam",
     "stats": {
       "stores": "kedai",
@@ -1112,6 +1112,17 @@
     "active": "Aktif",
     "current": "Sedang digunakan",
     "switch": "Guna Kedai Ini",
+    "delete": "Padam",
+    "deleteTitle": "Padam kedai?",
+    "deleteConfirmDesc": "Padam \"{{name}}\"? Semua data tempatan kedai ini pada peranti akan dipadam kekal dan tidak boleh dipulihkan.",
+    "deleteCloudNote": "Data awan kedai ini (langganan, sandaran, penyegerakan) juga akan dipadam.",
+    "yesDelete": "Ya, padam",
+    "cancel": "Batal",
+    "toast": {
+      "deleted": "Kedai dipadam.",
+      "deleteFailed": "Gagal memadam kedai",
+      "cloudNotDeleted": "Kedai tempatan dipadam, tetapi data awan gagal dipadam."
+    },
     "empty": "Tiada kedai lagi.",
     "lockedPermission": "Perlu akses urus tetapan kedai",
     "switcherLabel": "Kedai Aktif",

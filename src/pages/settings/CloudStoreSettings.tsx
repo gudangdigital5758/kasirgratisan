@@ -41,6 +41,7 @@ import {
   type CloudStore,
 } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
+import { removeStoreByCloudId, getActiveStoreKey } from '@/lib/store-registry';
 
 const LOCALES: Record<string, Locale> = { id: idLocale, en: enUS, ms };
 
@@ -220,6 +221,15 @@ export default function CloudStoreSettings() {
       // Unbind jika toko yang dihapus adalah toko aktif
       if (activeStoreId === id && storeSettings?.id) {
         await db.storeSettings.update(storeSettings.id, { cloudStoreId: null });
+      }
+      // Bersihkan toko lokal di perangkat ini yang terhubung ke cloud store tsb
+      // (registry + database IndexedDB-nya), kalau ada.
+      const local = await removeStoreByCloudId(id);
+      if (local.deleted && local.storeKey && local.storeKey === getActiveStoreKey()) {
+        // Toko lokal yang sedang dipakai ikut dihapus → pindah ke toko default.
+        toast.success(t('cloudStore.toast.delete'));
+        window.location.reload();
+        return;
       }
       toast.success(t('cloudStore.toast.delete'));
     } catch (err) {

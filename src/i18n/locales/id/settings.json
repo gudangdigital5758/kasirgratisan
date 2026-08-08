@@ -601,7 +601,7 @@
     "cancel": "Batal",
     "delete": "Hapus",
     "connect": "Hubungkan",
-    "deleteConfirm": "Hapus \"{{name}}\"? Semua data sync (produk, transaksi, dll.) akan dihapus permanen dari cloud.",
+    "deleteConfirm": "Hapus \"{{name}}\"? Semua data sync (produk, transaksi, dll.) dan backup cloud-nya akan dihapus permanen. Data toko ini di perangkat (jika ada) juga ikut dihapus.",
     "yesDelete": "Ya, hapus",
     "stats": {
       "stores": "toko",
@@ -1529,6 +1529,17 @@
     "active": "Aktif",
     "current": "Sedang dipakai",
     "switch": "Pakai Toko Ini",
+    "delete": "Hapus",
+    "deleteTitle": "Hapus toko?",
+    "deleteConfirmDesc": "Hapus \"{{name}}\"? Semua data lokal toko ini di perangkat akan dihapus permanen dan tidak bisa dikembalikan.",
+    "deleteCloudNote": "Data cloud toko ini (langganan, backup, sinkronisasi) juga akan dihapus.",
+    "yesDelete": "Ya, hapus",
+    "cancel": "Batal",
+    "toast": {
+      "deleted": "Toko dihapus.",
+      "deleteFailed": "Gagal menghapus toko",
+      "cloudNotDeleted": "Toko lokal dihapus, tapi data cloud gagal dihapus."
+    },
     "empty": "Belum ada toko.",
     "lockedPermission": "Perlu akses kelola pengaturan toko",
     "switcherLabel": "Toko Aktif",

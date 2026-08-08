@@ -426,3 +426,32 @@ Monetisasi cloud multi-toko, unit lisensi **per toko**, bukan per akun.
   ke perangkat" saat toko turun offline, dan auto-sync (hapus ketergantungan tombol
   manual).
 - Backup retention 30 hari tetap berlaku.
+
+---
+
+## 2026-08-08 — Hapus Toko (permanen, lokal + cloud)
+
+**Status:** Accepted
+
+User boleh menghapus toko yang sudah tutup/tidak beroperasi dari daftar toko.
+
+**Decision:**
+
+1. **Hapus dari device (lokal):** entry registry `kasirgratisan-stores` + database
+   IndexedDB toko (`kasirgratisan-db-<storeKey>`, atau `kasirgratisan-db` untuk
+   toko default) dihapus permanen. Toko yang sedang dipakai (aktif) **tidak bisa**
+   dihapus — user harus pindah ke toko lain dulu.
+2. **Hapus dari cloud (jika toko online):** `DELETE /api/stores/:id` menghapus
+   backup R2 + metadata, baris `stores` (cascade `sync_records`, `sync_devices`,
+   `sync_pull_watermarks`, `subscriptions.store_id`). `payments.store_id` di-set
+   `null` — riwayat keuangan & komisi affiliate TETAP tersimpan.
+3. **Idempotent & aman:** endpoint mengembalikan `ok` bila toko sudah tidak ada.
+   UI selalu minta konfirmasi eksplisit yang menyebutkan data dihapus permanen.
+
+**Implications:**
+- Worker: route baru `DELETE /api/stores/:id` (ownership check, hapus backup R2 +
+  meta, hapus store).
+- Frontend: tombol hapus di halaman Toko (`StoresManager`) + di Kelola Toko cloud
+  (yang sudah ada, kini berfungsi); hapus cloud juga membersihkan toko lokal yang
+  terhubung (`cloudStoreId`) + reload bila toko lokal aktif ikut terhapus.
+- Data tidak bisa dipulihkan setelah penghapusan — konfirmasi harus jelas.

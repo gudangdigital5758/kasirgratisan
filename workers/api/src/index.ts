@@ -17,7 +17,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './env';
 import { SEED_PLANS } from './data/seed-plans';
-import { getUserFromJwt, sbGet, sbPost, sbPatch, SupabaseError } from './lib/supabase';
+import { getUserFromJwt, sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from './lib/supabase';
 import { sendEmail, sendPush, sendWhatsApp } from './lib/notify';
 import {
   deleteBackupMeta,
@@ -1111,6 +1111,59 @@ app.post('/api/stores', async (c) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[stores create]', err);
     return c.json({ error: 'Gagal membuat toko cloud' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/stores/:id — hapus toko cloud milik user secara permanen.
+ * Menghapus:
+ *  - objek backup di R2 + metadata di tabel backups
+ *  - baris stores (cascade: sync_records, sync_devices, sync_pull_watermarks,
+ *    subscriptions.store_id). payments.store_id di-set null (riwayat keuangan &
+ *    komisi affiliate tetap tersimpan).
+ * Idempotent: jika toko sudah tidak ada → 200 ok.
+ */
+app.delete('/api/stores/:id', async (c) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id');
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+
+  try {
+    // Pastikan toko milik user ini.
+    const owned = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
+    );
+    if (!owned[0]) return c.json({ ok: true }); // sudah tidak ada / bukan miliknya
+
+    // 1) Hapus backup cloud toko (R2 + metadata) — data toko tutup tidak perlu disimpan.
+    const backups = await sbGet<
+      { id: string; file_key: string }[]
+    >(c.env, `backups?store_id=eq.${storeId}&user_id=eq.${userId}&select=id,file_key`).catch(
+      () => [] as { id: string; file_key: string }[],
+    );
+    for (const b of backups) {
+      try {
+        await deleteBackupObject(c.env, b.file_key);
+      } catch (e) {
+        console.warn('[stores delete] backup object', b.file_key, e);
+      }
+      try {
+        await sbDelete(c.env, `backups?id=eq.${b.id}`);
+      } catch (e) {
+        console.warn('[stores delete] backup meta', b.id, e);
+      }
+    }
+
+    // 2) Hapus baris toko (cascade sync/subscription).
+    await sbDelete(c.env, `stores?id=eq.${storeId}&user_id=eq.${userId}`);
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[stores delete]', err);
+    return c.json({ error: 'Gagal menghapus toko' }, 500);
   }
 });
 
