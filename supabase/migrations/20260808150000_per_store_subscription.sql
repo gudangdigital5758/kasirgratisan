@@ -170,3 +170,16 @@ from public.stores st;
 COMMENT ON COLUMN public.subscriptions.store_id IS 'Toko yang dilanggani (unit lisensi per toko; NULL = legacy akun)';
 COMMENT ON COLUMN public.payments.store_id IS 'Toko tujuan pembayaran (perpanjangan/aktivasi)';
 COMMENT ON VIEW public.store_entitlements IS 'Entitlement sinkronisasi + kuota per toko (sumber UI baru)';
+
+-- === Backfill: langganan legacy (store_id NULL) → toko pertama milik user ===
+-- Agar store_entitlements.has_sync benar untuk user lama (langganan sebelum
+-- model per-toko). Idempotent: hanya baris dengan store_id NULL.
+update public.subscriptions s
+set store_id = st.id
+from (
+  select distinct on (user_id) user_id, id
+  from public.stores
+  order by user_id, created_at asc
+) st
+where s.store_id is null
+  and s.user_id = st.user_id;
