@@ -21,6 +21,13 @@ import {
   isPaidStatus,
   midtransConfigured,
 } from '../lib/midtrans';
+import {
+  createSumopodPayment,
+  getSumopodPaymentStatus,
+  isSumopodFailedStatus,
+  isSumopodPaidStatus,
+  sumopodConfigured,
+} from '../lib/sumopod';
 import { normalizeVoucherCode, resolveListPrice, validateVoucherForUser } from '../lib/vouchers';
 import {
   getAffiliateSettings,
@@ -158,6 +165,10 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
 
   let paymentLink: string | null = `${cloudReturn}?pending=${paymentId}`;
   let snapToken: string | null = null;
+  let sumopodMeta: { paymentId: string | null; orderId: string | null } = {
+    paymentId: null,
+    orderId: null,
+  };
   let completedImmediately = false;
 
   // Amount 0: skip gateway, fulfill langsung (voucher free / 100% / lifetime)
@@ -254,6 +265,25 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
         502,
       );
     }
+  } else if (provider === 'sumopod') {
+    if (!sumopodConfigured(c.env)) {
+      return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
+    }
+    try {
+      const sumopod = await createSumopodPayment(c.env, {
+        orderId: paymentId,
+        amount,
+        finishUrl,
+      });
+      paymentLink = sumopod.paymentLink;
+      sumopodMeta = { paymentId: sumopod.paymentId, orderId: sumopod.orderId };
+    } catch (err) {
+      console.error('[checkout sumopod]', err);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal membuat transaksi SumoPod' },
+        502,
+      );
+    }
   } else if (provider === 'xendit') {
     return c.json({ error: 'Xendit belum diaktifkan — set PAYMENT_PROVIDER=midtrans|mock' }, 501);
   }
@@ -276,6 +306,7 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
           storeId,
           durationMonths,
           snapToken,
+          sumopod: sumopodMeta.paymentId || sumopodMeta.orderId ? sumopodMeta : null,
           finishUrl,
           ...(voucherMeta || {}),
           ...(affiliateMeta
@@ -389,6 +420,54 @@ paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
         message: 'Menunggu pembayaran',
         transaction: { id, status: 'PENDING' },
         midtransStatus: st.transactionStatus,
+      });
+    }
+
+    if (provider === 'sumopod') {
+      if (!sumopodConfigured(c.env)) {
+        return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
+      }
+      let st;
+      try {
+        st = await getSumopodPaymentStatus(c.env, id);
+      } catch (err) {
+        // API sementara tidak bisa dihubungi — jangan gagalkan polling, biarkan PENDING.
+        console.warn('[verify sumopod] status lookup', err);
+        return c.json({
+          message: 'Menunggu pembayaran',
+          transaction: { id, status: 'PENDING' },
+        });
+      }
+      if (isSumopodPaidStatus(st.status)) {
+        await fulfillCompletedPayment(c.env, {
+          paymentId: id,
+          userId: String(userId),
+          userEmail: c.get('userEmail'),
+          provider: 'sumopod',
+          providerRef: st.paymentId || st.orderId,
+          sumopodRaw: st.raw,
+        });
+        return c.json({
+          message: 'Pembayaran terverifikasi',
+          transaction: { id, status: 'COMPLETED' },
+          sumopodStatus: st.status,
+        });
+      }
+      if (isSumopodFailedStatus(st.status)) {
+        await sbPatch(c.env, `payments?id=eq.${id}`, {
+          status: 'FAILED',
+          raw: { sumopod: st.raw },
+        });
+        return c.json({
+          message: 'Pembayaran gagal / dibatalkan',
+          transaction: { id, status: 'FAILED' },
+          sumopodStatus: st.status,
+        });
+      }
+      return c.json({
+        message: 'Menunggu pembayaran',
+        transaction: { id, status: 'PENDING' },
+        sumopodStatus: st.status,
       });
     }
 

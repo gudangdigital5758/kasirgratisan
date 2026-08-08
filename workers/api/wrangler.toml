@@ -8,12 +8,15 @@ workers_dev = true
 
 [vars]
 APP_ORIGIN = "https://profitku.my.id"
+# Gateway pembayaran aktif: sumopod | midtrans | mock
+PAYMENT_PROVIDER = "sumopod"
 # Fase release sync (M4): set "false" untuk menonaktifkan push/pull sementara.
 SYNC_ENABLED = "true"
 # Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY
 #          RESEND_API_KEY | RESEND_FROM | FONNTE_TOKEN | WEBHOOK_SECRET
 #          ONESIGNAL_APP_ID | ONESIGNAL_REST_API_KEY | ADMIN_EMAILS | ADMIN_ORIGIN
 #          PAYMENT_PROVIDER | MIDTRANS_SERVER_KEY | MIDTRANS_IS_PRODUCTION
+#          SUMOPOD_API_KEY | SUMOPOD_WEBHOOK_SECRET | SUMOPOD_WEBHOOK_TOKEN
 
 # R2 backup (bucket dibuat: profitku-backups)
 [[r2_buckets]]

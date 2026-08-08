@@ -27,6 +27,7 @@ type PayRaw = {
   isLifetime?: boolean | null;
   durationMonths?: number | null;
   midtrans?: unknown;
+  sumopod?: unknown;
   [key: string]: unknown;
 };
 
@@ -71,6 +72,7 @@ export async function fulfillCompletedPayment(
     provider?: string;
     providerRef?: string | null;
     midtransRaw?: Record<string, unknown> | null;
+    sumopodRaw?: Record<string, unknown> | null;
   },
 ): Promise<{ alreadyDone: boolean; periodEnd?: string; isLifetime?: boolean }> {
   const pays = await sbGet<Pay[]>(
@@ -109,6 +111,7 @@ export async function fulfillCompletedPayment(
     raw: {
       ...(typeof pay.raw === 'object' && pay.raw ? pay.raw : {}),
       midtrans: opts.midtransRaw || (pay.raw as PayRaw)?.midtrans || null,
+      sumopod: opts.sumopodRaw || (pay.raw as PayRaw)?.sumopod || null,
       fulfilledAt: startIso,
       periodEnd: period.endIso,
       isLifetime: period.isLifetime,

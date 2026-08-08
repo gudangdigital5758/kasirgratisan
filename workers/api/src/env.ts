@@ -35,4 +35,10 @@ export interface Env {
   BACKUP_BUCKET?: R2Bucket;
   /** Gate fase sync (M4): set "false" untuk menonaktifkan push/pull sementara. */
   SYNC_ENABLED?: string;
+  /** SumoPod Payment Gateway — API key (X-Api-Key) project Managed Payment. */
+  SUMOPOD_API_KEY?: string;
+  /** SumoPod webhook signing secret (whsec_...) — dihasilkan dari Settings → Webhook. */
+  SUMOPOD_WEBHOOK_SECRET?: string;
+  /** SumoPod webhook token (whtok_...) — alternatif verifikasi sederhana. */
+  SUMOPOD_WEBHOOK_TOKEN?: string;
 }

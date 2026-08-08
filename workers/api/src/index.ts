@@ -38,6 +38,13 @@ import {
   midtransConfigured,
   verifyNotificationSignature,
 } from './lib/midtrans';
+import {
+  isSumopodFailureEvent,
+  isSumopodPaidEvent,
+  sumopodConfigured,
+  verifySumopodSignature,
+  verifySumopodToken,
+} from './lib/sumopod';
 import { fulfillCompletedPayment } from './lib/payments';
 
 import adminRoutes from './routes/admin';
@@ -215,6 +222,7 @@ app.get('/health', (c) =>
     onesignal: Boolean(c.env.ONESIGNAL_APP_ID && c.env.ONESIGNAL_REST_API_KEY),
     paymentProvider: (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase(),
     midtrans: midtransConfigured(c.env),
+    sumopod: sumopodConfigured(c.env),
     time: new Date().toISOString(),
   }),
 );
@@ -400,6 +408,131 @@ app.post('/webhook/payment', async (c) => {
     if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
   }
   return c.json({ ok: true, ignored: true });
+});
+
+/**
+ * SumoPod payment webhook (Svix-style).
+ * Dashboard: Settings → Webhook → URL https://api.profitku.my.id/webhook/sumopod
+ * Events: payment.completed | payment.failed | payment.expired | payment.test
+ * Verifikasi: header svix-id/svix-timestamp/svix-signature (HMAC whsec_...)
+ * ATAU X-Webhook-Token (wh tok_...).
+ * `data.order_id` = payment UUID internal Profitku.
+ */
+app.post('/webhook/sumopod', async (c) => {
+  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 60, 60_000);
+  if (!allowed) {
+    return c.json({ error: 'Terlalu banyak permintaan' }, 429, {
+      'Retry-After': String(retryAfterSeconds),
+    });
+  }
+
+  const rawBody = await c.req.text();
+  const body = (JSON.parse(rawBody) || {}) as Record<string, unknown>;
+  const data = (typeof body.data === 'object' && body.data ? body.data : {}) as Record<
+    string,
+    unknown
+  >;
+  // Ambil event type dari berbagai kemungkinan field (Svix `type`, atau `event`/`event_type`/`event_name`).
+  const eventType = String(
+    body.type || body.event || body.event_type || body.event_name ||
+      data.type || data.event || '',
+  );
+  const orderId = String(
+    data.order_id || data.orderId || body.order_id || body.orderId || '',
+  );
+
+  console.log('[sumopod-webhook]', eventType, orderId, 'keys=', Object.keys(body).join(','));
+
+  // Event test/ping dari dashboard — ack sebelum validasi order_id (test tidak memakai order_id).
+  if (/test|ping/i.test(eventType)) {
+    return c.json({ ok: true, status: 'test' });
+  }
+
+  if (!orderId) return c.json({ error: 'order_id missing' }, 400);
+
+  const svixId = c.req.header('svix-id') || '';
+  const svixTimestamp = c.req.header('svix-timestamp') || '';
+  const svixSignature = c.req.header('svix-signature') || '';
+  const token = c.req.header('x-webhook-token');
+
+  const sigOk = await verifySumopodSignature(c.env, {
+    svixId,
+    svixTimestamp,
+    svixSignature,
+    rawBody,
+  });
+  const tokOk = verifySumopodToken(c.env, token);
+  if (!sigOk && !tokOk) {
+    console.warn('[sumopod-webhook] invalid signature', orderId);
+    return c.json({ error: 'invalid signature' }, 401);
+  }
+
+  try {
+    type Pay = { id: string; user_id: string; status: string };
+    // Lookup berlapis: 1) id langsung (UUID internal), 2) order_id SumoPod
+    // (berprefix SUMOPAY-...) yang disimpan di raw.sumopod saat checkout,
+    // 3) payment_id SumoPod. PostgREST menolak id non-UUID → try/catch.
+    let pays: Pay[] = [];
+    try {
+      pays = await sbGet<Pay[]>(
+        c.env,
+        `payments?id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+      );
+    } catch {
+      pays = [];
+    }
+    if (!pays[0]) {
+      try {
+        pays = await sbGet<Pay[]>(
+          c.env,
+          `payments?raw->sumopod->>order_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+        );
+      } catch {
+        pays = [];
+      }
+    }
+    if (!pays[0]) {
+      try {
+        pays = await sbGet<Pay[]>(
+          c.env,
+          `payments?raw->sumopod->>payment_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+        );
+      } catch {
+        pays = [];
+      }
+    }
+    const pay = pays[0];
+    if (!pay) {
+      console.warn('[sumopod-webhook] payment not found', orderId);
+      return c.json({ ok: true, skipped: 'unknown_order' });
+    }
+
+    if (isSumopodPaidEvent(eventType)) {
+      await fulfillCompletedPayment(c.env, {
+        paymentId: pay.id,
+        userId: pay.user_id,
+        provider: 'sumopod',
+        providerRef: String(data.payment_id || orderId),
+        sumopodRaw: { eventType, data },
+      });
+      return c.json({ ok: true, status: 'COMPLETED' });
+    }
+
+    if (isSumopodFailureEvent(eventType)) {
+      if (pay.status !== 'COMPLETED') {
+        await sbPatch(c.env, `payments?id=eq.${pay.id}`, {
+          status: 'FAILED',
+          raw: { sumopod: { eventType, data } },
+        });
+      }
+      return c.json({ ok: true, status: 'FAILED' });
+    }
+
+    return c.json({ ok: true, status: eventType || 'unknown' });
+  } catch (err) {
+    console.error('[sumopod-webhook] fulfill', err);
+    return c.json({ error: 'processing_failed' }, 500);
+  }
 });
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
