@@ -538,6 +538,12 @@ export default function Pengaturan() {
         </div>
       )}
 
+      {/* 2b. Affiliate */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.affiliate')}</h2>
+        <SettingsLinkCard to="/affiliate" icon={Share2} iconClass="bg-amber-500/10 text-amber-600 dark:text-amber-400" title={t('affiliate.cardTitle')} description={t('affiliate.cardDesc')} className="" />
+      </div>
+
       {/* 3. Data & Backup */}
       {can('manage_backup') && (
         <div className="space-y-2">

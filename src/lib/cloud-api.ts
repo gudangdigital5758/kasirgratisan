@@ -438,6 +438,122 @@ export async function lookupAffiliate(code: string): Promise<AffiliateLookupResu
   return res.json() as Promise<AffiliateLookupResult>;
 }
 
+// === Affiliate dashboard (auth) ===
+
+export interface AffiliateTier {
+  tier: number;
+  percent: number;
+  description: string;
+}
+
+export interface AffiliateProfile {
+  id: string;
+  code: string;
+  name: string;
+  userId: string;
+  referredBy: string | null;
+  payoutNote: string | null;
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankAccountName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AffiliateMeResult {
+  ok: boolean;
+  registered: boolean;
+  affiliate?: AffiliateProfile;
+  parentCode?: string | null;
+  tiers: AffiliateTier[];
+  link: string;
+}
+
+export interface AffiliateTreeNode {
+  id: string;
+  email: string;
+  code: string;
+  name?: string;
+  commission: { count: number; earnedIdr: number; paidIdr: number };
+  children: AffiliateTreeNode[];
+}
+
+export interface AffiliateTreeResult {
+  ok: boolean;
+  tiers: AffiliateTier[];
+  tree: { affiliateId: string; level: number; users: AffiliateTreeNode[] };
+}
+
+export interface AffiliateCommissionRow {
+  id: string;
+  affiliateId: string;
+  paymentId: string;
+  userId: string;
+  amountPaid: number;
+  ratePercent: number;
+  commissionIdr: number;
+  tier: number;
+  status: 'earned' | 'paid' | 'void';
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface AffiliateCommissionsResult {
+  ok: boolean;
+  commissions: AffiliateCommissionRow[];
+  summary: Record<number, { count: number; earnedIdr: number }>;
+  totals: { earnedIdr: number; paidIdr: number };
+}
+
+export interface AffiliateRegisterResult {
+  ok: boolean;
+  created: boolean;
+  affiliate: AffiliateProfile;
+  parentCode: string | null;
+  tiers: AffiliateTier[];
+  link: string;
+}
+
+/** Profil affiliasi user login (auth). */
+export async function fetchAffiliateMe(): Promise<AffiliateMeResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/me`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+/** Pohon downline s.d. 5 tier (auth). */
+export async function fetchAffiliateTree(): Promise<AffiliateTreeResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/tree`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+/** Komisi sendiri + ringkasan per tier (auth). */
+export async function fetchAffiliateCommissions(): Promise<AffiliateCommissionsResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/commissions`, { headers: authHeaders() });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+/** Daftar jadi affiliator (auth) — nama wajib, refCode opsional (ikat ke parent). */
+export async function registerAffiliate(body: {
+  name: string;
+  refCode?: string;
+  bankName?: string;
+  bankAccountNo?: string;
+  bankAccountName?: string;
+}): Promise<AffiliateRegisterResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/register`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+
 /** Preview efek kode voucher (harga dihitung server, durasi 6/12 = price factor). */
 export async function previewVoucher(
   code: string,

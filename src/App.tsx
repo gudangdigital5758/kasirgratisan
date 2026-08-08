@@ -56,6 +56,7 @@ const CloudHistorySettings = lazy(() => import("./pages/settings/CloudHistorySet
 const CloudBackupsListSettings = lazy(() => import("./pages/settings/CloudBackupsListSettings"));
 const CloudStoreSettings = lazy(() => import("./pages/settings/CloudStoreSettings"));
 const CloudOnlineStoreSettings = lazy(() => import("./pages/settings/CloudOnlineStoreSettings"));
+const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /** Preserve query/hash when redirecting legacy cloud-backup URLs. */
@@ -354,6 +355,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <CloudOnlineStoreSettings />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/affiliate"
+                    element={
+                      <ErrorBoundary>
+                        <AffiliateDashboard />
                       </ErrorBoundary>
                     }
                   />
