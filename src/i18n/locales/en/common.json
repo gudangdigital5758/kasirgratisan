@@ -167,6 +167,7 @@
     "reload": "Reload",
     "goHome": "Go to Home",
     "copyDetails": "Copy details",
+    "copied": "Copied!",
     "copyPrompt": "Copy the following error details:",
     "reportIssue": "Report Issue",
     "reportTitle": "Submit Issue Report?",

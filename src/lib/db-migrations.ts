@@ -35,7 +35,14 @@ export class PosDatabase extends Dexie {
   localBackups!: Table<LocalBackup>;
 
   constructor(dbName: string = 'kasirgratisan-db') {
-    super(dbName);
+    // NOTE: cache 'disabled' — bug Dexie 4.4.4 di createVirtualIndexMiddleware:
+    // saat bulk add/put (>=50 nilai ATAU ada key null) gagal total,
+    // adjustOptimisticFromFailures() mengembalikan null lalu null di-push
+    // tanpa guard ke optimisticOps. Query berikutnya (mis. useLiveQuery di
+    // Settings) crash "Cannot read properties of null (reading 'type')".
+    // Opsi cache lain ('cloned'/'immutable') tetap mengaktifkan jalur tsb;
+    // hanya 'disabled' yang melewatinya. reactivitas liveQuery tidak terpengaruh.
+    super(dbName, { cache: 'disabled' });
 
     // Version 1 — original schema (must remain for migration path)
     this.version(1).stores({

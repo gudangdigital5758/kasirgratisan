@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { AlertTriangle, Send } from "lucide-react";
+import { AlertTriangle, Send, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import i18n from "@/i18n";
@@ -17,10 +17,11 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
   showConsentOpen: boolean;
   reporting: boolean;
+  copied: boolean;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { error: null, errorInfo: null, showConsentOpen: false, reporting: false };
+  state: ErrorBoundaryState = { error: null, errorInfo: null, showConsentOpen: false, reporting: false, copied: false };
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error };
@@ -68,6 +69,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     } catch {
       window.prompt(i18n.t('common:error.copyPrompt'), details);
     }
+    this.setState({ copied: true });
+    window.setTimeout(() => this.setState({ copied: false }), 2000);
   };
 
   submitReport = async (): Promise<void> => {
@@ -157,7 +160,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </Alert>
 
           <div className="rounded-lg border bg-background p-4">
-            <div className="mb-2 text-sm font-medium">{i18n.t('common:error.details')}</div>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">{i18n.t('common:error.details')}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => this.copyDetails()}
+                className="h-8 gap-1.5 text-xs"
+              >
+                {this.state.copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                {this.state.copied ? i18n.t('common:error.copied') : i18n.t('common:error.copyDetails')}
+              </Button>
+            </div>
             <pre className="max-h-48 overflow-auto rounded bg-muted p-3 text-xs leading-relaxed">
               {error.name}: {error.message}
               {error.stack ? `\n\n${error.stack}` : ""}
