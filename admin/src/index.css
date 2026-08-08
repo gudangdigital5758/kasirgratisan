@@ -313,13 +313,19 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+/* Konten kartu: teks/kode panjang wrap rapi (mis. link REF) */
+.card code {
+  overflow-wrap: anywhere;
+}
+
+/* Kartu KPI & grid umum: kolom mengecil mengikuti lebar layar */
 .grid {
   display: grid;
   gap: 0.75rem;
 }
 
 .grid-4 {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .kpi .label {
@@ -328,7 +334,7 @@ textarea {
 }
 
 .kpi .value {
-  font-size: 1.35rem;
+  font-size: clamp(1.05rem, 4vw, 1.35rem);
   font-weight: 700;
   margin-top: 0.2rem;
 }
@@ -560,6 +566,24 @@ th {
     width: 100% !important;
     max-width: none !important;
   }
+  /* Tombol di dalam .row tetap compact (jangan full-width bertumpuk) */
+  .row > .btn {
+    flex: 0 1 auto !important;
+    width: auto !important;
+  }
+  /* Gambar (avatar, dll) jangan dilebarkan jadi full-width */
+  .row > img {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+  /* Checkbox/radio di .row tetap kecil */
+  .row > input[type='checkbox'],
+  .row > input[type='radio'] {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-height: 1.25rem;
+    min-width: 1.25rem;
+  }
 
   /* Touch target lebih besar */
   .btn {
@@ -568,5 +592,21 @@ th {
   .sidebar nav a {
     padding: 0.75rem;
     font-size: 0.95rem;
+  }
+}
+
+/* Layar sangat kecil (≤400px): kartu lebih ringkas */
+@media (max-width: 400px) {
+  .card {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Kartu dalam kartu (detail table) & pre tetap scroll horizontal */
+  .card table td {
+    word-break: break-word;
   }
 }
