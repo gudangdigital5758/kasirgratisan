@@ -38,7 +38,7 @@ export default function PaymentsPage() {
                 <td data-label="Waktu" className="muted">{new Date(p.created_at).toLocaleString('id-ID')}</td>
                 <td data-label="User">
                   <Link to={`/members/${p.user_id}`} style={{ color: 'var(--primary)' }}>
-                    {p.user_id.slice(0, 8)}…
+                    {p.user_email || `${p.user_id.slice(0, 8)}…`}
                   </Link>
                 </td>
                 <td data-label="Plan">{p.plan_id}</td>

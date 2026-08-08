@@ -317,7 +317,27 @@ admin.get('/payments', async (c) => {
       c.env,
       `payments?order=created_at.desc&limit=${limit}&select=id,user_id,plan_id,amount,status,provider,created_at`,
     );
-    return c.json({ payments: rows });
+
+    // Batch lookup email user (profiles) agar kolom User bisa menampilkan email.
+    const userIds = [...new Set(rows.map((r) => String(r.user_id || '')).filter(Boolean))];
+    let emailById = new Map<string, string | null>();
+    if (userIds.length > 0) {
+      try {
+        const profs = await sbGet<{ id: string; email: string | null }[]>(
+          c.env,
+          `profiles?id=in.(${userIds.join(',')})&select=id,email`,
+        );
+        emailById = new Map(profs.map((p) => [p.id, p.email]));
+      } catch {
+        /* email optional — fallback ke user_id */
+      }
+    }
+
+    const payments = rows.map((r) => ({
+      ...r,
+      user_email: r.user_id ? (emailById.get(String(r.user_id)) ?? null) : null,
+    }));
+    return c.json({ payments });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat payments' }, 500);
   }

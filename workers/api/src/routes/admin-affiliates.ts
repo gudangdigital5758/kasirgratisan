@@ -204,6 +204,21 @@ affiliates.get('/', async (c) => {
     }
     const codeById = new Map(rows.map((r) => [r.id, r.code]));
 
+    // Batch lookup email affiliator (profiles) untuk kolom email.
+    const userIds = [...new Set(rows.map((r) => r.user_id).filter((x): x is string => Boolean(x)))];
+    let emailById = new Map<string, string | null>();
+    if (userIds.length > 0) {
+      try {
+        const profs = await sbGet<{ id: string; email: string | null }[]>(
+          c.env,
+          `profiles?id=in.(${userIds.join(',')})&select=id,email`,
+        );
+        emailById = new Map(profs.map((p) => [p.id, p.email]));
+      } catch {
+        /* email optional */
+      }
+    }
+
     const list = rows.map((r) => {
       const cm = byAffiliate.get(r.id) ?? [];
       const totalCommission = cm.reduce((s, x) => s + (x.commission_idr || 0), 0);
@@ -212,6 +227,7 @@ affiliates.get('/', async (c) => {
       const referredUsers = new Set(cm.map((x) => x.user_id)).size;
       return {
         ...mapAffiliate(r),
+        userEmail: r.user_id ? (emailById.get(r.user_id) ?? null) : null,
         referredByCode: r.referred_by ? (codeById.get(r.referred_by) ?? null) : null,
         stats: {
           // Referral = jumlah payment unik (bukan jumlah baris — 1 payment bisa punya 5 tier).
@@ -365,8 +381,22 @@ affiliates.get('/:id', async (c) => {
       `affiliate_commissions?affiliate_id=eq.${id}&order=created_at.desc&limit=200&select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at`,
     ).catch(() => [] as CommissionRow[]);
 
+    // Email affiliator (profiles) untuk keterangan kontak di detail.
+    let userEmail: string | null = null;
+    if (row.user_id) {
+      try {
+        const profs = await sbGet<{ email: string | null }[]>(
+          c.env,
+          `profiles?id=eq.${row.user_id}&select=email&limit=1`,
+        );
+        userEmail = profs[0]?.email ?? null;
+      } catch {
+        /* email optional */
+      }
+    }
+
     return c.json({
-      affiliate: mapAffiliate(row),
+      affiliate: { ...mapAffiliate(row), userEmail },
       commissions: commissions.map(mapCommission),
     });
   } catch (err) {

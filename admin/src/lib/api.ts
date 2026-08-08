@@ -258,6 +258,7 @@ export type AffiliateRow = {
   code: string;
   name: string;
   userId: string | null;
+  userEmail?: string | null;
   referredBy: string | null;
   referredByCode?: string | null;
   payoutNote: string | null;
@@ -339,6 +340,7 @@ export type MemberDetail = {
 export type PaymentRow = {
   id: string;
   user_id: string;
+  user_email?: string | null;
   plan_id: string;
   amount: number;
   status: string;

@@ -172,6 +172,16 @@ export default function AffiliatesPage() {
     return parts.length ? parts.join(' · ') : null;
   };
 
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setOk('Link referral disalin');
+      setErr(null);
+    } catch {
+      setErr('Gagal menyalin link');
+    }
+  };
+
   // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
   const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
   const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
@@ -365,6 +375,11 @@ export default function AffiliatesPage() {
                     <td data-label="Kode / Nama">
                       <code>{a.code}</code>
                       <div>{a.name}</div>
+                      {a.userEmail && (
+                        <div className="muted" style={{ fontSize: 11 }}>
+                          {a.userEmail}
+                        </div>
+                      )}
                       {a.referredByCode && (
                         <div className="muted" style={{ fontSize: 11 }}>
                           parent: {a.referredByCode}
@@ -428,8 +443,22 @@ export default function AffiliatesPage() {
             </div>
           </div>
           <p className="muted" style={{ margin: 0 }}>
-            Link: <code>https://profitku.my.id/?ref={detail?.affiliate.code}</code>
+            Link:{' '}
+            <code>https://profitku.my.id/?ref={detail?.affiliate.code}</code>{' '}
+            <button
+              type="button"
+              className="btn ghost"
+              style={{ fontSize: 12, padding: '2px 8px' }}
+              onClick={() => void copyText(`https://profitku.my.id/?ref=${detail?.affiliate.code ?? ''}`)}
+            >
+              📋 Copy
+            </button>
           </p>
+          {detail?.affiliate.userEmail && (
+            <p className="muted" style={{ margin: 0 }}>
+              ✉️ Email: {detail.affiliate.userEmail}
+            </p>
+          )}
           {detail?.affiliate && bankText(detail.affiliate) && (
             <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
               💳 Bank: {bankText(detail.affiliate)}
