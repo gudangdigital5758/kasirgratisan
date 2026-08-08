@@ -6,11 +6,21 @@
     "cloudData": "Cloud & Data",
     "transactionsAndStock": "Transactions & Stock",
     "people": "Customers & Suppliers",
-    "storeAndStaff": "Store & Staff"
+    "storeAndStaff": "Store & Staff",
+    "store": "Stores",
+    "cloud": "Cloud & Subscription",
+    "data": "Data & Backup",
+    "staff": "Staff & Permissions",
+    "catalog": "Catalog & Master Data",
+    "appearance": "Appearance & Help"
   },
   "localBackup": {
     "title": "Backup & restore (local)",
     "description": "Export/import JSON on this device"
+  },
+  "cloudBackup": {
+    "cardTitle": "Cloud Backup",
+    "cardDesc": "Files & history of automatic cloud backups"
   },
   "shiftMenu": {
     "title": "Cashier shift",
@@ -560,6 +570,8 @@
       "permissionLabel": "Manage Backup"
     },
     "title": "Manage Stores",
+    "cardTitle": "Cloud Stores & Subscription",
+    "cardDesc": "Manage online stores & per-store subscription",
     "loading": "Loading…",
     "requiresSubscription": "Profitku Cloud subscription is required to manage stores.",
     "activeDevice": "This device is connected to:",
@@ -1519,8 +1531,8 @@
   "stores": {
     "title": "Stores",
     "desc": "Manage multiple stores on this device. Each store's data is isolated.",
-    "cardTitle": "Stores",
-    "cardDesc": "Add & switch stores (offline/online)",
+    "cardTitle": "Stores on This Device",
+    "cardDesc": "Add, switch, or delete stores on this device",
     "switchHint": "Switching a store reloads the app — all data shown belongs to the active store.",
     "addButton": "Add Store",
     "modeLocal": "Offline",

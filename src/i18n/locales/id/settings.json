@@ -6,11 +6,21 @@
     "cloudData": "Cloud & Data",
     "transactionsAndStock": "Transaksi & Stok",
     "people": "Pelanggan & Supplier",
-    "storeAndStaff": "Toko & Karyawan"
+    "storeAndStaff": "Toko & Karyawan",
+    "store": "Toko",
+    "cloud": "Cloud & Langganan",
+    "data": "Data & Backup",
+    "staff": "Karyawan & Hak Akses",
+    "catalog": "Katalog & Master Data",
+    "appearance": "Tampilan & Bantuan"
   },
   "localBackup": {
     "title": "Backup & pulihkan (lokal)",
     "description": "Export/import JSON di perangkat ini"
+  },
+  "cloudBackup": {
+    "cardTitle": "Backup Cloud",
+    "cardDesc": "File & riwayat backup cloud otomatis"
   },
   "shiftMenu": {
     "title": "Shift kasir",
@@ -560,6 +570,8 @@
       "permissionLabel": "Kelola Backup"
     },
     "title": "Kelola Toko",
+    "cardTitle": "Toko Cloud & Langganan",
+    "cardDesc": "Kelola toko online & langganan per toko",
     "loading": "Memuat…",
     "requiresSubscription": "Langganan Profitku Cloud diperlukan untuk mengelola toko.",
     "activeDevice": "Device ini terhubung ke:",
@@ -1520,8 +1532,8 @@
   "stores": {
     "title": "Toko",
     "desc": "Kelola beberapa toko di perangkat ini. Data tiap toko terpisah.",
-    "cardTitle": "Toko",
-    "cardDesc": "Tambah & ganti toko (offline/online)",
+    "cardTitle": "Toko di Perangkat Ini",
+    "cardDesc": "Tambah, ganti, atau hapus toko di perangkat ini",
     "switchHint": "Mengganti toko akan memuat ulang aplikasi — seluruh data tampil sesuai toko aktif.",
     "addButton": "Tambah Toko",
     "modeLocal": "Offline",

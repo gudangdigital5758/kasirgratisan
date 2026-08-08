@@ -6,11 +6,21 @@
     "cloudData": "Cloud & Data",
     "transactionsAndStock": "Transaksi & Stok",
     "people": "Pelanggan & Pembekal",
-    "storeAndStaff": "Kedai & Kakitangan"
+    "storeAndStaff": "Kedai & Kakitangan",
+    "store": "Kedai",
+    "cloud": "Cloud & Langganan",
+    "data": "Data & Sandaran",
+    "staff": "Kakitangan & Kebenaran",
+    "catalog": "Katalog & Data Utama",
+    "appearance": "Paparan & Bantuan"
   },
   "localBackup": {
     "title": "Sandaran & pulihkan (tempatan)",
     "description": "Eksport/import JSON pada peranti ini"
+  },
+  "cloudBackup": {
+    "cardTitle": "Sandaran Awan",
+    "cardDesc": "Fail & sejarah sandaran awan automatik"
   },
   "shiftMenu": {
     "title": "Shift kasir",
@@ -560,6 +570,8 @@
       "permissionLabel": "Urus Backup"
     },
     "title": "Urus Kedai",
+    "cardTitle": "Kedai Awan & Langganan",
+    "cardDesc": "Urus kedai dalam talian & langganan setiap kedai",
     "loading": "Memuat…",
     "requiresSubscription": "Langganan Profitku Cloud diperlukan untuk mengurus kedai.",
     "activeDevice": "Peranti ini disambungkan ke:",
@@ -1103,8 +1115,8 @@
   "stores": {
     "title": "Kedai",
     "desc": "Urus beberapa kedai pada peranti ini. Data setiap kedai terasing.",
-    "cardTitle": "Kedai",
-    "cardDesc": "Tambah & tukar kedai (offline/online)",
+    "cardTitle": "Kedai pada Peranti Ini",
+    "cardDesc": "Tambah, tukar, atau padam kedai pada peranti ini",
     "switchHint": "Menukar kedai akan memuat semula aplikasi — semua data dipaparkan mengikut kedai aktif.",
     "addButton": "Tambah Kedai",
     "modeLocal": "Offline",

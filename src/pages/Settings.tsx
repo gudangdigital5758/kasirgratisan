@@ -477,10 +477,35 @@ export default function Pengaturan() {
 
       {/* Play Store alert ditunda — BRAND.playStoreEnabled === false (fokus PWA). */}
 
-      {/* 1. Cloud & Data */}
+      {/* 1. Toko */}
+      <div className="space-y-2 mt-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.store')}</h2>
+        <SettingsLinkCard to="/settings/stores" icon={Store} iconClass="bg-primary/10 text-primary" title={t('stores.cardTitle')} description={t('stores.cardDesc')} className="" />
+        {can('manage_backup') && (
+          <SettingsLinkCard to="/settings/cloud/stores" icon={Cloud} iconClass="bg-sky-500/10 text-sky-600 dark:text-sky-400" title={t('cloudStore.cardTitle')} description={t('cloudStore.cardDesc')} className="" />
+        )}
+        {can('manage_store_settings') && (
+          <Card className="border-0 shadow-sm mb-2">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                <Store className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{t('productFields:settings.title')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('productFields:settings.desc')}</p>
+              </div>
+              <Button size="sm" className="h-8 text-xs" onClick={openStoreTypeDialog}>
+                {t('productFields:settings.change')}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* 2. Cloud & Langganan */}
       {can('manage_backup') && (
-        <div className="space-y-2 mt-2">
-          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.cloudData')}</h2>
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.cloud')}</h2>
           <Link to="/settings/cloud" className="block">
             <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -509,6 +534,14 @@ export default function Pengaturan() {
               </CardContent>
             </Card>
           </Link>
+          <SettingsLinkCard to="/settings/cloud/files" icon={Cloud} iconClass="bg-primary/10 text-primary" title={t('cloudBackup.cardTitle')} description={t('cloudBackup.cardDesc')} className="" />
+        </div>
+      )}
+
+      {/* 3. Data & Backup */}
+      {can('manage_backup') && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.data')}</h2>
           <SettingsLinkCard to="/settings/backup" icon={HardDrive} iconClass="bg-success/10 text-success" title={t('localBackup.title')} description={t('localBackup.description')} className="" />
         </div>
       )}
@@ -550,7 +583,7 @@ export default function Pengaturan() {
         </Card>
       )}
 
-      {/* 2. Transaksi & Stok */}
+      {/* 5. Transaksi & Stok */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.transactionsAndStock')}</h2>
         <SettingsLinkCard to="/history" icon={Receipt} title={t('transactionsAndStock.transactionHistory.title')} description={t('transactionsAndStock.transactionHistory.description')} />
@@ -572,7 +605,7 @@ export default function Pengaturan() {
         )}
       </div>
 
-      {/* 3. Pelanggan & Supplier */}
+      {/* 6. Pelanggan & Supplier */}
       {(can('manage_supplier') || can('manage_customers')) && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.people')}</h2>
@@ -588,9 +621,9 @@ export default function Pengaturan() {
         </div>
       )}
 
-      {/* 4. Toko & Karyawan */}
+      {/* 7. Karyawan & Hak Akses */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.storeAndStaff')}</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.staff')}</h2>
 
         {multiUserEnabled && currentUser ? (
           <Card className="border-0 shadow-sm mb-2">
@@ -665,7 +698,11 @@ export default function Pengaturan() {
             </CardContent>
           </Card>
         )}
+      </div>
 
+      {/* 8. Katalog & Master Data */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.catalog')}</h2>
         {can('manage_categories_payments') && (
           <SettingsLinkCard to="/settings/payment-methods" icon={CreditCard} title={t('masterData.paymentMethods.title')} description={t('masterData.paymentMethods.description', { count: paymentMethods?.length ?? 0 })} />
         )}
@@ -679,26 +716,11 @@ export default function Pengaturan() {
         )}
 
         <SettingsLinkCard to="/settings/units" icon={Ruler} title={t('masterData.units.title')} description={t('masterData.units.description', { count: units?.length ?? 0 })} />
+      </div>
 
-        <SettingsLinkCard to="/settings/stores" icon={Store} iconClass="bg-primary/10 text-primary" title={t('stores.cardTitle')} description={t('stores.cardDesc')} />
-
-        {can('manage_store_settings') && (
-          <Card className="border-0 shadow-sm mb-2">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
-                <Store className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{t('productFields:settings.title')}</p>
-                <p className="text-[10px] text-muted-foreground">{t('productFields:settings.desc')}</p>
-              </div>
-              <Button size="sm" className="h-8 text-xs" onClick={openStoreTypeDialog}>
-                {t('productFields:settings.change')}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
+      {/* 9. Tampilan & Bantuan */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.appearance')}</h2>
         {can('manage_store_settings') && (
           <SettingsLinkCard to="/settings/receipt" icon={Receipt} title={t('masterData.receiptFooter.title')} description={t('masterData.receiptFooter.description')} />
         )}
