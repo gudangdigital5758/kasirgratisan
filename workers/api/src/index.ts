@@ -60,6 +60,7 @@ import {
   loadAffiliateByCode,
   normalizeAffiliateCode,
 } from './lib/affiliates';
+import affiliateRoutes from './routes/affiliate';
 
 type Variables = {
   userId: string | null;
@@ -83,14 +84,18 @@ function escapeHtml(value: string): string {
 app.use('*', async (c, next) => {
   const origin = c.env.APP_ORIGIN || 'https://profitku.my.id';
   const adminOrigin = c.env.ADMIN_ORIGIN || 'https://dashboard.profitku.my.id';
+  const affiliateOrigin = c.env.AFFILIATE_ORIGIN || 'https://affiliate.profitku.my.id';
   return cors({
     origin: [
       origin,
       adminOrigin,
+      affiliateOrigin,
       'http://localhost:8080',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://127.0.0.1:5174',
+      'http://localhost:5179',
+      'http://127.0.0.1:5179',
       'capacitor://localhost',
       'http://localhost',
     ],
@@ -190,6 +195,9 @@ app.use('/admin/api/*', rateLimitMiddleware);
 
 /** Staff admin console API */
 app.route('/admin/api', adminRoutes);
+
+/** Affiliate — lookup publik + register/me/tree/commissions (auth) */
+app.route('/api/affiliate', affiliateRoutes);
 
 function requireUser(c: {
   get: (k: 'userId' | 'userEmail' | 'bearer') => string | null;
@@ -433,29 +441,6 @@ app.get('/api/user/profile', async (c) => {
   }
 
   return c.json(profile);
-});
-
-// --- Affiliate lookup (publik, tanpa auth) ---
-// Dipakai client saat user membuka link ?ref=KODE untuk memvalidasi + menampilkan nama affiliator.
-app.get('/api/affiliate/lookup', async (c) => {
-  const code = normalizeAffiliateCode(c.req.query('code') || '');
-  if (!code) return c.json({ valid: false, error: 'Kode affiliasi wajib' }, 400);
-  if (!isValidAffiliateCode(code)) {
-    return c.json({ valid: false, error: 'Format kode affiliasi tidak valid' }, 400);
-  }
-  try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const affiliate = await loadAffiliateByCode(c.env, code);
-      if (!affiliate) {
-        return c.json({ valid: false, error: 'Kode affiliasi tidak ditemukan atau nonaktif' });
-      }
-      return c.json({ valid: true, code: affiliate.code, name: affiliate.name });
-    }
-    return c.json({ valid: false, error: 'Layanan affiliasi belum tersedia' }, 503);
-  } catch (err) {
-    console.warn('[affiliate lookup]', err);
-    return c.json({ valid: false, error: 'Gagal memeriksa kode affiliasi' }, 500);
-  }
 });
 
 // --- Voucher preview (auth) ---

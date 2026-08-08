@@ -2,6 +2,8 @@ export interface Env {
   APP_ORIGIN: string;
   /** Origin admin SPA (dashboard.profitku.my.id) — CORS */
   ADMIN_ORIGIN?: string;
+  /** Origin SPA affiliator (affiliate.profitku.my.id) — CORS */
+  AFFILIATE_ORIGIN?: string;
   /**
    * Comma-separated staff emails (Google/Supabase) yang boleh akses /admin/api/*
    * Contoh: you@gmail.com,ops@profitku.my.id

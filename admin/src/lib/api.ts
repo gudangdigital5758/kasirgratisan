@@ -206,10 +206,11 @@ export const adminApi = {
     ),
 
   createAffiliate: (body: {
-    code: string;
+    code?: string;
     name: string;
     userId?: string;
     userEmail?: string;
+    referredByCode?: string;
     payoutNote?: string;
     bankName?: string;
     bankAccountNo?: string;
@@ -244,7 +245,10 @@ export const adminApi = {
 
 export type AffiliateSettings = {
   enabled: boolean;
+  /** Legacy: komisi tier tunggal (backward compat). */
   commission_percent: number;
+  /** Komisi per tier (1..5), persen dari amount. */
+  tiers: number[];
   attribution_days: number;
   min_amount_idr: number;
 };
@@ -254,6 +258,8 @@ export type AffiliateRow = {
   code: string;
   name: string;
   userId: string | null;
+  referredBy: string | null;
+  referredByCode?: string | null;
   payoutNote: string | null;
   bankName: string | null;
   bankAccountNo: string | null;
@@ -278,6 +284,7 @@ export type AffiliateCommission = {
   amountPaid: number;
   ratePercent: number;
   commissionIdr: number;
+  tier: number;
   status: 'earned' | 'paid' | 'void' | string;
   paidAt: string | null;
   createdAt: string;

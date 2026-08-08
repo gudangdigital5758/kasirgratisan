@@ -8,8 +8,10 @@ import { sbGet, sbPatch, sbPost } from '../lib/supabase';
 import { canWrite, requireAdmin, writeAudit, writeEvent, type AdminContext } from '../lib/admin';
 import {
   DEFAULT_AFFILIATE_SETTINGS,
+  generateAffiliateCode,
   getAffiliateSettings,
   isValidAffiliateCode,
+  loadAffiliateByCode,
   normalizeAffiliateCode,
   type AffiliateSettings,
 } from '../lib/affiliates';
@@ -30,6 +32,7 @@ type CommissionRow = {
   amount_paid: number;
   rate_percent: number;
   commission_idr: number;
+  tier?: number | null;
   status: string;
   paid_at: string | null;
   created_at: string;
@@ -40,6 +43,7 @@ type AffiliateRow = {
   code: string;
   name: string;
   user_id: string | null;
+  referred_by: string | null;
   payout_note: string | null;
   bank_name: string | null;
   bank_account_no: string | null;
@@ -54,6 +58,7 @@ const mapAffiliate = (r: AffiliateRow) => ({
   code: r.code,
   name: r.name,
   userId: r.user_id,
+  referredBy: r.referred_by,
   payoutNote: r.payout_note,
   bankName: r.bank_name,
   bankAccountNo: r.bank_account_no,
@@ -71,6 +76,7 @@ const mapCommission = (c: CommissionRow) => ({
   amountPaid: c.amount_paid,
   ratePercent: c.rate_percent,
   commissionIdr: c.commission_idr,
+  tier: c.tier ?? 1,
   status: c.status,
   paidAt: c.paid_at,
   createdAt: c.created_at,
@@ -79,6 +85,17 @@ const mapCommission = (c: CommissionRow) => ({
 function validateSettingsBody(body: Record<string, unknown>): string | null {
   if (body.enabled !== undefined && typeof body.enabled !== 'boolean') {
     return "Field 'enabled' harus boolean";
+  }
+  if (body.tiers !== undefined) {
+    if (!Array.isArray(body.tiers) || body.tiers.length < 1 || body.tiers.length > 5) {
+      return "Field 'tiers' harus array 1–5 angka (komisi per tier)";
+    }
+    for (const t of body.tiers) {
+      const n = Number(t);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        return "Field 'tiers' harus berisi angka 0–100";
+      }
+    }
   }
   if (body.commission_percent !== undefined) {
     const n = Number(body.commission_percent);
@@ -120,12 +137,22 @@ affiliates.patch('/settings', async (c) => {
   if (validationError) return c.json({ error: validationError }, 400);
 
   const current = await getAffiliateSettings(c.env);
+  let commission_percent = current.commission_percent;
+  let tiers = current.tiers;
+  if (body.commission_percent !== undefined) {
+    commission_percent = Math.max(0, Math.min(100, Math.floor(Number(body.commission_percent))));
+  }
+  if (body.tiers !== undefined) {
+    tiers = (body.tiers as unknown[])
+      .map((t) => Math.max(0, Math.min(100, Math.floor(Number(t)))))
+      .slice(0, 5);
+    // Jaga kompatibilitas legacy: commission_percent mengikuti tier 1.
+    commission_percent = tiers[0] ?? commission_percent;
+  }
   const next: AffiliateSettings = {
     enabled: body.enabled === undefined ? current.enabled : Boolean(body.enabled),
-    commission_percent:
-      body.commission_percent === undefined
-        ? current.commission_percent
-        : Math.max(0, Math.min(100, Math.floor(Number(body.commission_percent)))),
+    commission_percent,
+    tiers,
     attribution_days:
       body.attribution_days === undefined
         ? current.attribution_days
@@ -165,7 +192,7 @@ affiliates.get('/', async (c) => {
       sbGet<AffiliateRow[]>(c.env, 'affiliates?order=created_at.desc&select=*'),
       sbGet<CommissionRow[]>(
         c.env,
-        'affiliate_commissions?select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,status,paid_at,created_at&limit=5000',
+        'affiliate_commissions?select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at&limit=5000',
       ).catch(() => [] as CommissionRow[]),
     ]);
 
@@ -175,6 +202,7 @@ affiliates.get('/', async (c) => {
       list.push(cm);
       byAffiliate.set(cm.affiliate_id, list);
     }
+    const codeById = new Map(rows.map((r) => [r.id, r.code]));
 
     const list = rows.map((r) => {
       const cm = byAffiliate.get(r.id) ?? [];
@@ -184,8 +212,10 @@ affiliates.get('/', async (c) => {
       const referredUsers = new Set(cm.map((x) => x.user_id)).size;
       return {
         ...mapAffiliate(r),
+        referredByCode: r.referred_by ? (codeById.get(r.referred_by) ?? null) : null,
         stats: {
-          referrals: cm.length,
+          // Referral = jumlah payment unik (bukan jumlah baris — 1 payment bisa punya 5 tier).
+          referrals: new Set(cm.map((x) => x.payment_id)).size,
           referredUsers,
           totalCommissionIdr: totalCommission,
           earnedCommissionIdr: earned.reduce((s, x) => s + x.commission_idr, 0),
@@ -214,6 +244,7 @@ affiliates.post('/', async (c) => {
     name?: string;
     userId?: string;
     userEmail?: string;
+    referredByCode?: string;
     payoutNote?: string;
     bankName?: string;
     bankAccountNo?: string;
@@ -222,7 +253,7 @@ affiliates.post('/', async (c) => {
   const code = normalizeAffiliateCode(body.code || '');
   const name = (body.name || '').trim();
 
-  if (!isValidAffiliateCode(code)) {
+  if (code && !isValidAffiliateCode(code)) {
     return c.json({ error: 'Kode affiliasi 4–24 karakter [A-Z0-9_-], tidak diawali -/_' }, 400);
   }
   if (!name) return c.json({ error: 'Nama affiliator wajib' }, 400);
@@ -240,37 +271,66 @@ affiliates.post('/', async (c) => {
     }
   }
 
-  try {
-    const existing = await sbGet<{ id: string }[]>(
-      c.env,
-      `affiliates?code=eq.${code}&select=id&limit=1`,
-    );
-    if (existing[0]) return c.json({ error: `Kode '${code}' sudah dipakai` }, 409);
+  // Parent (referred_by) opsional — menghubungkan ke pohon referral tier.
+  let referredBy: string | null = null;
+  if (body.referredByCode) {
+    const rc = normalizeAffiliateCode(body.referredByCode);
+    if (!isValidAffiliateCode(rc)) {
+      return c.json({ error: 'Kode referal parent tidak valid' }, 400);
+    }
+    const parent = await loadAffiliateByCode(c.env, rc);
+    if (!parent) return c.json({ error: `Parent '${rc}' tidak ditemukan atau nonaktif` }, 400);
+    referredBy = parent.id;
+  }
 
-    const rows = await sbPost<AffiliateRow[]>(c.env, 'affiliates', {
-      code,
-      name,
-      user_id: userId,
-      payout_note: (body.payoutNote || '').trim() || null,
-      bank_name: (body.bankName || '').trim() || null,
-      bank_account_no: (body.bankAccountNo || '').trim() || null,
-      bank_account_name: (body.bankAccountName || '').trim() || null,
-      is_active: true,
-    });
-    const row = rows[0];
-    if (!row) return c.json({ error: 'Gagal membuat affiliator' }, 500);
+  try {
+    const insert = async (candidate: string) =>
+      sbPost<AffiliateRow[]>(c.env, 'affiliates', {
+        code: candidate,
+        name,
+        user_id: userId,
+        referred_by: referredBy,
+        payout_note: (body.payoutNote || '').trim() || null,
+        bank_name: (body.bankName || '').trim() || null,
+        bank_account_no: (body.bankAccountNo || '').trim() || null,
+        bank_account_name: (body.bankAccountName || '').trim() || null,
+        is_active: true,
+      });
+
+    let row: AffiliateRow | undefined;
+    if (code) {
+      const existing = await sbGet<{ id: string }[]>(
+        c.env,
+        `affiliates?code=eq.${code}&select=id&limit=1`,
+      );
+      if (existing[0]) return c.json({ error: `Kode '${code}' sudah dipakai` }, 409);
+      const rows = await insert(code);
+      row = rows[0];
+    } else {
+      // REF otomatis: generate kode acak, retry bila bentrok.
+      for (let attempt = 0; attempt < 5 && !row; attempt++) {
+        try {
+          const rows = await insert(generateAffiliateCode());
+          row = rows[0];
+        } catch (err) {
+          if (!(err instanceof Error) || !/duplicate/i.test(err.message)) throw err;
+        }
+      }
+    }
+    if (!row) return c.json({ error: 'Gagal membuat affiliator (kode bentrok)' }, 500);
 
     await writeAudit(c.env, a as AdminContext, 'affiliate.create', 'affiliates', row.id, {
-      code,
+      code: row.code,
       name,
       userId,
+      referredBy: referredBy ?? undefined,
       bank: row.bank_name ?? null,
     });
     await writeEvent(c.env, {
       type: 'admin.affiliate.create',
-      message: `Admin created affiliate ${code}`,
+      message: `Admin created affiliate ${row.code}`,
       actorUserId: a.userId,
-      payload: { code, name, actorEmail: a.email },
+      payload: { code: row.code, name, actorEmail: a.email },
     });
 
     return c.json({
@@ -302,7 +362,7 @@ affiliates.get('/:id', async (c) => {
 
     const commissions = await sbGet<CommissionRow[]>(
       c.env,
-      `affiliate_commissions?affiliate_id=eq.${id}&order=created_at.desc&limit=200&select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,status,paid_at,created_at`,
+      `affiliate_commissions?affiliate_id=eq.${id}&order=created_at.desc&limit=200&select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at`,
     ).catch(() => [] as CommissionRow[]);
 
     return c.json({

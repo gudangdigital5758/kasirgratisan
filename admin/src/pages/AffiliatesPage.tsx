@@ -9,6 +9,7 @@ import {
 const defaultSettings: AffiliateSettings = {
   enabled: true,
   commission_percent: 10,
+  tiers: [20, 5, 3, 2, 1],
   attribution_days: 90,
   min_amount_idr: 0,
 };
@@ -17,6 +18,7 @@ const emptyForm = {
   code: '',
   name: '',
   userEmail: '',
+  referredByCode: '',
   bankName: '',
   bankAccountNo: '',
   bankAccountName: '',
@@ -26,7 +28,7 @@ const emptyForm = {
 const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
 /** Field angka disimpan sebagai string agar bisa dikosongkan (tanpa paksa 0 / leading zero). */
-const emptyCfg = { enabled: true, commission_percent: '', attribution_days: '', min_amount_idr: '' };
+const emptyCfg = { enabled: true, tiers: ['20', '5', '3', '2', '1'], attribution_days: '', min_amount_idr: '' };
 
 const toNum = (v: string, fallback = 0, min = 0, max = Infinity) => {
   const n = Number(v.trim());
@@ -58,7 +60,7 @@ export default function AffiliatesPage() {
       .then((r) =>
         setCfg({
           enabled: r.settings.enabled,
-          commission_percent: String(r.settings.commission_percent),
+          tiers: (r.settings.tiers?.length ? r.settings.tiers : [r.settings.commission_percent]).map(String),
           attribution_days: String(r.settings.attribution_days),
           min_amount_idr: String(r.settings.min_amount_idr),
         }),
@@ -80,13 +82,13 @@ export default function AffiliatesPage() {
     try {
       const res = await adminApi.patchAffiliateSettings({
         enabled: cfg.enabled,
-        commission_percent: toNum(cfg.commission_percent, 0, 0, 100),
+        tiers: cfg.tiers.map((t) => toNum(t, 0, 0, 100)),
         attribution_days: toNum(cfg.attribution_days, 90, 1, 3650),
         min_amount_idr: toNum(cfg.min_amount_idr, 0, 0),
       });
       setCfg({
         enabled: res.settings.enabled,
-        commission_percent: String(res.settings.commission_percent),
+        tiers: (res.settings.tiers?.length ? res.settings.tiers : [res.settings.commission_percent]).map(String),
         attribution_days: String(res.settings.attribution_days),
         min_amount_idr: String(res.settings.min_amount_idr),
       });
@@ -105,15 +107,16 @@ export default function AffiliatesPage() {
     setOk(null);
     try {
       await adminApi.createAffiliate({
-        code: form.code,
+        code: form.code.trim() || undefined,
         name: form.name,
         userEmail: form.userEmail.trim() || undefined,
+        referredByCode: form.referredByCode.trim().toUpperCase() || undefined,
         bankName: form.bankName,
         bankAccountNo: form.bankAccountNo,
         bankAccountName: form.bankAccountName,
         payoutNote: form.payoutNote,
       });
-      setOk(`Affiliator ${form.code.toUpperCase()} dibuat — link: https://profitku.my.id/?ref=${form.code.toUpperCase()}`);
+      setOk('Affiliator dibuat (kode REF otomatis bila kosong)');
       setForm(emptyForm);
       load();
     } catch (e2) {
@@ -174,9 +177,9 @@ export default function AffiliatesPage() {
       <div>
         <h2 style={{ margin: 0 }}>Affiliate</h2>
         <p className="muted">
-          Referral link Profitku. User yang membuka <code>?ref=KODE</code> otomatis dikunci ke
-          affiliator; saat berlangganan/perpanjang cloud, komisi <b>N%</b> dicatat otomatis dari
-          pembayaran sukses.
+          Referral link Profitku 5 tier. User yang membuka <code>?ref=KODE</code> otomatis dikunci ke
+          affiliator; saat berlangganan/perpanjang cloud, komisi per tier (20/5/3/2/1%) dicatat
+          otomatis dari pembayaran sukses s.d. 5 level di atasnya.
         </p>
       </div>
 
@@ -186,17 +189,21 @@ export default function AffiliatesPage() {
       <form className="card stack" onSubmit={(e) => void saveSettings(e)}>
         <h3 style={{ margin: 0, fontSize: '1rem' }}>Settings komisi</h3>
         <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
-          <label className="stack" style={{ flex: '0 1 160px' }}>
-            <span className="muted">Komisi (%)</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={cfg.commission_percent}
-              onChange={(e) => setCfg((s) => ({ ...s, commission_percent: e.target.value }))}
-              placeholder="10"
-            />
-          </label>
+          {cfg.tiers.map((t, i) => (
+            <label key={i} className="stack" style={{ flex: '0 1 110px' }}>
+              <span className="muted">Tier {i + 1} (%)</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={t}
+                onChange={(e) =>
+                  setCfg((s) => ({ ...s, tiers: s.tiers.map((x, j) => (j === i ? e.target.value : x)) }))
+                }
+                placeholder="0"
+              />
+            </label>
+          ))}
           <label className="stack" style={{ flex: '0 1 150px' }}>
             <span className="muted">Atribusi (hari)</span>
             <input
@@ -230,9 +237,10 @@ export default function AffiliatesPage() {
           </label>
         </div>
         <p className="muted" style={{ margin: 0, fontSize: '0.75rem', maxWidth: 640 }}>
-          <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus berlangganan dalam X hari
-          sejak mengklik link affiliator, kalau lewat komisi tidak berlaku. Kosongkan Komisi (%) lalu
-          simpan untuk komisi 0 (jalur referral tetap terekam).
+          <b>Komisi 5 tier</b> (persen dari nominal pembayaran): tier 1 = referrer langsung,
+          tier 2–5 = ancestor di atasnya. Set 0 untuk menonaktifkan tier tertentu. Total maks
+          31% (20+5+3+2+1). <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus
+          berlangganan dalam X hari sejak mengklik link, kalau lewat komisi tidak berlaku.
         </p>
         <div className="row" style={{ gap: '0.5rem' }}>
           <button type="submit" className="btn" disabled={busy}>
@@ -245,9 +253,8 @@ export default function AffiliatesPage() {
         <h3 style={{ margin: 0, fontSize: '1rem' }}>Buat affiliator</h3>
         <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
           <label className="stack" style={{ flex: '1 1 150px' }}>
-            <span className="muted">Kode (4–24, A-Z0-9_-)</span>
+            <span className="muted">Kode (kosongkan = otomatis)</span>
             <input
-              required
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
               placeholder="MITRA-BUDI"
@@ -270,6 +277,15 @@ export default function AffiliatesPage() {
               onChange={(e) => setForm((f) => ({ ...f, userEmail: e.target.value }))}
               placeholder="budi@gmail.com"
               type="email"
+            />
+          </label>
+          <label className="stack" style={{ flex: '1 1 180px' }}>
+            <span className="muted">Kode parent (opsional, tier di atasnya)</span>
+            <input
+              value={form.referredByCode}
+              onChange={(e) => setForm((f) => ({ ...f, referredByCode: e.target.value.toUpperCase() }))}
+              placeholder="MITRA-UTAMA"
+              style={{ textTransform: 'uppercase' }}
             />
           </label>
         </div>
@@ -342,6 +358,11 @@ export default function AffiliatesPage() {
                     <td>
                       <code>{a.code}</code>
                       <div>{a.name}</div>
+                      {a.referredByCode && (
+                        <div className="muted" style={{ fontSize: 11 }}>
+                          parent: {a.referredByCode}
+                        </div>
+                      )}
                       {a.payoutNote && (
                         <div className="muted" style={{ fontSize: 11 }}>
                           {a.payoutNote}
@@ -414,6 +435,7 @@ export default function AffiliatesPage() {
                 <tr>
                   <th>Tanggal</th>
                   <th>Payment</th>
+                  <th>Tier</th>
                   <th>Dibayar</th>
                   <th>Rate</th>
                   <th>Komisi</th>
@@ -423,7 +445,7 @@ export default function AffiliatesPage() {
               <tbody>
                 {(detail?.commissions.length ?? 0) === 0 ? (
                   <tr>
-                    <td colSpan={6} className="muted">
+                    <td colSpan={7} className="muted">
                       Belum ada komisi
                     </td>
                   </tr>
@@ -434,6 +456,7 @@ export default function AffiliatesPage() {
                       <td>
                         <code>{cm.paymentId.slice(0, 8)}</code>
                       </td>
+                      <td>Tier {cm.tier ?? 1}</td>
                       <td>{rp(cm.amountPaid)}</td>
                       <td>{cm.ratePercent}%</td>
                       <td>
