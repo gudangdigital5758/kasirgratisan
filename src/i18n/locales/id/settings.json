@@ -551,6 +551,7 @@
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tanpa langganan",
+    "storage": "Penyimpanan {{used}}/{{max}} MB",
     "note": "1 langganan ({{price}}/bulan) = 1 toko online. Toko offline gratis tanpa batas."
   },
   "cloudStore": {
@@ -567,6 +568,23 @@
     "storeList": "Daftar Toko",
     "used": "{{used}} dari {{max}} terpakai",
     "unlimited": "tak terbatas",
+    "plan": "Langganan toko",
+    "planActive": "Langganan aktif",
+    "planInactive": "Tanpa langganan",
+    "storage": "Penyimpanan cloud",
+    "expiry": "Berlaku s.d.",
+    "renew": "Perpanjang",
+    "subscribe": "Langganan",
+    "expiredNote": "Langganan toko ini berakhir. Simpan backup terakhir ke perangkat — toko tetap berjalan offline.",
+    "saveBackup": "Simpan backup",
+    "duration": {
+      "1": "1 bulan",
+      "6": "6 bulan (bayar 5)",
+      "12": "12 bulan (bayar 10)"
+    },
+    "cta": {
+      "subscribeDuration": "Langganan {{months}} bulan"
+    },
     "addButton": "Tambah",
     "atLimit": {
       "title": "Batas toko paketmu sudah penuh",
@@ -603,7 +621,12 @@
       "delete": "Toko dan semua data sync-nya dihapus.",
       "deleteFailed": "Gagal menghapus toko",
       "createBound": "Toko dibuat dan device otomatis terhubung.",
-      "atLimit": "Batas toko paketmu sudah penuh. Upgrade paket untuk menambah toko."
+      "atLimit": "Batas toko paketmu sudah penuh. Upgrade paket untuk menambah toko.",
+      "subscribed": "Langganan toko aktif.",
+      "checkoutFailed": "Gagal memulai checkout",
+      "noBackup": "Belum ada backup cloud untuk toko ini.",
+      "backupSaved": "Backup terakhir diunduh ke perangkat.",
+      "backupFailed": "Gagal mengunduh backup"
     }
   },
   "transactionHistory": {

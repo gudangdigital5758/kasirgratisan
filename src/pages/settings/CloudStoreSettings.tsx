@@ -15,6 +15,8 @@ import {
   ShoppingCart,
   HardDrive,
   AlertTriangle,
+  RefreshCw,
+  Download,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,21 +34,27 @@ import {
   createStore,
   renameStore,
   deleteStore,
+  checkoutPlan,
+  listBackups,
+  downloadBackup,
+  CLOUD_DURATIONS,
   type CloudStore,
 } from '@/lib/cloud-api';
+import { cn } from '@/lib/utils';
 
 const LOCALES: Record<string, Locale> = { id: idLocale, en: enUS, ms };
 
 export default function CloudStoreSettings() {
   const { can } = useAuth();
-  const { isLoggedIn, isSyncSubscribed, profile } = useCloudAuth();
+  const { isLoggedIn, isSyncSubscribed, profile, refreshProfile } = useCloudAuth();
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? idLocale;
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
 
-  // Batas jumlah toko sesuai paket sync aktif.
-  const maxStores = profile?.user?.maxStores ?? profile?.syncSubscription?.plan?.maxStores ?? null;
-  const isUnlimited = maxStores != null && maxStores >= 999999;
+  // Model per-toko berbayar (2026-08-08): jumlah toko tak terbatas;
+  // langganan cloud ditentukan per toko (entitlement), bukan jumlah toko.
+  const maxStores = null;
+  const isUnlimited = true;
 
   const [stores, setStores] = useState<CloudStore[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,8 +68,13 @@ export default function CloudStoreSettings() {
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const [subStoreId, setSubStoreId] = useState<string | null>(null);
+  const [subDuration, setSubDuration] = useState<1 | 6 | 12>(1);
+  const [subBusy, setSubBusy] = useState(false);
+
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
-  const atLimit = maxStores != null && !isUnlimited && stores.length >= maxStores;
+  // Unlimited toko (model per-toko berbayar) — tidak ada batas jumlah.
+  const atLimit = false;
 
   const loadStores = useCallback(async () => {
     setLoading(true);
@@ -100,6 +113,58 @@ export default function CloudStoreSettings() {
     if (!storeSettings?.id) return;
     await db.storeSettings.update(storeSettings.id, { cloudStoreId: null });
     toast.success(t('cloudStore.toast.unbind'));
+  };
+
+  /** Langganan/perpanjangan satu toko (durasi 1/6/12 bulan, harga server-side). */
+  const handleSubscribe = async (storeId: string) => {
+    setSubBusy(true);
+    try {
+      const res = await checkoutPlan('cloud_monthly', {
+        storeId,
+        durationMonths: subDuration,
+      });
+      if (res.completed) {
+        toast.success(t('cloudStore.toast.subscribed'));
+        setSubStoreId(null);
+        await refreshProfile();
+        loadStores();
+      } else if (res.paymentLink) {
+        window.open(res.paymentLink, '_blank');
+        setSubStoreId(null);
+      } else {
+        toast.error(t('cloudStore.toast.checkoutFailed'));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('cloudStore.toast.checkoutFailed'));
+    } finally {
+      setSubBusy(false);
+    }
+  };
+
+  /** Unduh backup cloud terakhir toko ke perangkat (saat langganan berakhir → offline). */
+  const handleSaveBackupToDevice = async (storeId: string) => {
+    setBusy(`backup:${storeId}`);
+    try {
+      const { items } = await listBackups({ storeId, limit: 1 });
+      const latest = items[0];
+      if (!latest) {
+        toast.error(t('cloudStore.toast.noBackup'));
+        return;
+      }
+      const data = await downloadBackup(latest.id);
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = latest.fileName || `profitku-backup-${storeId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t('cloudStore.toast.backupSaved'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('cloudStore.toast.backupFailed'));
+    } finally {
+      setBusy(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -214,14 +279,12 @@ export default function CloudStoreSettings() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{t('cloudStore.storeList')}</p>
-                  {maxStores != null && (
-                    <p className="text-[10px] text-muted-foreground">
-                      {t('cloudStore.used', {
-                        used: stores.length,
-                        max: isUnlimited ? t('cloudStore.unlimited') : `${maxStores} ${t('cloudStore.stats.stores')}`,
-                      })}
-                    </p>
-                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    {t('cloudStore.used', {
+                      used: stores.length,
+                      max: t('cloudStore.unlimited'),
+                    })}
+                  </p>
                 </div>
                 {!atLimit && (
                   <Button
@@ -356,6 +419,109 @@ export default function CloudStoreSettings() {
                             <p className="text-[10px] text-muted-foreground">
                               {t('cloudStore.created', { date: format(new Date(store.createdAt), 'dd MMM yyyy', { locale: dateLocale }) })}
                             </p>
+
+                            {/* Langganan per toko + penyimpanan per toko + perpanjangan */}
+                            {store.entitlement && (
+                              <div className="rounded-lg bg-muted/40 p-2.5 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[10px] text-muted-foreground">{t('cloudStore.plan')}</span>
+                                  {store.entitlement.hasSync ? (
+                                    <span className="text-[10px] font-semibold text-success">{t('cloudStore.planActive')}</span>
+                                  ) : (
+                                    <span className="text-[10px] font-semibold text-warning">{t('cloudStore.planInactive')}</span>
+                                  )}
+                                </div>
+                                {store.entitlement.hasSync && (
+                                  <>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] text-muted-foreground">{t('cloudStore.storage')}</span>
+                                      <span className="text-[10px]">
+                                        {store.entitlement.usedMb} / {store.entitlement.storageLimitMb} MB
+                                      </span>
+                                    </div>
+                                    {store.entitlement.syncExpiry && (
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] text-muted-foreground">{t('cloudStore.expiry')}</span>
+                                        <span className="text-[10px]">
+                                          {format(new Date(store.entitlement.syncExpiry), 'dd MMM yyyy', { locale: dateLocale })}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                                {!store.entitlement.hasSync && store.entitlement.backupBytes > 0 && (
+                                  <p className="text-[10px] text-warning leading-snug">
+                                    {t('cloudStore.expiredNote')}
+                                  </p>
+                                )}
+                                <div className="space-y-1.5">
+                                  {subStoreId === store.id ? (
+                                    <>
+                                      <div className="flex gap-1">
+                                        {CLOUD_DURATIONS.map((d) => (
+                                          <button
+                                            key={d.months}
+                                            type="button"
+                                            onClick={() => setSubDuration(d.months)}
+                                            className={cn(
+                                              'flex-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition-colors',
+                                              subDuration === d.months
+                                                ? 'border-primary bg-primary/10 text-primary'
+                                                : 'border-border text-muted-foreground',
+                                            )}
+                                          >
+                                            {t(`cloudStore.duration.${d.months}`)}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 text-xs w-full gap-1"
+                                        disabled={subBusy}
+                                        onClick={() => handleSubscribe(store.id)}
+                                      >
+                                        {subBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                        {t('cloudStore.cta.subscribeDuration', { months: subDuration })}
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <div className="flex gap-1.5">
+                                      <Button
+                                        size="sm"
+                                        variant={store.entitlement.hasSync ? 'outline' : 'default'}
+                                        className="h-7 text-xs flex-1 gap-1"
+                                        onClick={() => {
+                                          setSubStoreId(store.id);
+                                          setSubDuration(1);
+                                        }}
+                                      >
+                                        {store.entitlement.hasSync ? (
+                                          <><RefreshCw className="w-3 h-3" /> {t('cloudStore.renew')}</>
+                                        ) : (
+                                          <><Package className="w-3 h-3" /> {t('cloudStore.subscribe')}</>
+                                        )}
+                                      </Button>
+                                      {!store.entitlement.hasSync && store.entitlement.backupBytes > 0 && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 text-xs gap-1"
+                                          disabled={busy === `backup:${store.id}`}
+                                          onClick={() => handleSaveBackupToDevice(store.id)}
+                                        >
+                                          {busy === `backup:${store.id}` ? (
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                          ) : (
+                                            <Download className="w-3 h-3" />
+                                          )}
+                                          {t('cloudStore.saveBackup')}
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>

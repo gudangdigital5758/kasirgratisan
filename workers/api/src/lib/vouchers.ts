@@ -4,7 +4,11 @@
  */
 import type { Env } from '../env';
 import { sbGet, sbPost } from './supabase';
-import { CLOUD_PLAN_ID, CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
+import {
+  CLOUD_PLAN_ID,
+  CLOUD_PLAN_PRICE_IDR,
+  cloudDurationDays,
+} from '../data/seed-plans';
 
 export type VoucherType = 'percent' | 'free_days' | 'lifetime';
 
@@ -264,19 +268,24 @@ export type ActiveSub = {
   is_lifetime: boolean;
 };
 
-export async function getActiveSubscription(env: Env, userId: string): Promise<ActiveSub | null> {
+export async function getActiveSubscription(
+  env: Env,
+  userId: string,
+  storeId: string | null = null,
+): Promise<ActiveSub | null> {
   const now = new Date().toISOString();
+  const storeFilter = storeId ? `&store_id=eq.${storeId}` : '';
   try {
     const rows = await sbGet<ActiveSub[]>(
       env,
-      `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${now})&order=current_period_end.desc&limit=1&select=id,plan_id,status,current_period_start,current_period_end,is_lifetime`,
+      `subscriptions?user_id=eq.${userId}${storeFilter}&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${now})&order=current_period_end.desc&limit=1&select=id,plan_id,status,current_period_start,current_period_end,is_lifetime`,
     );
     return rows[0] ?? null;
   } catch {
     // kolom is_lifetime belum ada — fallback
     const rows = await sbGet<ActiveSub[]>(
       env,
-      `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1&select=id,plan_id,status,current_period_start,current_period_end`,
+      `subscriptions?user_id=eq.${userId}${storeFilter}&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1&select=id,plan_id,status,current_period_start,current_period_end`,
     );
     if (rows[0]) return { ...rows[0], is_lifetime: false };
     return null;
@@ -285,9 +294,11 @@ export async function getActiveSubscription(env: Env, userId: string): Promise<A
 
 export function computeNewPeriod(opts: {
   existing: ActiveSub | null;
-  effect: Pick<VoucherEffect, 'isLifetime' | 'grantDays'> | null;
+  effect: Pick<VoucherEffect, 'isLifetime' | 'grantDays' | 'type'> | null;
   /** Default paid/renew: 30 hari */
   defaultDays?: number;
+  /** Durasi berbayar per toko: 1/6/12 bulan (6=180, 12=360 hari) */
+  durationMonths?: number;
   now?: Date;
 }): { startIso: string; endIso: string; isLifetime: boolean } {
   const now = opts.now ?? new Date();
@@ -299,7 +310,14 @@ export function computeNewPeriod(opts: {
   }
 
   const base = extensionBaseDate(opts.existing, now);
-  const days = opts.effect?.grantDays ?? opts.defaultDays ?? 30;
+  let days: number;
+  if (opts.effect?.type === 'free_days' && opts.effect.grantDays != null) {
+    days = opts.effect.grantDays;
+  } else if (opts.durationMonths) {
+    days = cloudDurationDays(opts.durationMonths);
+  } else {
+    days = opts.effect?.grantDays ?? opts.defaultDays ?? 30;
+  }
   return {
     startIso,
     endIso: addDaysIso(base, days),

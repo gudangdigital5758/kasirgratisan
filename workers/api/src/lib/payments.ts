@@ -6,7 +6,7 @@ import type { Env } from '../env';
 import { sbGet, sbPatch, sbPost } from './supabase';
 import { notifySubscriptionActivated } from './lifecycle';
 import { writeEvent } from './admin';
-import { CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
+import { CLOUD_PLAN_PRICE_IDR, normalizeDurationMonths } from '../data/seed-plans';
 import {
   computeNewPeriod,
   getActiveSubscription,
@@ -25,6 +25,7 @@ type PayRaw = {
   amountBefore?: number | null;
   grantDays?: number | null;
   isLifetime?: boolean | null;
+  durationMonths?: number | null;
   midtrans?: unknown;
   [key: string]: unknown;
 };
@@ -34,29 +35,29 @@ type Pay = {
   plan_id: string;
   status: string;
   user_id: string;
+  store_id: string | null;
   amount: number;
   raw?: PayRaw | null;
 };
 
-function effectFromPayment(pay: Pay): Pick<VoucherEffect, 'isLifetime' | 'grantDays' | 'type' | 'value'> | null {
+function effectFromPayment(pay: Pay): Pick<VoucherEffect, 'isLifetime' | 'grantDays' | 'type'> | null {
   const raw = pay.raw;
   if (!raw?.voucherId && !raw?.voucherType) {
-    // paid default: 30 hari
-    return { type: 'percent', value: 0, grantDays: 30, isLifetime: false };
+    // paid default: durasi dari durationMonths (1/6/12); grantDays null → durasi dipakai.
+    return { type: 'percent', grantDays: null, isLifetime: false };
   }
   const type = (raw.voucherType || 'percent') as VoucherType;
   if (type === 'lifetime' || raw.isLifetime) {
-    return { type: 'lifetime', value: raw.voucherValue ?? 0, grantDays: null, isLifetime: true };
+    return { type: 'lifetime', grantDays: null, isLifetime: true };
   }
   if (type === 'free_days') {
     const days = Math.max(1, Number(raw.grantDays ?? raw.voucherValue) || 1);
-    return { type: 'free_days', value: days, grantDays: days, isLifetime: false };
+    return { type: 'free_days', grantDays: days, isLifetime: false };
   }
   // percent (termasuk 100% → 1 bulan gratis)
   return {
     type: 'percent',
-    value: Number(raw.voucherValue) || 0,
-    grantDays: Number(raw.grantDays) || 30,
+    grantDays: Number(raw.grantDays) || null,
     isLifetime: false,
   };
 }
@@ -87,13 +88,15 @@ export async function fulfillCompletedPayment(
   const now = new Date();
   const startIso = now.toISOString();
   const effect = effectFromPayment(pay);
-  const existing = await getActiveSubscription(env, userId);
+  const storeId = pay.store_id ?? null;
+  const durationMonths = normalizeDurationMonths(pay.raw?.durationMonths);
+  const existing = await getActiveSubscription(env, userId, storeId);
   const period = computeNewPeriod({
     existing,
     effect: effect
-      ? { isLifetime: effect.isLifetime, grantDays: effect.grantDays }
-      : { isLifetime: false, grantDays: 30 },
-    defaultDays: 30,
+      ? { isLifetime: effect.isLifetime, grantDays: effect.grantDays, type: effect.type }
+      : { isLifetime: false, grantDays: null, type: 'percent' },
+    durationMonths,
     now,
   });
 
@@ -127,6 +130,7 @@ export async function fulfillCompletedPayment(
   } else {
     await sbPost(env, 'subscriptions', {
       user_id: userId,
+      store_id: storeId,
       plan_id: pay.plan_id,
       status: 'active',
       current_period_start: startIso,

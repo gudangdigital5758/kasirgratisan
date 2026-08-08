@@ -523,6 +523,10 @@ export default function CloudHub() {
               {(localStores ?? []).map((s) => {
                 const isActive = s.storeKey === activeLocalKey;
                 const online = s.mode === 'cloud';
+                const ent = online
+                  ? (profile?.stores ?? []).find((x) => x.id === s.cloudStoreId)?.entitlement
+                  : undefined;
+                const hasSync = !!ent?.hasSync;
                 return (
                   <div key={s.storeKey} className="flex items-center gap-2.5 rounded-xl border border-border p-2.5">
                     <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -534,16 +538,19 @@ export default function CloudHub() {
                         {online ? t('stores.modeCloud') : t('stores.modeLocal')}
                         {online ? ` · ${s.cloudStoreId ? t('cloudStores.linked') : t('cloudStores.notLinked')}` : ''}
                         {isActive ? ` · ${t('cloudStores.active')}` : ''}
+                        {online && ent
+                          ? ` · ${t('cloudStores.storage', { used: ent.usedMb, max: ent.storageLimitMb })}`
+                          : ''}
                       </p>
                     </div>
                     {online && (
                       <span
                         className={cn(
                           'text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0',
-                          isSyncSubscribed ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground',
+                          hasSync ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground',
                         )}
                       >
-                        {isSyncSubscribed ? t('cloudStores.planActive') : t('cloudStores.planInactive')}
+                        {hasSync ? t('cloudStores.planActive') : t('cloudStores.planInactive')}
                       </span>
                     )}
                   </div>

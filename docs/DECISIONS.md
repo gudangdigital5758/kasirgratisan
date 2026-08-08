@@ -382,3 +382,47 @@ Konteks dan opsi.
 
 **Implications:** …
 ```
+
+---
+
+## 2026-08-08 — Langganan Cloud per TOKO (unlimited) + durasi diskon + storage per toko + auto-sync
+
+**Status:** Accepted (menggantikan keputusan 2026-08-05 "cloudMaxStores = 1")
+
+Monetisasi cloud multi-toko, unit lisensi **per toko**, bukan per akun.
+
+**Decision:**
+
+1. **Unlimited toko cloud; Rp 25.000/bulan PER TOKO.** User bebas membuat banyak
+   toko; setiap toko cloud membutuhkan langganan sendiri (`subscriptions.store_id`).
+   Toko tanpa langganan aktif = toko offline (lokal) — gratis.
+2. **Durasi langganan per toko:** 1 bulan (Rp 25.000), **6 bulan = bayar 5 bulan
+   (Rp 125.000, berlaku 6 bulan)**, **12 bulan = bayar 10 bulan (Rp 250.000,
+   berlaku 12 bulan)**. Harga dihitung **server-side** di Worker; client tidak
+   dipercaya untuk amount. Voucher tetap berlaku terhadap amount.
+3. **Perpanjangan per toko:** user memilih toko yang diperpanjang; perpanjangan
+   menambah periode dari `max(now, current_period_end)` (stack). Toko yang tidak
+   diperpanjang → saat `current_period_end` lewat, toko **turun jadi offline**;
+   **backup cloud terakhir diunduh ke perangkat user** (restore ke DB lokal).
+4. **Kuota penyimpanan per toko:** kolom "Penyimpanan Cloud" menampilkan sisa
+   kuota **masing-masing toko** (1024 MB per langganan toko; dihitung dari
+   `backups.store_id`), bukan agregat akun.
+5. **Sinkronisasi Antar-Perangkat otomatis:** tanpa tombol "Sync Sekarang" manual —
+   sinkronisasi dipicu otomatis saat ada perubahan data & perangkat online
+   (debounce), plus saat aplikasi dibuka/fokus & interval berkala.
+6. **Komisi affiliate:** tetap dihitung dari nominal pembayaran (per toko);
+   `affiliateCode` diteruskan di payment.raw.
+
+**Implications:**
+- Migrasi baru: `subscriptions.store_id`, `payments.store_id`, index; view
+  `store_entitlements` (per toko); `create_store_with_limit` diubah → tanpa batas
+  (null = unlimited) atau fungsi baru; `user_entitlements` disesuaikan.
+- Worker: checkout menerima `storeId` + `durationMonths` (1|6|12) dengan kalkulasi
+  harga & periode server-side; fulfillment membuat/memperpanjang sub per toko;
+  `requireSyncStore` memvalidasi entitlement per toko; cron dunning per toko;
+  endpoint storage usage per toko.
+- Frontend: CloudHub & Kelola Toko menampilkan kartu per toko (status langganan,
+  durasi 1/6/12, sisa storage), alur renew per toko, prompt "simpan backup terakhir
+  ke perangkat" saat toko turun offline, dan auto-sync (hapus ketergantungan tombol
+  manual).
+- Backup retention 30 hari tetap berlaku.

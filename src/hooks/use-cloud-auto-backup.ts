@@ -85,4 +85,30 @@ export function useCloudAutoBackup() {
       }
     })();
   }, [storeSettings, isLoggedIn, isSyncSubscribed, refreshProfile]);
+
+  // Auto-sync antar-perangkat: jalankan berkala + saat tab terlihat kembali / online
+  // (tanpa tombol "Sync Sekarang" manual). Fail-silent; hanya push data yang berubah.
+  useEffect(() => {
+    if (!storeSettings?.cloudStoreId) return;
+    if (!isLoggedIn || !isSyncSubscribed) return;
+
+    const run = () => {
+      if (!navigator.onLine) return;
+      void syncNow().catch((err) => console.warn('[sync] auto berkala gagal:', err));
+    };
+    initSyncListeners();
+
+    const id = window.setInterval(run, 5 * 60 * 1000); // tiap 5 menit
+    const onVis = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    const onOnline = () => run();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [storeSettings?.cloudStoreId, isLoggedIn, isSyncSubscribed]);
 }

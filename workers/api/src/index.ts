@@ -34,7 +34,7 @@ import {
 } from './lib/backups';
 import { notifySubscriptionActivated, runDunningCron } from './lib/lifecycle';
 import { exchangeGoogleIdToken } from './lib/auth-google';
-import { CLOUD_PLAN_PRICE_IDR } from './data/seed-plans';
+import { CLOUD_PLAN_PRICE_IDR, cloudDurationFactor, normalizeDurationMonths } from './data/seed-plans';
 import adminRoutes from './routes/admin';
 import { resolveAdmin, writeEvent } from './lib/admin';
 import { isMaintenanceMode } from './lib/platform-settings';
@@ -208,6 +208,29 @@ function requireUser(c: {
   return id;
 }
 
+/** Validasi kepemilikan toko (opsional). Return null bila tanpa storeId. */
+async function resolveOwnedStoreId(
+  c: { env: Env; json: (b: unknown, s?: number) => Response },
+  userId: string,
+  storeIdRaw?: string | null,
+): Promise<string | null | Response> {
+  if (!storeIdRaw) return null;
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const rows = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?id=eq.${storeIdRaw}&user_id=eq.${userId}&select=id`,
+    );
+    if (!rows[0]) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 400);
+    return rows[0].id;
+  } catch (err) {
+    console.warn('[checkout store]', err);
+    return c.json({ error: 'Gagal memvalidasi toko' }, 500);
+  }
+}
+
 app.get('/health', (c) =>
   c.json({
     ok: true,
@@ -326,6 +349,7 @@ app.get('/api/user/profile', async (c) => {
     syncSubscription: null as null | Record<string, unknown>,
     storageUsage: { usedMb: 0, limitMb: 0, remainingMb: 0 },
     backups: [] as unknown[],
+    stores: [] as unknown[],
   };
 
   try {
@@ -435,6 +459,42 @@ app.get('/api/user/profile', async (c) => {
         createdAt: b.created_at,
         updatedAt: b.updated_at,
       }));
+
+      // Per-toko: entitlement + kuota penyimpanan + pemakaian backup.
+      try {
+        type StoreEnt = {
+          store_id: string;
+          store_name: string;
+          is_public: boolean;
+          has_sync: boolean;
+          sync_expiry: string | null;
+          is_lifetime: boolean;
+          storage_limit_mb: number;
+          backup_bytes: number | string;
+        };
+        const storeEnts = await sbGet<StoreEnt[]>(
+          c.env,
+          `store_entitlements?user_id=eq.${userId}&select=store_id,store_name,is_public,has_sync,sync_expiry,is_lifetime,storage_limit_mb,backup_bytes`,
+        );
+        profile.stores = storeEnts.map((e) => {
+          const backupBytes = Number(e.backup_bytes ?? 0);
+          return {
+            id: e.store_id,
+            name: e.store_name,
+            isPublic: e.is_public,
+            entitlement: {
+              hasSync: e.has_sync,
+              syncExpiry: e.sync_expiry,
+              isLifetime: e.is_lifetime,
+              storageLimitMb: e.storage_limit_mb || 0,
+              backupBytes,
+              usedMb: Math.round(backupBytes / (1024 * 1024)),
+            },
+          };
+        });
+      } catch (err) {
+        console.warn('[profile stores]', err);
+      }
     }
   } catch (err) {
     console.warn('[profile]', err);
@@ -448,7 +508,11 @@ app.post('/api/vouchers/preview', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
 
-  const body = (await c.req.json().catch(() => ({}))) as { code?: string; planId?: string };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    code?: string;
+    planId?: string;
+    durationMonths?: number;
+  };
   const planId = body.planId || 'cloud_monthly';
   const code = body.code || '';
   if (!code.trim()) return c.json({ valid: false, error: 'Kode voucher wajib diisi' }, 400);
@@ -457,7 +521,9 @@ app.post('/api/vouchers/preview', async (c) => {
     return c.json({ valid: false, error: 'Database belum dikonfigurasi' }, 503);
   }
 
-  const { amount: listPrice } = await resolveListPrice(c.env, planId);
+  const { amount: listPriceBase } = await resolveListPrice(c.env, planId);
+  // Durasi 6/12 bulan memakai price factor (bayar 5/10 bulan) — harga dihitung server.
+  const listPrice = Math.round(listPriceBase * cloudDurationFactor(normalizeDurationMonths(body.durationMonths)));
   const result = await validateVoucherForUser(c.env, {
     code,
     userId: String(userId),
@@ -480,6 +546,8 @@ app.post('/api/payments/checkout', async (c) => {
     voucherCode?: string;
     affiliateCode?: string;
     affiliateCapturedAt?: string;
+    storeId?: string;
+    durationMonths?: number;
   };
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
 
@@ -524,6 +592,11 @@ app.post('/api/payments/checkout', async (c) => {
   let planName = plan?.name ?? body.planId;
   let amountBefore = amount;
 
+  // Durasi langganan per toko (1/6/12 bulan) — harga dihitung server-side.
+  const durationMonths = normalizeDurationMonths(body.durationMonths);
+  const storeId = await resolveOwnedStoreId(c, String(userId), body.storeId);
+  if (storeId instanceof Response) return storeId;
+
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
       const priced = await resolveListPrice(c.env, body.planId);
@@ -534,6 +607,9 @@ app.post('/api/payments/checkout', async (c) => {
   } catch {
     /* seed price */
   }
+
+  amount = Math.round(amount * cloudDurationFactor(durationMonths));
+  amountBefore = amount;
 
   let voucherMeta: {
     voucherId: string;
@@ -597,6 +673,7 @@ app.post('/api/payments/checkout', async (c) => {
         await sbPost(c.env, 'payments', {
           id: paymentId,
           user_id: userId,
+          store_id: storeId,
           plan_id: body.planId,
           amount: 0,
           status: 'PENDING',
@@ -606,6 +683,8 @@ app.post('/api/payments/checkout', async (c) => {
           raw: {
             mobile: body.mobile ?? null,
             redirectURL: body.redirectURL ?? null,
+            storeId,
+            durationMonths,
             ...(voucherMeta || {}),
             ...(affiliateMeta
               ? {
@@ -688,6 +767,7 @@ app.post('/api/payments/checkout', async (c) => {
       await sbPost(c.env, 'payments', {
         id: paymentId,
         user_id: userId,
+        store_id: storeId,
         plan_id: body.planId,
         amount,
         status: 'PENDING',
@@ -697,6 +777,8 @@ app.post('/api/payments/checkout', async (c) => {
         raw: {
           mobile: body.mobile ?? null,
           redirectURL: body.redirectURL ?? null,
+          storeId,
+          durationMonths,
           snapToken,
           finishUrl,
           ...(voucherMeta || {}),
@@ -943,17 +1025,44 @@ app.get('/api/stores', async (c) => {
         is_public: boolean;
         identifier: string | null;
       };
+      type StoreEnt = {
+        store_id: string;
+        has_sync: boolean;
+        sync_expiry: string | null;
+        is_lifetime: boolean;
+        storage_limit_mb: number;
+        backup_bytes: number | string;
+      };
       const rows = await sbGet<S[]>(c.env, `stores?user_id=eq.${userId}&order=created_at.desc&select=*`);
+      const ents = await sbGet<StoreEnt[]>(
+        c.env,
+        `store_entitlements?user_id=eq.${userId}&select=store_id,has_sync,sync_expiry,is_lifetime,storage_limit_mb,backup_bytes`,
+      ).catch(() => [] as StoreEnt[]);
+      const entByStore = new Map(ents.map((e) => [e.store_id, e]));
       return c.json({
-        stores: rows.map((s) => ({
-          id: s.id,
-          userId: s.user_id,
-          name: s.name,
-          createdAt: s.created_at,
-          updatedAt: s.updated_at,
-          isPublic: s.is_public,
-          identifier: s.identifier,
-        })),
+        stores: rows.map((s) => {
+          const e = entByStore.get(s.id);
+          const backupBytes = e ? Number(e.backup_bytes ?? 0) : 0;
+          return {
+            id: s.id,
+            userId: s.user_id,
+            name: s.name,
+            createdAt: s.created_at,
+            updatedAt: s.updated_at,
+            isPublic: s.is_public,
+            identifier: s.identifier,
+            entitlement: e
+              ? {
+                  hasSync: e.has_sync,
+                  syncExpiry: e.sync_expiry,
+                  isLifetime: e.is_lifetime,
+                  storageLimitMb: e.storage_limit_mb || 0,
+                  backupBytes,
+                  usedMb: Math.round(backupBytes / (1024 * 1024)),
+                }
+              : null,
+          };
+        }),
       });
     }
   } catch (err) {
@@ -972,7 +1081,6 @@ app.post('/api/stores', async (c) => {
   }
 
   try {
-    type Entitlement = { max_stores: number | null };
     type S = {
       id: string;
       user_id: string;
@@ -981,21 +1089,12 @@ app.post('/api/stores', async (c) => {
       updated_at: string;
     };
 
-    const entitlements = await sbGet<Entitlement[]>(
-      c.env,
-      `user_entitlements?user_id=eq.${userId}&select=max_stores`,
-    );
-    const configuredProvider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
-    const maxStores = entitlements[0]?.max_stores ?? (configuredProvider === 'mock' ? 1 : 0);
-    if (!Number.isInteger(maxStores) || maxStores < 1) {
-      return c.json({ error: 'Langganan Profitku Cloud diperlukan untuk membuat toko cloud.' }, 403);
-    }
-
-    // The RPC takes an advisory lock, so concurrent requests cannot exceed the plan limit.
+    // Model per-toko berbayar: semua user boleh membuat toko (unlimited).
+    // Langganan cloud ditentukan per toko (store_entitlements), bukan jumlah toko.
     const result = await sbPost<S[] | S>(c.env, 'rpc/create_store_with_limit', {
       p_user_id: userId,
       p_name: body.name.trim(),
-      p_max_stores: maxStores,
+      p_max_stores: null,
     });
     const s = Array.isArray(result) ? result[0] : result;
     if (!s) return c.json({ error: 'Gagal membuat toko cloud' }, 500);
@@ -1047,19 +1146,20 @@ async function requireSyncStore(c: {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
   try {
-    const ent = await sbGet<{ has_sync: boolean }[]>(
-      c.env,
-      `user_entitlements?user_id=eq.${userId}&select=has_sync`,
-    );
-    if (!ent[0]?.has_sync) {
-      return c.json({ error: 'Langganan sinkronisasi tidak aktif' }, 403);
-    }
+    // Kepemilikan toko + entitlement langganan PER TOKO (model per-toko berbayar).
     const stores = await sbGet<{ id: string }[]>(
       c.env,
       `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
     );
     if (!stores[0]) {
       return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    }
+    const ent = await sbGet<{ has_sync: boolean }[]>(
+      c.env,
+      `store_entitlements?store_id=eq.${storeId}&select=has_sync`,
+    );
+    if (!ent[0]?.has_sync) {
+      return c.json({ error: 'Langganan sinkronisasi toko ini tidak aktif' }, 403);
     }
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
@@ -1197,9 +1297,17 @@ app.get('/api/sync/pull', async (c) => {
 app.get('/api/backups', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  if (storeId) {
+    const own = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
+    ).catch(() => [] as { id: string }[]);
+    if (!own[0]) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+  }
 
   try {
-    const rows = await listBackupMeta(c.env, String(userId), 50);
+    const rows = await listBackupMeta(c.env, String(userId), 50, storeId || undefined);
     const backups = rows.map((b) => ({
       id: b.id,
       fileName: b.file_name,

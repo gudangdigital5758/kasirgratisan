@@ -43,11 +43,10 @@ export default function AddStoreWizard({ open, onOpenChange }: Props) {
   const [saving, setSaving] = useState(false);
 
   const cloudReady = isLoggedIn && isSyncSubscribed;
-  const maxStores = profile?.user?.maxStores ?? profile?.syncSubscription?.plan?.maxStores ?? null;
-  const isUnlimited = maxStores != null && maxStores >= 999999;
   const stores = useLiveQuery(() => storeRegistry.stores.orderBy('createdAt').toArray());
-  const cloudStoreCount = (stores ?? []).filter((s) => s.mode === 'cloud').length;
-  const atLimit = maxStores != null && !isUnlimited && cloudStoreCount >= maxStores;
+  // Model per-toko berbayar (2026-08-08): jumlah toko tak terbatas;
+  // langganan cloud ditentukan per toko, bukan jumlah toko.
+  const atLimit = false;
 
   const reset = () => {
     setNewName('');

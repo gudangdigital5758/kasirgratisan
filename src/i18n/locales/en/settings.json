@@ -551,6 +551,7 @@
     "active": "Active",
     "planActive": "Plan active",
     "planInactive": "No plan",
+    "storage": "Storage {{used}}/{{max}} MB",
     "note": "1 subscription ({{price}}/month) = 1 online store. Offline stores are free, unlimited."
   },
   "cloudStore": {
@@ -567,6 +568,23 @@
     "storeList": "Store List",
     "used": "{{used}} of {{max}} used",
     "unlimited": "unlimited",
+    "plan": "Store plan",
+    "planActive": "Plan active",
+    "planInactive": "No plan",
+    "storage": "Cloud storage",
+    "expiry": "Valid until",
+    "renew": "Renew",
+    "subscribe": "Subscribe",
+    "expiredNote": "This store's subscription has ended. Save the latest backup to this device — the store keeps working offline.",
+    "saveBackup": "Save backup",
+    "duration": {
+      "1": "1 month",
+      "6": "6 months (pay 5)",
+      "12": "12 months (pay 10)"
+    },
+    "cta": {
+      "subscribeDuration": "Subscribe {{months}} months"
+    },
     "addButton": "Add",
     "atLimit": {
       "title": "Your plan's store limit is full",
@@ -603,7 +621,12 @@
       "delete": "Store and all its sync data deleted.",
       "deleteFailed": "Failed to delete store",
       "createBound": "Store created and device automatically connected.",
-      "atLimit": "Your plan's store limit is full. Upgrade plan to add more stores."
+      "atLimit": "Your plan's store limit is full. Upgrade plan to add more stores.",
+      "subscribed": "Store subscription active.",
+      "checkoutFailed": "Failed to start checkout",
+      "noBackup": "No cloud backup for this store yet.",
+      "backupSaved": "Latest backup downloaded to this device.",
+      "backupFailed": "Failed to download backup"
     }
   },
   "transactionHistory": {

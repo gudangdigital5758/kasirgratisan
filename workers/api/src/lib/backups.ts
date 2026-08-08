@@ -43,11 +43,12 @@ export async function deleteBackupObject(env: Env, key: string): Promise<void> {
   await env.BACKUP_BUCKET.delete(key);
 }
 
-export async function listBackupMeta(env: Env, userId: string, limit = 50): Promise<BackupMeta[]> {
+export async function listBackupMeta(env: Env, userId: string, limit = 50, storeId?: string): Promise<BackupMeta[]> {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const storeFilter = storeId ? `&store_id=eq.${storeId}` : '';
   return sbGet<BackupMeta[]>(
     env,
-    `backups?user_id=eq.${userId}&order=created_at.desc&limit=${limit}&select=*`,
+    `backups?user_id=eq.${userId}${storeFilter}&order=created_at.desc&limit=${limit}&select=*`,
   );
 }
 

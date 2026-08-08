@@ -56,6 +56,37 @@ export interface StorageUsage {
   remainingMb: number;
 }
 
+/** Durasi langganan per toko (1/6/12 bulan dengan diskon). */
+export interface CloudDuration {
+  months: 1 | 6 | 12;
+  priceFactor: number;
+  label: string;
+  price: number;
+}
+
+export const CLOUD_DURATIONS: CloudDuration[] = [
+  { months: 1, priceFactor: 1, label: '1 bulan', price: 25_000 },
+  { months: 6, priceFactor: 5, label: '6 bulan (bayar 5)', price: 125_000 },
+  { months: 12, priceFactor: 10, label: '12 bulan (bayar 10)', price: 250_000 },
+];
+
+/** Entitlement + pemakaian penyimpanan per toko cloud. */
+export interface CloudStoreEntitlement {
+  hasSync: boolean;
+  syncExpiry: string | null;
+  isLifetime: boolean;
+  storageLimitMb: number;
+  backupBytes: number;
+  usedMb: number;
+}
+
+export interface CloudProfileStore {
+  id: string;
+  name: string;
+  isPublic: boolean;
+  entitlement: CloudStoreEntitlement;
+}
+
 export interface Subscription {
   id: string;
   planId: string;
@@ -118,6 +149,8 @@ export interface CloudStore {
     storeTransactions: number;
     backups: number;
   };
+  /** Entitlement langganan per toko (model per-toko berbayar). */
+  entitlement?: CloudStoreEntitlement | null;
 }
 
 export interface UserProfile {
@@ -126,6 +159,8 @@ export interface UserProfile {
   syncSubscription: Subscription | null;
   storageUsage: StorageUsage;
   backups: CloudBackup[];
+  /** Daftar toko cloud + entitlement per toko (model per-toko berbayar). */
+  stores?: CloudProfileStore[];
 }
 
 export interface Pagination {
@@ -322,8 +357,13 @@ export async function fetchProfile(): Promise<UserProfile> {
   return res.json();
 }
 
-export async function listBackups(params?: PageParams): Promise<Paginated<CloudBackup>> {
-  const res = await fetch(`${BASE_URL}/api/backups${buildPageQuery(params)}`, { headers: authHeaders() });
+export async function listBackups(params?: PageParams & { storeId?: string }): Promise<Paginated<CloudBackup>> {
+  const qs = new URLSearchParams();
+  if (params?.storeId) qs.set('storeId', params.storeId);
+  const query = qs.toString();
+  const res = await fetch(`${BASE_URL}/api/backups${query ? `?${query}` : ''}${buildPageQuery(params)}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) await parseError(res);
   const data = await res.json();
   const items: CloudBackup[] = data.backups ?? [];
@@ -370,6 +410,10 @@ export async function checkoutPlan(
     voucherCode?: string;
     affiliateCode?: string;
     affiliateCapturedAt?: string;
+    /** Toko tujuan langganan (model per-toko berbayar). */
+    storeId?: string;
+    /** Durasi langganan: 1 | 6 | 12 bulan (default 1). */
+    durationMonths?: 1 | 6 | 12;
   },
 ): Promise<CheckoutResult> {
   const res = await fetch(`${BASE_URL}/api/payments/checkout`, {
@@ -394,12 +438,16 @@ export async function lookupAffiliate(code: string): Promise<AffiliateLookupResu
   return res.json() as Promise<AffiliateLookupResult>;
 }
 
-/** Preview efek kode voucher (harga dihitung server). */
-export async function previewVoucher(code: string, planId: string): Promise<VoucherPreviewResult> {
+/** Preview efek kode voucher (harga dihitung server, durasi 6/12 = price factor). */
+export async function previewVoucher(
+  code: string,
+  planId: string,
+  opts?: { durationMonths?: number },
+): Promise<VoucherPreviewResult> {
   const res = await fetch(`${BASE_URL}/api/vouchers/preview`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, planId }),
+    body: JSON.stringify({ code, planId, durationMonths: opts?.durationMonths }),
   });
   if (!res.ok) await parseError(res);
   return res.json();

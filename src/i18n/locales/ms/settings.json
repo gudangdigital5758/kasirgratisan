@@ -551,6 +551,7 @@
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tiada langganan",
+    "storage": "Storan {{used}}/{{max}} MB",
     "note": "1 langganan ({{price}}/bulan) = 1 kedai online. Kedai offline percuma, tanpa had."
   },
   "cloudStore": {
@@ -566,6 +567,23 @@
     "storeList": "Senarai Kedai",
     "used": "{{used}} dari {{max}} terpakai",
     "unlimited": "tidak terhad",
+    "plan": "Langganan kedai",
+    "planActive": "Langganan aktif",
+    "planInactive": "Tiada langganan",
+    "storage": "Storan cloud",
+    "expiry": "Berkuat hingga",
+    "renew": "Perpanjang",
+    "subscribe": "Langganan",
+    "expiredNote": "Langganan kedai ini tamat. Simpan backup terakhir ke peranti — kedai tetap berjalan offline.",
+    "saveBackup": "Simpan backup",
+    "duration": {
+      "1": "1 bulan",
+      "6": "6 bulan (bayar 5)",
+      "12": "12 bulan (bayar 10)"
+    },
+    "cta": {
+      "subscribeDuration": "Langganan {{months}} bulan"
+    },
     "addButton": "Tambah",
     "atLimit": {
       "title": "Had kedai pakej anda sudah penuh",
@@ -602,7 +620,12 @@
       "delete": "Kedai dan semua data sync-nya dipadam.",
       "deleteFailed": "Gagal memadam kedai",
       "createBound": "Kedai dibuat dan peranti automatik disambungkan.",
-      "atLimit": "Had kedai pakej anda sudah penuh. Naik taraf pakej untuk menambah kedai."
+      "atLimit": "Had kedai pakej anda sudah penuh. Naik taraf pakej untuk menambah kedai.",
+      "subscribed": "Langganan kedai aktif.",
+      "checkoutFailed": "Gagal memulakan checkout",
+      "noBackup": "Belum ada backup cloud untuk kedai ini.",
+      "backupSaved": "Backup terakhir dimuat turun ke peranti.",
+      "backupFailed": "Gagal memuat turun backup"
     },
     "syncActive": "Sinkronisasi automatik latar belakang aktif"
   },
