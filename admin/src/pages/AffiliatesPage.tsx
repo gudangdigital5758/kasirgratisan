@@ -182,6 +182,17 @@ export default function AffiliatesPage() {
     }
   };
 
+  /** Baris field label-value (hanya dirender bila value ada). */
+  const field = (label: string, value?: string | null) =>
+    value ? (
+      <div className="row" style={{ gap: '0.5rem' }}>
+        <span className="muted" style={{ flex: '0 0 90px', fontSize: 12 }}>
+          {label}
+        </span>
+        <span>{value}</span>
+      </div>
+    ) : null;
+
   // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
   const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
   const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
@@ -430,9 +441,7 @@ export default function AffiliatesPage() {
       {detailId && (
         <div className="card stack">
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem' }}>
-              Komisi — <code>{detail?.affiliate.code}</code> {detail?.affiliate.name}
-            </h3>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>Detail affiliator</h3>
             <div className="row" style={{ gap: '0.5rem' }}>
               <button type="button" className="btn ghost" onClick={() => setDetailId(null)}>
                 Tutup
@@ -442,6 +451,18 @@ export default function AffiliatesPage() {
               </button>
             </div>
           </div>
+
+          {/* Field affiliator terpisah */}
+          <div className="stack" style={{ gap: '0.35rem' }}>
+            {field('Kode', detail?.affiliate.code)}
+            {field('Nama', detail?.affiliate.name)}
+            {field('Email', detail?.affiliate.userEmail)}
+            {field('Bank', detail?.affiliate.bankName)}
+            {field('No. Rek', detail?.affiliate.bankAccountNo)}
+            {field('Atas nama', detail?.affiliate.bankAccountName)}
+            {field('Catatan', detail?.affiliate.payoutNote)}
+          </div>
+
           <p className="muted" style={{ margin: 0 }}>
             Link:{' '}
             <code>https://profitku.my.id/?ref={detail?.affiliate.code}</code>{' '}
@@ -454,17 +475,6 @@ export default function AffiliatesPage() {
               📋 Copy
             </button>
           </p>
-          {detail?.affiliate.userEmail && (
-            <p className="muted" style={{ margin: 0 }}>
-              ✉️ Email: {detail.affiliate.userEmail}
-            </p>
-          )}
-          {detail?.affiliate && bankText(detail.affiliate) && (
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-              💳 Bank: {bankText(detail.affiliate)}
-              {detail.affiliate.payoutNote ? ` · Catatan: ${detail.affiliate.payoutNote}` : ''}
-            </p>
-          )}
           <div style={{ overflowX: 'auto' }}>
             <table>
               <thead>

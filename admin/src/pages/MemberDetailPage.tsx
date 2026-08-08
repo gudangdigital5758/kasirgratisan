@@ -57,14 +57,20 @@ export default function MemberDetailPage() {
           {p.picture && (
             <img src={p.picture} alt="" width={48} height={48} style={{ borderRadius: 999 }} />
           )}
-          <div>
-            <h2 style={{ margin: 0 }}>{p.name || '—'}</h2>
-            <p className="muted" style={{ margin: 0 }}>
-              {p.email} · {p.phone || 'no phone'}
-            </p>
-            <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.75rem' }}>
-              {p.id}
-            </p>
+          <div className="stack" style={{ gap: '0.25rem', flex: 1, minWidth: 0 }}>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <span className="muted" style={{ flex: '0 0 70px', fontSize: 12 }}>Nama</span>
+              <strong>{p.name || '—'}</strong>
+            </div>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <span className="muted" style={{ flex: '0 0 70px', fontSize: 12 }}>Email</span>
+              <span>{p.email || '—'}</span>
+            </div>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <span className="muted" style={{ flex: '0 0 70px', fontSize: 12 }}>HP</span>
+              <span>{p.phone || 'no phone'}</span>
+            </div>
+            <div className="muted" style={{ fontSize: '0.75rem' }}>{p.id}</div>
           </div>
         </div>
       </div>
