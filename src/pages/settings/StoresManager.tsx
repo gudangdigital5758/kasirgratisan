@@ -130,8 +130,6 @@ export default function StoresManager() {
                     {cat
                       ? `${cat.icon} ${t(cat.labelKey)}`
                       : t(`productFields:types.${normalizeStoreType(store.storeType)}.name`)}
-                    {' · '}
-                    {store.dbName}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
