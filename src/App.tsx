@@ -51,6 +51,7 @@ const RoleManager = lazy(() => import("./pages/settings/RoleManager"));
 const StoresManager = lazy(() => import("./pages/settings/StoresManager"));
 const BackupRestoreSettings = lazy(() => import("./pages/settings/BackupRestoreSettings"));
 const CloudHub = lazy(() => import("./pages/settings/CloudHub"));
+const JoinPage = lazy(() => import("./pages/JoinPage"));
 const CloudAutoBackupSettings = lazy(() => import("./pages/settings/CloudAutoBackupSettings"));
 const CloudHistorySettings = lazy(() => import("./pages/settings/CloudHistorySettings"));
 const CloudBackupsListSettings = lazy(() => import("./pages/settings/CloudBackupsListSettings"));
@@ -101,6 +102,14 @@ const App = () => {
                 <AnalyticsTracker />
               <Suspense fallback={<PageLoader />}>
               <Routes>
+                <Route
+                  path="/join"
+                  element={
+                    <ErrorBoundary>
+                      <JoinPage />
+                    </ErrorBoundary>
+                  }
+                />
                 <Route element={<AppLayout />}>
                   <Route
                     path="/"

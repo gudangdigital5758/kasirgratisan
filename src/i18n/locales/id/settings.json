@@ -1778,6 +1778,28 @@
     "networkError": "Terjadi kesalahan jaringan saat mengirim laporan.",
     "emptyError": "Silakan isi deskripsi kendala terlebih dahulu."
   },
+  "join": {
+    "title": "Dapatkan akun Profitku gratis",
+    "benefitsTitle": "Buat akun gratis untuk:",
+    "benefit1": "Menyimpan akses akun Anda",
+    "benefit2": "Mendapatkan kode referral pribadi",
+    "benefit3": "Mengajak teman dan dapat komisi saat mereka berlangganan Cloud",
+    "benefit4": "Tetap memakai kasir Profitku secara offline, gratis",
+    "invitedBy": "Anda diundang oleh {{name}}",
+    "freeNote": "Gratis selamanya untuk fitur kasir offline. Tidak ada pembayaran atau langganan otomatis.",
+    "successTitle": "Akun gratis Anda aktif",
+    "successDesc": "Anda sekarang affiliator Profitku dengan kode referral sendiri.",
+    "yourCode": "Kode referral Anda",
+    "yourLink": "Link referral Anda",
+    "copy": "Salin",
+    "copied": "Link disalin ke clipboard",
+    "copyFailed": "Gagal menyalin link",
+    "startApp": "Mulai pakai Profitku gratis",
+    "openAffiliate": "Buka dashboard affiliate",
+    "cloudNote": "Profitku Cloud adalah fitur opsional untuk backup dan sinkronisasi — tanpa kewajiban berlangganan.",
+    "loginFailed": "Login gagal. Silakan coba lagi.",
+    "accountActive": "Akun Profitku Anda aktif. Mulai jualan sekarang — kasir offline tetap gratis."
+  },
   "affiliate": {
     "cardTitle": "Dashboard Affiliate",
     "cardDesc": "Pantau kode REF, pohon downline, dan komisi kamu",

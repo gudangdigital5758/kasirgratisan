@@ -475,8 +475,8 @@ memberikan komisi ke affiliator pengundang.
 2. Default/fallback disamakan: Worker `DEFAULT_AFFILIATE_SETTINGS`, admin UI
    (default form, fallback simpan, placeholder), konstanta info client.
 3. Admin tetap bisa mengubah 1–3650 via Profitku Admin (input sudah `max=3650`).
-4. Link share affiliator → `https://profitku.my.id/settings/cloud?ref=CODE` (langsung
-   buka Cloud Hub; `?ref` tetap ditangkap `captureAffiliateRef` di semua route).
+4. Link share affiliator → `https://profitku.my.id/join?ref=CODE` (halaman aktivasi
+   akun gratis `/join`; `?ref` tetap ditangkap `captureAffiliateRef` di semua route).
 
 **Implications:**
 - Atribusi tetap terikat perangkat (localStorage); ganti device / clear browser
@@ -496,8 +496,9 @@ First valid referral wins — parent tidak bisa diganti.
 
 **Decision:**
 
-1. Link share: `https://profitku.my.id/settings/cloud?ref=KODE#masuk-profitku` —
-   langsung membuka Cloud Hub dan scroll ke kartu "Masuk ke Profitku".
+1. Link share: `https://profitku.my.id/join?ref=KODE` — halaman aktivasi akun
+   gratis (`/join`, tanpa layout kasir/Cloud) terpisah dari Cloud Hub; fokus akun
+   + kode referral pribadi, tanpa sinyal paywall sebelum OAuth.
 2. `POST /api/affiliate/claim` (auth, idempotent): validasi kode, auto-register
    via `registerAffiliate` (kode REF otomatis + `referred_by`); user yang sudah
    punya affiliate row tidak diganti parent-nya (race double-claim aman via

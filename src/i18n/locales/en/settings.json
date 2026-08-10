@@ -1777,6 +1777,28 @@
     "networkError": "A network error occurred while submitting the report.",
     "emptyError": "Please fill in the issue description first."
   },
+  "join": {
+    "title": "Get a free Profitku account",
+    "benefitsTitle": "Create a free account to:",
+    "benefit1": "Save your account access",
+    "benefit2": "Get your own personal referral code",
+    "benefit3": "Invite friends and earn commission when they subscribe to Cloud",
+    "benefit4": "Keep using Profitku cashier offline, free",
+    "invitedBy": "You were invited by {{name}}",
+    "freeNote": "Free forever for offline cashier features. No payment or automatic subscription.",
+    "successTitle": "Your free account is active",
+    "successDesc": "You are now a Profitku affiliate with your own referral code.",
+    "yourCode": "Your referral code",
+    "yourLink": "Your referral link",
+    "copy": "Copy",
+    "copied": "Link copied to clipboard",
+    "copyFailed": "Failed to copy link",
+    "startApp": "Start using Profitku for free",
+    "openAffiliate": "Open affiliate dashboard",
+    "cloudNote": "Profitku Cloud is an optional feature for backup and sync — no subscription required.",
+    "loginFailed": "Login failed. Please try again.",
+    "accountActive": "Your Profitku account is active. Start selling now — offline cashier stays free."
+  },
   "affiliate": {
     "cardTitle": "Affiliate Dashboard",
     "cardDesc": "Track your REF code, downline tree, and commissions",

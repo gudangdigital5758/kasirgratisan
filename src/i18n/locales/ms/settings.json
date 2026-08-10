@@ -1361,6 +1361,28 @@
     "networkError": "Ralat rangkaian berlaku semasa menghantar laporan.",
     "emptyError": "Sila isi keterangan kendala terlebih dahulu."
   },
+  "join": {
+    "title": "Dapatkan akaun Profitku percuma",
+    "benefitsTitle": "Buat akaun percuma untuk:",
+    "benefit1": "Simpan akses akaun anda",
+    "benefit2": "Dapatkan kod rujukan peribadi anda",
+    "benefit3": "Jemput rakan dan dapat komisen apabila mereka melanggan Cloud",
+    "benefit4": "Terus guna juruwang Profitku luar talian, percuma",
+    "invitedBy": "Anda dijemput oleh {{name}}",
+    "freeNote": "Percuma selama-lamanya untuk ciri juruwang luar talian. Tiada bayaran atau langganan automatik.",
+    "successTitle": "Akaun percuma anda aktif",
+    "successDesc": "Anda kini afiliasi Profitku dengan kod rujukan sendiri.",
+    "yourCode": "Kod rujukan anda",
+    "yourLink": "Pautan rujukan anda",
+    "copy": "Salin",
+    "copied": "Pautan disalin ke papan keratan",
+    "copyFailed": "Gagal menyalin pautan",
+    "startApp": "Mula guna Profitku secara percuma",
+    "openAffiliate": "Buka papan pemuka afiliasi",
+    "cloudNote": "Profitku Cloud ialah ciri pilihan untuk sandaran dan penyelarasan — tanpa kewajipan langganan.",
+    "loginFailed": "Log masuk gagal. Sila cuba lagi.",
+    "accountActive": "Akaun Profitku anda aktif. Mula berniaga sekarang — juruwang luar talian kekal percuma."
+  },
   "affiliate": {
     "cardTitle": "Papan Pemuka Affiliate",
     "cardDesc": "Pantau kod REF, rangkaian downline, dan komisen anda",
