@@ -89,6 +89,10 @@ export default function JoinPage() {
       await new Promise((r) => setTimeout(r, 500));
     }
     setMe(result);
+    // Flow invite: setelah jadi affiliator → langsung ke dashboard portal.
+    if (result?.registered) {
+      window.location.replace(`${BRAND.affiliateOrigin}/dashboard`);
+    }
   };
 
   useEffect(() => {
