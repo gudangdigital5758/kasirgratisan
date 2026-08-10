@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   adminApi,
   type AffiliateRow,
-  type AffiliateCommission,
   type AffiliateSettings,
 } from '../lib/api';
 
@@ -43,8 +42,7 @@ export default function AffiliatesPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [detailId, setDetailId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<{ affiliate: AffiliateRow; commissions: AffiliateCommission[] } | null>(null);
+  const [q, setQ] = useState('');
 
   const load = useCallback(() => {
     setErr(null);
@@ -135,27 +133,15 @@ export default function AffiliatesPage() {
     }
   };
 
-  const openDetail = async (id: string) => {
-    setDetailId(id);
-    setDetail(null);
-    try {
-      const d = await adminApi.affiliate(id);
-      setDetail(d);
-    } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : 'Gagal detail');
-    }
-  };
-
-  const markPaid = async () => {
-    if (!detailId) return;
-    if (!window.confirm('Tandai SEMUA komisi earned affiliator ini sebagai PAID?')) return;
+  /** Tandai semua komisi earned satu affiliator sebagai paid (dari kartu). */
+  const markPaidFor = async (a: AffiliateRow) => {
+    if (!window.confirm(`Tandai SEMUA komisi earned ${a.code} sebagai PAID?`)) return;
     setBusy(true);
     setErr(null);
     setOk(null);
     try {
-      const res = await adminApi.markAffiliatePaid(detailId);
+      const res = await adminApi.markAffiliatePaid(a.id);
       setOk(`${res.updated} komisi ditandai paid`);
-      if (detailId) await openDetail(detailId);
       load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Gagal menandai paid');
@@ -163,9 +149,6 @@ export default function AffiliatesPage() {
       setBusy(false);
     }
   };
-
-  const statusLabel = (s: string) =>
-    s === 'paid' ? 'paid' : s === 'void' ? 'void' : 'earned';
 
   const bankText = (a: AffiliateRow) => {
     const parts = [a.bankName, a.bankAccountNo, a.bankAccountName].filter(Boolean);
@@ -182,20 +165,19 @@ export default function AffiliatesPage() {
     }
   };
 
-  /** Baris field label-value (hanya dirender bila value ada). */
-  const field = (label: string, value?: string | null) =>
-    value ? (
-      <div className="row" style={{ gap: '0.5rem' }}>
-        <span className="muted" style={{ flex: '0 0 90px', fontSize: 12 }}>
-          {label}
-        </span>
-        <span>{value}</span>
-      </div>
-    ) : null;
-
   // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
   const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
   const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
+
+  // Filter pencarian kartu affiliator (nama/kode/email/bank/parent).
+  const needle = q.trim().toLowerCase();
+  const filtered = needle
+    ? rows.filter((a) =>
+        [a.name, a.code, a.userEmail, a.bankName, a.bankAccountNo, a.referredByCode]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(needle)),
+      )
+    : rows;
 
   return (
     <div className="stack">
@@ -358,167 +340,84 @@ export default function AffiliatesPage() {
         </div>
       </form>
 
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Kode / Nama</th>
-              <th>Bank</th>
-              <th>Referral</th>
-              <th>Komisi (earned)</th>
-              <th>Komisi (paid)</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="muted">
-                  Belum ada affiliator
-                </td>
-              </tr>
-            ) : (
-              rows.map((a) => {
-                const bank = bankText(a);
-                return (
-                  <tr key={a.id}>
-                    <td data-label="Kode / Nama">
-                      <code>{a.code}</code>
-                      <div>{a.name}</div>
-                      {a.userEmail && (
-                        <div className="muted" style={{ fontSize: 11 }}>
-                          {a.userEmail}
-                        </div>
-                      )}
-                      {a.referredByCode && (
-                        <div className="muted" style={{ fontSize: 11 }}>
-                          parent: {a.referredByCode}
-                        </div>
-                      )}
-                      {a.payoutNote && (
-                        <div className="muted" style={{ fontSize: 11 }}>
-                          {a.payoutNote}
-                        </div>
-                      )}
-                    </td>
-                    <td data-label="Bank">
-                      {bank ? (
-                        <div style={{ fontSize: 12 }}>{bank}</div>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td data-label="Referral">
-                      {a.stats?.referrals ?? 0}
-                      <div className="muted" style={{ fontSize: 11 }}>
-                        {a.stats?.referredUsers ?? 0} user
-                      </div>
-                    </td>
-                  <td data-label="Komisi (earned)">{rp(a.stats?.earnedCommissionIdr ?? 0)}</td>
-                  <td data-label="Komisi (paid)">{rp(a.stats?.paidCommissionIdr ?? 0)}</td>
-                  <td data-label="Status">
-                    <span className={`badge ${a.isActive ? 'ok' : ''}`}>
-                      {a.isActive ? 'aktif' : 'nonaktif'}
-                    </span>
-                  </td>
-                  <td className="actions">
-                    <button type="button" className="btn ghost" onClick={() => void openDetail(a.id)}>
-                      Komisi
-                    </button>{' '}
-                    <button type="button" className="btn ghost" onClick={() => void toggleActive(a)}>
-                      {a.isActive ? 'Disable' : 'Enable'}
-                    </button>
-                  </td>
-                </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      {/* Pencarian + kartu affiliator (detail inline) */}
+      <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <input
+          className="input"
+          style={{ maxWidth: 360 }}
+          placeholder="Cari nama / kode / email / bank…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <span className="muted">{filtered.length} affiliator</span>
       </div>
 
-      {detailId && (
-        <div className="card stack">
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem' }}>Detail affiliator</h3>
-            <div className="row" style={{ gap: '0.5rem' }}>
-              <button type="button" className="btn ghost" onClick={() => setDetailId(null)}>
-                Tutup
-              </button>
-              <button type="button" className="btn" disabled={busy} onClick={() => void markPaid()}>
-                {busy ? '…' : 'Tandai semua paid'}
-              </button>
-            </div>
-          </div>
-
-          {/* Field affiliator terpisah */}
-          <div className="stack" style={{ gap: '0.35rem' }}>
-            {field('Kode', detail?.affiliate.code)}
-            {field('Nama', detail?.affiliate.name)}
-            {field('Email', detail?.affiliate.userEmail)}
-            {field('Bank', detail?.affiliate.bankName)}
-            {field('No. Rek', detail?.affiliate.bankAccountNo)}
-            {field('Atas nama', detail?.affiliate.bankAccountName)}
-            {field('Catatan', detail?.affiliate.payoutNote)}
-          </div>
-
-          <p className="muted" style={{ margin: 0 }}>
-            Link:{' '}
-            <code>https://profitku.my.id/join?ref={detail?.affiliate.code}</code>{' '}
-            <button
-              type="button"
-              className="btn ghost"
-              style={{ fontSize: 12, padding: '2px 8px' }}
-              onClick={() => void copyText(`https://profitku.my.id/join?ref=${detail?.affiliate.code ?? ''}`)}
-            >
-              📋 Copy
-            </button>
-          </p>
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Payment</th>
-                  <th>Tier</th>
-                  <th>Dibayar</th>
-                  <th>Rate</th>
-                  <th>Komisi</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(detail?.commissions.length ?? 0) === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="muted">
-                      Belum ada komisi
-                    </td>
-                  </tr>
-                ) : (
-                  detail!.commissions.map((cm) => (
-                    <tr key={cm.id}>
-                      <td data-label="Tanggal" className="muted">{new Date(cm.createdAt).toLocaleString('id-ID')}</td>
-                      <td data-label="Payment">
-                        <code>{cm.paymentId.slice(0, 8)}</code>
-                      </td>
-                      <td data-label="Tier">Tier {cm.tier ?? 1}</td>
-                      <td data-label="Dibayar">{rp(cm.amountPaid)}</td>
-                      <td data-label="Rate">{cm.ratePercent}%</td>
-                      <td data-label="Komisi">
-                        <b>{rp(cm.commissionIdr)}</b>
-                      </td>
-                      <td data-label="Status">
-                        <span className={`badge ${cm.status === 'paid' ? 'ok' : ''}`}>
-                          {statusLabel(cm.status)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      {filtered.length === 0 ? (
+        <div className="card muted">Belum ada affiliator</div>
+      ) : (
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+          {filtered.map((a) => {
+            const bank = bankText(a);
+            const earned = a.stats?.earnedCommissionIdr ?? 0;
+            return (
+              <div key={a.id} className="card stack" style={{ gap: '0.4rem' }}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <code>{a.code}</code>
+                  <span className={`badge ${a.isActive ? 'ok' : ''}`}>
+                    {a.isActive ? 'aktif' : 'nonaktif'}
+                  </span>
+                </div>
+                <div>
+                  <strong>{a.name || '—'}</strong>
+                  {a.userEmail && (
+                    <div className="muted" style={{ fontSize: 12 }}>{a.userEmail}</div>
+                  )}
+                  {a.referredByCode && (
+                    <div className="muted" style={{ fontSize: 11 }}>parent: {a.referredByCode}</div>
+                  )}
+                </div>
+                {bank && <div style={{ fontSize: 12 }}>💳 {bank}</div>}
+                {a.payoutNote && <div className="muted" style={{ fontSize: 11 }}>{a.payoutNote}</div>}
+                <div className="muted" style={{ fontSize: 11, wordBreak: 'break-all' }}>
+                  https://profitku.my.id/join?ref={a.code}
+                </div>
+                <div className="row" style={{ gap: '1rem' }}>
+                  <span style={{ fontSize: 12 }}>📥 {a.stats?.referrals ?? 0}</span>
+                  <span style={{ fontSize: 12 }}>👥 {a.stats?.referredUsers ?? 0} user</span>
+                  <span style={{ fontSize: 12 }}>💰 earned {rp(earned)}</span>
+                  <span style={{ fontSize: 12 }}>✅ paid {rp(a.stats?.paidCommissionIdr ?? 0)}</span>
+                </div>
+                <div className="row" style={{ flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    onClick={() => void copyText(`https://profitku.my.id/join?ref=${a.code}`)}
+                  >
+                    📋 Salin link
+                  </button>
+                  {earned > 0 && (
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => void markPaidFor(a)}
+                    >
+                      Tandai paid
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    onClick={() => void toggleActive(a)}
+                  >
+                    {a.isActive ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -200,6 +200,10 @@ export const adminApi = {
   affiliates: () =>
     request<{ affiliates: AffiliateRow[] }>('/admin/api/affiliates'),
 
+  /** Semua komisi lintas affiliator (menu Commissions) — dengan kode/nama affiliator + email pembayar. */
+  affiliateCommissions: () =>
+    request<{ commissions: AdminCommissionRow[] }>('/admin/api/affiliate-commissions'),
+
   affiliate: (id: string) =>
     request<{ affiliate: AffiliateRow; commissions: AffiliateCommission[] }>(
       `/admin/api/affiliates/${id}`,
@@ -289,6 +293,12 @@ export type AffiliateCommission = {
   status: 'earned' | 'paid' | 'void' | string;
   paidAt: string | null;
   createdAt: string;
+};
+
+export type AdminCommissionRow = AffiliateCommission & {
+  affiliateCode: string | null;
+  affiliateName: string | null;
+  userEmail: string | null;
 };
 
 export type VoucherRow = {

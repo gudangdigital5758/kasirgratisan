@@ -10,6 +10,7 @@ import EventsPage from './pages/EventsPage';
 import SettingsPage from './pages/SettingsPage';
 import VouchersPage from './pages/VouchersPage';
 import AffiliatesPage from './pages/AffiliatesPage';
+import CommissionsPage from './pages/CommissionsPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { session, me, loading, error } = useAdminAuth();
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="vouchers" element={<VouchersPage />} />
         <Route path="affiliates" element={<AffiliatesPage />} />
+        <Route path="affiliate-commissions" element={<CommissionsPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

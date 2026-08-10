@@ -29,6 +29,80 @@ admin.route('/', adminSettings);
 // /me, /overview, /members, /payments, /events, /vouchers (route inline di bawah).
 admin.route('/affiliates', adminAffiliates);
 
+// --- Semua komisi (lintas affiliator) — menu "Commissions" admin ---
+type AdminCommissionRow = {
+  id: string;
+  affiliate_id: string;
+  payment_id: string;
+  user_id: string;
+  amount_paid: number;
+  rate_percent: number;
+  commission_idr: number;
+  tier: number | null;
+  status: string;
+  paid_at: string | null;
+  created_at: string;
+};
+
+admin.get('/affiliate-commissions', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+
+  try {
+    const [rows, affiliates] = await Promise.all([
+      sbGet<AdminCommissionRow[]>(
+        c.env,
+        'affiliate_commissions?select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at&order=created_at.desc&limit=5000',
+      ),
+      sbGet<{ id: string; code: string; name: string }[]>(
+        c.env,
+        'affiliates?select=id,code,name&limit=5000',
+      ),
+    ]);
+    const affById = new Map(affiliates.map((x) => [x.id, x]));
+
+    // Email pembayar (user_id) untuk konteks komisi.
+    const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
+    let emailById = new Map<string, string | null>();
+    if (userIds.length > 0) {
+      try {
+        const profs = await sbGet<{ id: string; email: string | null }[]>(
+          c.env,
+          `profiles?id=in.(${userIds.join(',')})&select=id,email`,
+        );
+        emailById = new Map(profs.map((p) => [p.id, p.email]));
+      } catch {
+        /* email optional */
+      }
+    }
+
+    return c.json({
+      commissions: rows.map((r) => {
+        const aff = affById.get(r.affiliate_id);
+        return {
+          id: r.id,
+          affiliateId: r.affiliate_id,
+          affiliateCode: aff?.code ?? null,
+          affiliateName: aff?.name ?? null,
+          paymentId: r.payment_id,
+          userId: r.user_id,
+          userEmail: r.user_id ? (emailById.get(r.user_id) ?? null) : null,
+          amountPaid: r.amount_paid,
+          ratePercent: r.rate_percent,
+          commissionIdr: r.commission_idr,
+          tier: r.tier ?? 1,
+          status: r.status,
+          paidAt: r.paid_at,
+          createdAt: r.created_at,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error('[admin affiliate commissions]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat komisi affiliate' }, 500);
+  }
+});
+
 function daysFromNow(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);
