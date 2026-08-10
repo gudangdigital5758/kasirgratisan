@@ -12,7 +12,7 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '../env';
-import { sbGet } from '../lib/supabase';
+import { sbGet, sbPatch } from '../lib/supabase';
 import {
   buildAffiliateTree,
   claimAffiliate,
@@ -199,6 +199,51 @@ affiliateRoutes.get('/me', async (c) => {
   } catch (err) {
     console.warn('[affiliate me]', err);
     return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat profil affiliasi' }, 500);
+  }
+});
+
+// --- Update profil affiliator sendiri (auth) — nama tampil + detail rekening ---
+affiliateRoutes.patch('/me', async (c) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Layanan affiliasi belum tersedia' }, 503);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    name?: unknown;
+    bankName?: unknown;
+    bankAccountNo?: unknown;
+    bankAccountName?: unknown;
+  };
+  const clean = (v: unknown, max: number): string | null => {
+    const s = String(v ?? '').trim();
+    return s ? s.slice(0, max) : null;
+  };
+
+  const update: Record<string, string | null> = {};
+  if (body.name !== undefined) {
+    const name = clean(body.name, 120);
+    if (!name) return c.json({ error: 'Nama wajib diisi' }, 400);
+    update.name = name;
+  }
+  if (body.bankName !== undefined) update.bank_name = clean(body.bankName, 120);
+  if (body.bankAccountNo !== undefined) update.bank_account_no = clean(body.bankAccountNo, 50);
+  if (body.bankAccountName !== undefined) update.bank_account_name = clean(body.bankAccountName, 120);
+  if (Object.keys(update).length === 0) {
+    return c.json({ error: 'Tidak ada field yang diubah' }, 400);
+  }
+
+  try {
+    const me = await loadAffiliateByUserId(c.env, userId);
+    if (!me) return c.json({ ok: false, registered: false });
+    const rows = await sbPatch<AffiliateRow[]>(c.env, `affiliates?id=eq.${me.id}`, update);
+    const row = rows[0];
+    if (!row) return c.json({ error: 'Affiliator tidak ditemukan' }, 404);
+    return c.json({ ok: true, affiliate: mapAffiliate(row) });
+  } catch (err) {
+    console.warn('[affiliate me patch]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal menyimpan detail affiliasi' }, 500);
   }
 });
 
