@@ -483,3 +483,34 @@ memberikan komisi ke affiliator pengundang.
   → jalur hilang. Binding server-side lintas device (claim) belum dibangun —
   bisa ditambahkan belakangan tanpa konflik (prioritas: kode eksplisit dulu).
 - `capturedAt` lama (klik > 90 hari lalu) kembali valid selama < 10 tahun.
+
+---
+
+## 2026-08-10 — OAuth dari link referral: auto-register affiliator + kunci parent permanen
+
+**Status:** Accepted
+
+User baru yang membuka link referral lalu login Google otomatis didaftarkan
+sebagai affiliator (kode REF sendiri) dan dikunci ke affiliator pengundang.
+First valid referral wins — parent tidak bisa diganti.
+
+**Decision:**
+
+1. Link share: `https://profitku.my.id/settings/cloud?ref=KODE#masuk-profitku` —
+   langsung membuka Cloud Hub dan scroll ke kartu "Masuk ke Profitku".
+2. `POST /api/affiliate/claim` (auth, idempotent): validasi kode, auto-register
+   via `registerAffiliate` (kode REF otomatis + `referred_by`); user yang sudah
+   punya affiliate row tidak diganti parent-nya (race double-claim aman via
+   unique index `affiliates_user_uidx`).
+3. Client: `claimAffiliateRef()` dipanggil best-effort setelah OAuth sukses di
+   `use-cloud-auth.login()`; gagal claim tidak menggagalkan login.
+4. Checkout: kunci server-side (`affiliates.referred_by`) diutamakan atas
+   `affiliateCode` dari client; `capturedAt: null` → tanpa jendela kedaluwarsa.
+   Client code hanya fallback untuk akun yang belum pernah claim.
+5. Tanpa migrasi DB baru — kolom `referred_by` + unique index sudah ada.
+
+**Implications:**
+- Atribusi permanen lintas perangkat: ganti HP / clear browser tidak menghapus
+  penguncian (berbeda dari jalur localStorage 3650 hari).
+- Dashboard affiliate user baru langsung aktif (kode REF sendiri); form manual
+  hanya untuk akun lama tanpa referral. Bank/payout tetap opsional.

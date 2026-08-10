@@ -515,6 +515,15 @@ export interface AffiliateRegisterResult {
   link: string;
 }
 
+export interface AffiliateClaimResult {
+  ok: boolean;
+  claimed: boolean;
+  affiliate: AffiliateProfile;
+  parentCode: string | null;
+  tiers: AffiliateTier[];
+  link: string;
+}
+
 /** Profil affiliasi user login (auth). */
 export async function fetchAffiliateMe(): Promise<AffiliateMeResult> {
   const res = await fetch(`${BASE_URL}/api/affiliate/me`, { headers: authHeaders() });
@@ -545,6 +554,17 @@ export async function registerAffiliate(body: {
   bankAccountName?: string;
 }): Promise<AffiliateRegisterResult> {
   const res = await fetch(`${BASE_URL}/api/affiliate/register`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+/** Klaim jalur referral setelah OAuth (auth) — kunci user ke affiliator pengundang. */
+export async function claimAffiliate(body: { refCode: string; name?: string }): Promise<AffiliateClaimResult> {
+  const res = await fetch(`${BASE_URL}/api/affiliate/claim`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

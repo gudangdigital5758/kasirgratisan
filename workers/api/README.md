@@ -22,6 +22,8 @@ npm run deploy
 | GET | `/api/payments/history` | Bearer |
 | GET/POST | `/api/stores` | Bearer |
 | POST | `/api/stores/:id/sync` | Bearer |
+| GET | `/api/affiliate/lookup` | no |
+| POST | `/api/affiliate/claim` | Bearer |
 | POST | `/webhook/payment` | secret |
 | POST | `/webhook/issue-report` | no |
 

@@ -364,9 +364,12 @@
         "desc": "Tarik lebih ramai pembeli, tingkatkan jualan, dan urus banyak kedai/cawangan sekaligus dengan mudah!"
       }
     },
-    "loginPrompt": "Mulai sekarang, login dulu yuk 👇",
+    "loginCard": {
+      "title": "Log Masuk ke Profitku",
+      "description": "Log masuk percuma dengan Google untuk menyimpan akaun anda. Profitku tetap boleh digunakan luar talian tanpa langganan Cloud."
+    },
     "continueWithGoogle": "Terus dengan Google",
-    "loginHint": "Selamat & pantas — tanpa kata laluan baru.",
+    "loginHint": "Tiada bayaran atau langganan automatik.",
     "account": {
       "fallbackName": "Akaun Google",
       "logout": "Log Keluar"

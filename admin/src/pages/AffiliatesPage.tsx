@@ -465,12 +465,12 @@ export default function AffiliatesPage() {
 
           <p className="muted" style={{ margin: 0 }}>
             Link:{' '}
-            <code>https://profitku.my.id/settings/cloud?ref={detail?.affiliate.code}</code>{' '}
+            <code>https://profitku.my.id/settings/cloud?ref={detail?.affiliate.code}#masuk-profitku</code>{' '}
             <button
               type="button"
               className="btn ghost"
               style={{ fontSize: 12, padding: '2px 8px' }}
-              onClick={() => void copyText(`https://profitku.my.id/settings/cloud?ref=${detail?.affiliate.code ?? ''}`)}
+              onClick={() => void copyText(`https://profitku.my.id/settings/cloud?ref=${detail?.affiliate.code ?? ''}#masuk-profitku`)}
             >
               📋 Copy
             </button>

@@ -12,6 +12,7 @@ import {
   clearLegacyToken,
   type CloudUserInfo,
 } from '@/lib/cloud-auth';
+import { claimAffiliateRef } from '@/lib/affiliate';
 import { getSupabase } from '@/lib/supabase-client';
 import { initOneSignal, oneSignalLogin, oneSignalLogout } from '@/lib/onesignal';
 import { nativeGoogleSignOut } from '@/lib/google-auth';
@@ -90,6 +91,8 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       const { accessToken, user } = await loginWithGoogleIdToken(googleIdToken);
       applySession(accessToken, user);
       await refreshProfile();
+      // Kunci jalur referral ke akun (best-effort; first valid referral wins).
+      void claimAffiliateRef(user.name);
     },
     [applySession, refreshProfile],
   );

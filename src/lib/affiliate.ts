@@ -2,16 +2,20 @@
  * Affiliate Profitku — penangkapan & penyimpanan jalur referral di perangkat.
  *
  * Alur:
- *  1. User membuka link https://profitku.my.id/settings/cloud?ref=KODE
+ *  1. User membuka link https://profitku.my.id/settings/cloud?ref=KODE#masuk-profitku
  *  2. captureAffiliateRef() dipanggil sekali saat app start → validasi via API
  *     (best-effort) → simpan kode ke localStorage.
- *  3. Saat checkout/perpanjangan cloud, kode dikirim sebagai affiliateCode.
- *  4. Komisi dihitung & dicatat server saat payment selesai.
+ *  3. Saat login Google dari link referral, claimAffiliateRef() mengunci akun
+ *     user ke affiliator pengundang di server (first valid referral wins) +
+ *     auto-register user sebagai affiliator dengan kode REF sendiri.
+ *  4. Saat checkout/perpanjangan cloud, kode dikirim sebagai affiliateCode
+ *     (fallback) — kunci server-side di payment.raw lebih diutamakan.
+ *  5. Komisi dihitung & dicatat server saat payment selesai.
  *
  * Jalur referral bersifat persisten (berlaku juga untuk perpanjangan layanan);
  * hanya ditimpa jika user membuka link affiliator lain.
  */
-import { lookupAffiliate } from './cloud-api';
+import { claimAffiliate, lookupAffiliate } from './cloud-api';
 
 const STORAGE_KEY = 'profitku_affiliate_ref';
 /** Jendela atribusi default (hari) — dipakai untuk info; jalur tidak dihapus otomatis. */
@@ -88,5 +92,22 @@ export function clearAffiliateRef(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+/**
+ * Kirim jalur referral ke server setelah login Google (best-effort).
+ * Server mengunci user_id → affiliator pengundang (first valid referral wins)
+ * dan auto-register user sebagai affiliator. Gagal claim TIDAK menggagalkan
+ * login; claim bisa diulang lain waktu (idempotent).
+ */
+export async function claimAffiliateRef(name?: string): Promise<boolean> {
+  const ref = getAffiliateRef();
+  if (!ref?.code) return false;
+  try {
+    await claimAffiliate({ refCode: ref.code, name: name ?? undefined });
+    return true;
+  } catch {
+    return false;
   }
 }

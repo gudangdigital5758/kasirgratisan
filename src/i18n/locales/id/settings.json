@@ -364,9 +364,12 @@
         "desc": "Tarik lebih banyak pembeli, tingkatkan penjualan, dan kelola banyak toko/cabang sekaligus!"
       }
     },
-    "loginPrompt": "Mulai sekarang, login dulu yuk 👇",
+    "loginCard": {
+      "title": "Masuk ke Profitku",
+      "description": "Masuk gratis dengan Google untuk menyimpan akun Anda. Profitku tetap bisa digunakan offline tanpa berlangganan Cloud."
+    },
     "continueWithGoogle": "Lanjut dengan Google",
-    "loginHint": "Aman & cepat — tanpa password baru.",
+    "loginHint": "Tidak ada biaya atau langganan otomatis.",
     "account": {
       "fallbackName": "Akun Google",
       "logout": "Keluar"

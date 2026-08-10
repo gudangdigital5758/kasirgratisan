@@ -364,9 +364,12 @@
         "desc": "Attract more buyers, increase sales, and easily manage multiple stores/branches!"
       }
     },
-    "loginPrompt": "Get started, login first 👇",
+    "loginCard": {
+      "title": "Sign in to Profitku",
+      "description": "Sign in free with Google to save your account. Profitku still works offline without a Cloud subscription."
+    },
     "continueWithGoogle": "Continue with Google",
-    "loginHint": "Safe & fast — no new password needed.",
+    "loginHint": "No cost, no automatic subscription.",
     "account": {
       "fallbackName": "Google Account",
       "logout": "Logout"

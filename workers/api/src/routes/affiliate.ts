@@ -15,6 +15,7 @@ import type { Env } from '../env';
 import { sbGet } from '../lib/supabase';
 import {
   buildAffiliateTree,
+  claimAffiliate,
   getAffiliateSettings,
   isValidAffiliateCode,
   loadAffiliateById,
@@ -174,7 +175,7 @@ affiliateRoutes.post('/register', async (c) => {
       affiliate: mapAffiliate(result.affiliate),
       parentCode: result.parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/settings/cloud?ref=${result.affiliate.code}`,
+      link: `https://profitku.my.id/settings/cloud?ref=${result.affiliate.code}#masuk-profitku`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gagal mendaftar';
@@ -182,6 +183,49 @@ affiliateRoutes.post('/register', async (c) => {
       return c.json({ error: message }, 400);
     }
     console.warn('[affiliate register]', err);
+    return c.json({ error: message }, 500);
+  }
+});
+
+// --- Claim (auth) — kunci jalur referral saat OAuth dari link ?ref=KODE ---
+// Auto-register user sebagai affiliator (kode REF sendiri) + ikat parent
+// (referred_by). Idempotent: first valid referral wins, tidak bisa diganti.
+// Best-effort dari sisi client: gagal claim tidak menggagalkan login.
+affiliateRoutes.post('/claim', async (c) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Layanan affiliasi belum tersedia' }, 503);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { refCode?: string; name?: string };
+  const refCode = normalizeAffiliateCode(body.refCode || '');
+  if (!refCode || !isValidAffiliateCode(refCode)) {
+    return c.json({ error: 'Kode referal tidak valid' }, 400);
+  }
+
+  try {
+    const result = await claimAffiliate(c.env, {
+      userId,
+      email: c.get('userEmail'),
+      name: (body.name || '').trim().slice(0, 120) || null,
+      refCode,
+    });
+    const settings = await getAffiliateSettings(c.env);
+    return c.json({
+      ok: true,
+      claimed: result.created,
+      affiliate: mapAffiliate(result.affiliate),
+      parentCode: result.parentCode,
+      tiers: settings.tiers,
+      link: `https://profitku.my.id/settings/cloud?ref=${result.affiliate.code}#masuk-profitku`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Gagal mengklaim referral';
+    if (message === 'Kode referal tidak valid') {
+      return c.json({ error: message }, 400);
+    }
+    console.warn('[affiliate claim]', err);
     return c.json({ error: message }, 500);
   }
 });
@@ -209,7 +253,7 @@ affiliateRoutes.get('/me', async (c) => {
       affiliate: mapAffiliate(me),
       parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/settings/cloud?ref=${me.code}`,
+      link: `https://profitku.my.id/settings/cloud?ref=${me.code}#masuk-profitku`,
     });
   } catch (err) {
     console.warn('[affiliate me]', err);

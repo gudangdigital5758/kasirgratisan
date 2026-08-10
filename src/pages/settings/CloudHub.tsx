@@ -418,6 +418,36 @@ export default function CloudHub() {
 
       {!isLoggedIn ? (
         <div className="space-y-4">
+          {/* Login gratis (bukan checkout) — terpisah dari kartu upgrade */}
+          <Card id="masuk-profitku" className="border-0 shadow-sm">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-bold">{t('cloudBackup.loginCard.title')}</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{t('cloudBackup.loginCard.description')}</p>
+              <div className="flex justify-center pt-1">
+                {isNativePlatform() ? (
+                  <Button className="h-11 gap-2 w-full max-w-[260px]" disabled={busy === 'login'} onClick={handleNativeLogin}>
+                    {busy === 'login' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                    {t('cloudBackup.continueWithGoogle')}
+                  </Button>
+                ) : (
+                  <GoogleLogin
+                    onSuccess={(cr) => {
+                      if (cr.credential) login(cr.credential).catch(() => toast.error(t('cloudBackup.toast.loginFailed')));
+                      else toast.error(t('cloudBackup.toast.loginFailed'));
+                    }}
+                    onError={() => toast.error(t('cloudBackup.toast.loginFailed'))}
+                  />
+                )}
+              </div>
+              <p className="text-center text-[10px] text-muted-foreground">{t('cloudBackup.loginHint')}</p>
+            </CardContent>
+          </Card>
+
           <Card className="border-0 shadow-sm overflow-hidden">
             <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 text-center space-y-3">
               <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mx-auto shadow-lg shadow-primary/25">
@@ -465,26 +495,6 @@ export default function CloudHub() {
                 />
               </ul>
 
-              <div className="pt-1 space-y-2">
-                <p className="text-center text-xs font-medium">{t('cloudBackup.loginPrompt')}</p>
-                <div className="flex justify-center">
-                  {isNativePlatform() ? (
-                    <Button className="h-11 gap-2 w-full max-w-[260px]" disabled={busy === 'login'} onClick={handleNativeLogin}>
-                      {busy === 'login' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                      {t('cloudBackup.continueWithGoogle')}
-                    </Button>
-                  ) : (
-                    <GoogleLogin
-                      onSuccess={(cr) => {
-                        if (cr.credential) login(cr.credential).catch(() => toast.error(t('cloudBackup.toast.loginFailed')));
-                        else toast.error(t('cloudBackup.toast.loginFailed'));
-                      }}
-                      onError={() => toast.error(t('cloudBackup.toast.loginFailed'))}
-                    />
-                  )}
-                </div>
-                <p className="text-center text-[10px] text-muted-foreground">{t('cloudBackup.loginHint')}</p>
-              </div>
             </CardContent>
           </Card>
 

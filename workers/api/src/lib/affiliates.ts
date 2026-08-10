@@ -224,6 +224,48 @@ export async function registerAffiliate(
   throw new Error('Gagal membuat kode affiliasi (kode bentrok)');
 }
 
+/**
+ * Klaim jalur referral setelah login Google dari link ?ref=KODE.
+ * Idempotent — first valid referral wins: user yang sudah punya affiliate row
+ * TIDAK diganti parent-nya; parent di-resolve dari referred_by agar response
+ * akurat. Auto-register user sebagai affiliator (kode REF sendiri) sesuai
+ * keputusan 2026-08-10 (docs/DECISIONS.md).
+ */
+export async function claimAffiliate(
+  env: Env,
+  opts: {
+    userId: string;
+    email?: string | null;
+    name?: string | null;
+    refCode: string;
+  },
+): Promise<{ affiliate: AffiliateRow; created: boolean; parentCode: string | null }> {
+  const resolveParentCode = async (row: AffiliateRow): Promise<string | null> => {
+    if (!row.referred_by) return null;
+    const parent = await loadAffiliateById(env, row.referred_by);
+    return parent?.code ?? null;
+  };
+
+  const existing = await loadAffiliateByUserId(env, opts.userId);
+  if (existing) return { affiliate: existing, created: false, parentCode: await resolveParentCode(existing) };
+
+  try {
+    return await registerAffiliate(env, {
+      userId: opts.userId,
+      email: opts.email ?? undefined,
+      name: opts.name ?? '',
+      refCode: opts.refCode,
+    });
+  } catch (err) {
+    // Race double-claim: unique index affiliates_user_uidx menang — kembalikan row existing.
+    if (err instanceof Error && /duplicate/i.test(err.message)) {
+      const row = await loadAffiliateByUserId(env, opts.userId);
+      if (row) return { affiliate: row, created: false, parentCode: await resolveParentCode(row) };
+    }
+    throw err;
+  }
+}
+
 /** Hitung komisi untuk satu tier (floor ke rupiah penuh). */
 export function computeCommission(
   amountPaid: number,

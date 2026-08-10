@@ -32,6 +32,8 @@ import { normalizeVoucherCode, resolveListPrice, validateVoucherForUser } from '
 import {
   getAffiliateSettings,
   loadAffiliateByCode,
+  loadAffiliateById,
+  loadAffiliateByUserId,
   normalizeAffiliateCode,
 } from '../lib/affiliates';
 
@@ -59,12 +61,29 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
   // Atribusi: bila capturedAt diberikan dan lebih tua dari attribution_days,
   // kode diabaikan (komisi tidak berlaku untuk transaksi di luar jendela).
   let affiliateMeta: { code: string; name: string | null; capturedAt: string | null } | null = null;
+
+  // 1) Kunci server-side (hasil OAuth dari link ?ref=KODE): user punya affiliate
+  //    row dengan referred_by → komisi ke pengundang, permanen & lintas perangkat.
+  //    Client (localStorage) tidak bisa menimpa kunci ini.
+  try {
+    const locked = await loadAffiliateByUserId(c.env, String(userId));
+    if (locked?.referred_by) {
+      const parent = await loadAffiliateById(c.env, locked.referred_by);
+      if (parent && parent.is_active) {
+        affiliateMeta = { code: parent.code, name: parent.name, capturedAt: null };
+      }
+    }
+  } catch (err) {
+    console.warn('[checkout affiliate lock]', err);
+  }
+
+  // 2) Fallback: kode dari client (localStorage, jendela attribution_days).
   const rawAffiliateCode = normalizeAffiliateCode(body.affiliateCode || '');
   const rawAffiliateCapturedAt =
     typeof body.affiliateCapturedAt === 'string' && body.affiliateCapturedAt.trim()
       ? new Date(body.affiliateCapturedAt).toISOString()
       : null;
-  if (rawAffiliateCode) {
+  if (!affiliateMeta && rawAffiliateCode) {
     try {
       const settings = await getAffiliateSettings(c.env);
       if (settings.enabled) {
