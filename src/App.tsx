@@ -60,6 +60,20 @@ const CloudOnlineStoreSettings = lazy(() => import("./pages/settings/CloudOnline
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+/**
+ * Redirect kompatibel untuk link referral lama/baru:
+ *   /?ref=KODE → /join?ref=KODE
+ * Di bundle terbaru funnel join tampil; di PWA/bundle lama route /join tidak
+ * dikenal sehingga root lama tetap aman (200, referral tercapture).
+ * Tanpa ?ref → render Dashboard normal.
+ */
+function RootOrReferral() {
+  const location = useLocation();
+  const code = new URLSearchParams(location.search).get("ref")?.trim().toUpperCase() || "";
+  if (code) return <Navigate to={`/join?ref=${encodeURIComponent(code)}`} replace />;
+  return <Dashboard />;
+}
+
 /** Preserve query/hash when redirecting legacy cloud-backup URLs. */
 function LegacyCloudRedirect({ to }: { to: string }) {
   const location = useLocation();
@@ -115,7 +129,7 @@ const App = () => {
                     path="/"
                     element={
                       <ErrorBoundary>
-                        <Dashboard />
+                        <RootOrReferral />
                       </ErrorBoundary>
                     }
                   />
