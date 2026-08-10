@@ -37,6 +37,37 @@ export default function JoinPage() {
       });
   }, []);
 
+  // SEO route metadata: canonical bersih (tanpa ?ref), title/description route,
+  // OG & Twitter. Di-restore saat unmount agar halaman lain kembali ke meta umum.
+  useEffect(() => {
+    const setAttr = (sel: string, attr: string, value: string) => {
+      const el = document.head.querySelector(sel);
+      if (el) el.setAttribute(attr, value);
+    };
+    const snap = (sel: string, attr: string) => document.head.querySelector(sel)?.getAttribute(attr) ?? '';
+    const JOIN_URL = 'https://profitku.my.id/join';
+    const title = t('join.metaTitle');
+    const desc = t('join.metaDescription');
+    const pairs: ReadonlyArray<readonly [string, string, string]> = [
+      ['meta[name="description"]', 'content', desc],
+      ['link[rel="canonical"]', 'href', JOIN_URL],
+      ['meta[property="og:url"]', 'content', JOIN_URL],
+      ['meta[property="og:title"]', 'content', title],
+      ['meta[property="og:description"]', 'content', desc],
+      ['meta[property="twitter:url"]', 'content', JOIN_URL],
+      ['meta[property="twitter:title"]', 'content', title],
+      ['meta[property="twitter:description"]', 'content', desc],
+    ];
+    const prevTitle = document.title;
+    const prev = pairs.map(([sel, attr]) => [sel, attr, snap(sel, attr)] as const);
+    document.title = title;
+    for (const [sel, attr, value] of pairs) setAttr(sel, attr, value);
+    return () => {
+      document.title = prevTitle;
+      for (const [sel, attr, value] of prev) setAttr(sel, attr, value);
+    };
+  }, [t]);
+
   const finishJoin = async () => {
     // Claim idempotent — pastikan selesai sebelum membaca profil affiliate.
     await claimAffiliateRef();

@@ -1798,7 +1798,9 @@
     "openAffiliate": "Buka dashboard affiliate",
     "cloudNote": "Profitku Cloud adalah fitur opsional untuk backup dan sinkronisasi — tanpa kewajiban berlangganan.",
     "loginFailed": "Login gagal. Silakan coba lagi.",
-    "accountActive": "Akun Profitku Anda aktif. Mulai jualan sekarang — kasir offline tetap gratis."
+    "accountActive": "Akun Profitku Anda aktif. Mulai jualan sekarang — kasir offline tetap gratis.",
+    "metaTitle": "Gabung Profitku Gratis — Akun Kasir & Kode Referral",
+    "metaDescription": "Buat akun Profitku gratis, dapatkan kode referral pribadi, dan gunakan aplikasi kasir offline tanpa biaya atau langganan otomatis."
   },
   "affiliate": {
     "cardTitle": "Dashboard Affiliate",

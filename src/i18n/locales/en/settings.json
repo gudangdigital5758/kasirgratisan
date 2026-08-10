@@ -1797,7 +1797,9 @@
     "openAffiliate": "Open affiliate dashboard",
     "cloudNote": "Profitku Cloud is an optional feature for backup and sync — no subscription required.",
     "loginFailed": "Login failed. Please try again.",
-    "accountActive": "Your Profitku account is active. Start selling now — offline cashier stays free."
+    "accountActive": "Your Profitku account is active. Start selling now — offline cashier stays free.",
+    "metaTitle": "Join Profitku Free — Cashier Account & Referral Code",
+    "metaDescription": "Create a free Profitku account, get your own referral code, and use the offline cashier app with no cost or automatic subscription."
   },
   "affiliate": {
     "cardTitle": "Affiliate Dashboard",
