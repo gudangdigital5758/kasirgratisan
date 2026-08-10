@@ -538,10 +538,23 @@ export default function Pengaturan() {
         </div>
       )}
 
-      {/* 2b. Affiliate */}
+      {/* 2b. Affiliate — portal canonical di affiliate.profitku.my.id */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.affiliate')}</h2>
-        <SettingsLinkCard to="/affiliate" icon={Share2} iconClass="bg-amber-500/10 text-amber-600 dark:text-amber-400" title={t('affiliate.cardTitle')} description={t('affiliate.cardDesc')} className="" />
+        <a href={`${BRAND.affiliateOrigin}/dashboard`} className="block">
+          <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Share2 className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">{t('affiliate.cardTitle')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('affiliate.cardDesc')}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </a>
       </div>
 
       {/* 3. Data & Backup */}

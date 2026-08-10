@@ -486,6 +486,32 @@ memberikan komisi ke affiliator pengundang.
 
 ---
 
+## 2026-08-10 — Dashboard affiliate canonical di affiliate.profitku.my.id/dashboard
+
+**Status:** Accepted
+
+Dashboard affiliator pindah penuh ke portal subdomain `affiliate.profitku.my.id`
+(repo `profitku-cloud`, project Pages `profitku-affiliate`), bukan route embedded
+di PWA POS.
+
+**Decision:**
+1. `affiliate.profitku.my.id/` = landing program (SEO, publik).
+2. `affiliate.profitku.my.id/dashboard` = area pribadi affiliator (login Google,
+   REF, link, QR, komisi, downline, payout) — `noindex`.
+3. `profitku.my.id/affiliate` (POS) = **redirect legacy** ke
+   `https://affiliate.profitku.my.id/dashboard` — halaman kosong lama tidak lagi
+   dipakai; komponen `AffiliateDashboard` embedded dihapus dari bundle PWA.
+4. Tombol "Buka dashboard affiliate" di `/join` dan kartu Affiliate di Settings
+   menuju URL canonical tersebut (tab yang sama).
+5. `BRAND.affiliateOrigin` sebagai satu sumber URL portal.
+
+**Implications:** Login Google di subdomain terpisah dari sesi POS (origin
+berbeda, localStorage per-origin) — user menekan login sekali lagi; Google
+mengenali akun sehingga prosesnya singkat. CORS Worker sudah mengizinkan origin
+ini (`AFFILIATE_ORIGIN`).
+
+---
+
 ## 2026-08-10 — OAuth dari link referral: auto-register affiliator + kunci parent permanen
 
 **Status:** Accepted

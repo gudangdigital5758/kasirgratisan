@@ -19,6 +19,7 @@ import PageLoader from "@/components/PageLoader";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
 import AppLayout from "./components/layout/AppLayout";
+import { BRAND } from "@/lib/brand";
 import { CLOUD_ROUTES, CLOUD_LEGACY_REDIRECTS } from "./lib/cloud-routes";
 
 // Route-level code splitting: tiap halaman diunduh & di-parse on-demand.
@@ -57,7 +58,6 @@ const CloudHistorySettings = lazy(() => import("./pages/settings/CloudHistorySet
 const CloudBackupsListSettings = lazy(() => import("./pages/settings/CloudBackupsListSettings"));
 const CloudStoreSettings = lazy(() => import("./pages/settings/CloudStoreSettings"));
 const CloudOnlineStoreSettings = lazy(() => import("./pages/settings/CloudOnlineStoreSettings"));
-const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /**
@@ -72,6 +72,14 @@ function RootOrReferral() {
   const code = new URLSearchParams(location.search).get("ref")?.trim().toUpperCase() || "";
   if (code) return <Navigate to={`/join?ref=${encodeURIComponent(code)}`} replace />;
   return <Dashboard />;
+}
+
+/** Route legacy: dashboard affiliate pindah penuh ke portal affiliate.profitku.my.id/dashboard. */
+function AffiliateRedirect() {
+  useEffect(() => {
+    window.location.replace(`${BRAND.affiliateOrigin}/dashboard`);
+  }, []);
+  return null;
 }
 
 /** Preserve query/hash when redirecting legacy cloud-backup URLs. */
@@ -385,7 +393,7 @@ const App = () => {
                     path="/affiliate"
                     element={
                       <ErrorBoundary>
-                        <AffiliateDashboard />
+                        <AffiliateRedirect />
                       </ErrorBoundary>
                     }
                   />

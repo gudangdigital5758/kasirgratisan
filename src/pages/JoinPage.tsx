@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { claimAffiliateRef } from '@/lib/affiliate';
+import { BRAND } from '@/lib/brand';
 import { fetchAffiliateMe, lookupAffiliate, type AffiliateMeResult } from '@/lib/cloud-api';
 import { isNativePlatform } from '@/lib/printer';
 import { nativeGoogleSignIn } from '@/lib/google-auth';
@@ -174,11 +175,11 @@ export default function JoinPage() {
                     {t('join.startApp')} <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
-                <Link to="/affiliate" className="block">
+                <a href={`${BRAND.affiliateOrigin}/dashboard`} className="block">
                   <Button variant="outline" className="w-full h-10 gap-1.5">
                     <Share2 className="w-4 h-4" /> {t('join.openAffiliate')}
                   </Button>
-                </Link>
+                </a>
               </div>
 
               <p className="text-[10px] text-muted-foreground leading-relaxed">{t('join.cloudNote')}</p>
