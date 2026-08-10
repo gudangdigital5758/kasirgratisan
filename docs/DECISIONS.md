@@ -514,3 +514,5 @@ First valid referral wins — parent tidak bisa diganti.
   penguncian (berbeda dari jalur localStorage 3650 hari).
 - Dashboard affiliate user baru langsung aktif (kode REF sendiri); form manual
   hanya untuk akun lama tanpa referral. Bank/payout tetap opsional.
+- Self-referral ditutup di engine komisi: pembayar yang memakai kode REF-nya
+  sendiri tidak mendapat komisi (rantai dimulai dari parent-nya).

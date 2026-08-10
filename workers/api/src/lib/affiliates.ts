@@ -287,6 +287,8 @@ export function computeCommission(
  *
  * Rantai: direct referrer = tier 1, lalu naik ke parent (referred_by) s.d. 5
  * level atau berhenti bila rantai putus / parent nonaktif.
+ * Self-referral: bila pemilik kode = pembayar sendiri, dia dilewati — rantai
+ * dimulai dari parent-nya (tier 1 = pengundangnya); tanpa parent → tanpa komisi.
  */
 export async function recordAffiliateCommission(
   env: Env,
@@ -314,6 +316,15 @@ export async function recordAffiliateCommission(
     // Direct referrer (tier 1) harus aktif & valid.
     let current = await loadAffiliateByCode(env, opts.affiliateCode);
     if (!current) return false;
+
+    // Self-referral: pemilik kode = pembayar sendiri → jangan beri komisi ke
+    // diri sendiri; mulai rantai dari parent (tier 1 = pengundangnya).
+    if (current.user_id && current.user_id === opts.userId) {
+      if (!current.referred_by) return false;
+      const parent = await loadAffiliateById(env, current.referred_by);
+      if (!parent || !parent.is_active) return false;
+      current = parent;
+    }
 
     // Idempotent: bila sudah ada komisi untuk payment ini, jangan tulis ulang.
     const existing = await sbGet<{ id: string }[]>(
