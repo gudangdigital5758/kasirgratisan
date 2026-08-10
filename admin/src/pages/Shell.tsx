@@ -10,6 +10,7 @@ const links = [
   { to: '/vouchers', label: 'Vouchers' },
   { to: '/affiliates', label: 'Affiliators' },
   { to: '/affiliate-commissions', label: 'Commissions' },
+  { to: '/admin-users', label: 'Staff' },
   { to: '/events', label: 'Events / Live log' },
   { to: '/settings', label: 'Platform' },
 ];

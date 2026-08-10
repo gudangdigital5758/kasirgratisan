@@ -15,6 +15,7 @@ import {
 import { CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
 import adminSettings from './admin-settings';
 import adminAffiliates from './admin-affiliates';
+import adminUsers from './admin-users';
 
 type Variables = {
   userId: string | null;
@@ -28,6 +29,7 @@ admin.route('/', adminSettings);
 // Mount di path spesifik: route `/:id` di sub-router TIDAK boleh membayangi
 // /me, /overview, /members, /payments, /events, /vouchers (route inline di bawah).
 admin.route('/affiliates', adminAffiliates);
+admin.route('/', adminUsers);
 
 // --- Semua komisi (lintas affiliator) — menu "Commissions" admin ---
 type AdminCommissionRow = {

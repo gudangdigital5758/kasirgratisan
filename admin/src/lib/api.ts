@@ -245,6 +245,22 @@ export const adminApi = {
     request<{ ok: boolean; updated: number }>(`/admin/api/affiliates/${id}/mark-paid`, {
       method: 'POST',
     }),
+
+  // --- Admin staff (admin_users) — hanya superadmin ---
+
+  adminUsers: () => request<{ admins: AdminUserRow[] }>('/admin/api/admin-users'),
+
+  createAdminUser: (body: { email: string; role: string; isActive?: boolean }) =>
+    request<{ ok: boolean; admin: AdminUserRow }>('/admin/api/admin-users', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  patchAdminUser: (userId: string, body: { role?: string; isActive?: boolean }) =>
+    request<{ ok: boolean; admin: AdminUserRow }>(`/admin/api/admin-users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
 };
 
 export type AffiliateSettings = {
@@ -385,3 +401,13 @@ export type AuditRow = {
   entity_id: string | null;
   created_at: string;
 };
+
+export type AdminUserRow = {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
