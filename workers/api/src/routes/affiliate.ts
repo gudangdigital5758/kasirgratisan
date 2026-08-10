@@ -5,10 +5,10 @@
  *   GET  /api/affiliate/lookup?code=KODE  → validasi kode (dipakai POS & SPA)
  *
  * Auth (Bearer Supabase access token):
- *   POST /api/affiliate/register          → daftar jadi affiliator (auto code)
- *   GET  /api/affiliate/me                → profil + link + tiers
- *   GET  /api/affiliate/tree              → pohon downline s.d. 5 tier
- *   GET  /api/affiliate/commissions       → komisi sendiri + ringkasan per tier
+ *   POST /api/affiliate/claim          → kunci referral + auto-register affiliator (invite-only, wajib refCode)
+ *   GET  /api/affiliate/me             → profil + link + tiers
+ *   GET  /api/affiliate/tree           → pohon downline s.d. 5 tier
+ *   GET  /api/affiliate/commissions    → komisi sendiri + ringkasan per tier
  */
 import { Hono } from 'hono';
 import type { Env } from '../env';
@@ -127,70 +127,11 @@ affiliateRoutes.get('/settings', async (c) => {
   }
 });
 
-// --- Register (auth) ---
-// Siapa pun bisa daftar jadi affiliator (tidak wajib berlangganan). Kode REF
-// dibuat otomatis di server. `refCode` (opsional) mengikat ke parent → pohon tier.
-affiliateRoutes.post('/register', async (c) => {
-  const userId = requireUser(c);
-  if (userId instanceof Response) return userId;
-  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return c.json({ error: 'Layanan affiliasi belum tersedia' }, 503);
-  }
-
-  const body = (await c.req.json().catch(() => ({}))) as {
-    name?: string;
-    refCode?: string;
-    bankName?: string;
-    bankAccountNo?: string;
-    bankAccountName?: string;
-    payoutNote?: string;
-  };
-  const name = (body.name || '').trim();
-  if (!name) return c.json({ error: 'Nama wajib diisi' }, 400);
-
-  let refCode: string | null = null;
-  if (body.refCode && String(body.refCode).trim()) {
-    const norm = normalizeAffiliateCode(String(body.refCode));
-    if (!isValidAffiliateCode(norm)) {
-      return c.json({ error: 'Kode referal tidak valid' }, 400);
-    }
-    refCode = norm;
-  }
-
-  try {
-    const result = await registerAffiliate(c.env, {
-      userId,
-      email: c.get('userEmail'),
-      name,
-      refCode,
-      bankName: body.bankName ?? null,
-      bankAccountNo: body.bankAccountNo ?? null,
-      bankAccountName: body.bankAccountName ?? null,
-      payoutNote: body.payoutNote ?? null,
-    });
-    const settings = await getAffiliateSettings(c.env);
-    return c.json({
-      ok: true,
-      created: result.created,
-      affiliate: mapAffiliate(result.affiliate),
-      parentCode: result.parentCode,
-      tiers: settings.tiers,
-      link: `https://profitku.my.id/join?ref=${result.affiliate.code}`,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Gagal mendaftar';
-    if (message === 'Kode referal tidak valid') {
-      return c.json({ error: message }, 400);
-    }
-    console.warn('[affiliate register]', err);
-    return c.json({ error: message }, 500);
-  }
-});
-
-// --- Claim (auth) — kunci jalur referral saat OAuth dari link ?ref=KODE ---
-// Auto-register user sebagai affiliator (kode REF sendiri) + ikat parent
-// (referred_by). Idempotent: first valid referral wins, tidak bisa diganti.
-// Best-effort dari sisi client: gagal claim tidak menggagalkan login.
+// --- Claim (auth) — SATU-SATUNYA jalur user menjadi affiliator (invite-only) ---
+// User hanya menjadi affiliator setelah membuka link ?ref=KODE dan login Google.
+// Pendaftaran manual (POST /register) dihapus — kode REF wajib dan parent
+// dikunci permanen (first valid referral wins). Idempotent: user yang sudah
+// punya affiliate row tidak diganti parent-nya.
 affiliateRoutes.post('/claim', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;

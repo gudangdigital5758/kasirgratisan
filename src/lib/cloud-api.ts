@@ -506,15 +506,6 @@ export interface AffiliateCommissionsResult {
   totals: { earnedIdr: number; paidIdr: number };
 }
 
-export interface AffiliateRegisterResult {
-  ok: boolean;
-  created: boolean;
-  affiliate: AffiliateProfile;
-  parentCode: string | null;
-  tiers: AffiliateTier[];
-  link: string;
-}
-
 export interface AffiliateClaimResult {
   ok: boolean;
   claimed: boolean;
@@ -545,24 +536,7 @@ export async function fetchAffiliateCommissions(): Promise<AffiliateCommissionsR
   return res.json();
 }
 
-/** Daftar jadi affiliator (auth) — nama wajib, refCode opsional (ikat ke parent). */
-export async function registerAffiliate(body: {
-  name: string;
-  refCode?: string;
-  bankName?: string;
-  bankAccountNo?: string;
-  bankAccountName?: string;
-}): Promise<AffiliateRegisterResult> {
-  const res = await fetch(`${BASE_URL}/api/affiliate/register`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) await parseError(res);
-  return res.json();
-}
-
-/** Klaim jalur referral setelah OAuth (auth) — kunci user ke affiliator pengundang. */
+/** Klaim jalur referral setelah OAuth (auth) — invite-only: kunci user ke affiliator pengundang. */
 export async function claimAffiliate(body: { refCode: string; name?: string }): Promise<AffiliateClaimResult> {
   const res = await fetch(`${BASE_URL}/api/affiliate/claim`, {
     method: 'POST',

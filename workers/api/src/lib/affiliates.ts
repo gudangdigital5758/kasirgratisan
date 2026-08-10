@@ -159,9 +159,10 @@ function cleanText(v: string | null | undefined, max = 120): string | null {
 }
 
 /**
- * Daftar menjadi affiliator (auto REF). Idempotent — bila user sudah punya
- * kode, kembalikan kode yang ada. Parent (referred_by) ditentukan dari kode
- * referal pemakai; self-referral diabaikan (tidak diikat ke diri sendiri).
+ * Daftar menjadi affiliator (auto REF) — HANYA via jalur invite (refCode wajib).
+ * Idempotent — bila user sudah punya kode, kembalikan kode yang ada. Parent
+ * (referred_by) selalu ditentukan dari kode referal pemakai; tanpa refCode atau
+ * parent tidak valid/self → ditolak (invite-only).
  */
 export async function registerAffiliate(
   env: Env,
@@ -169,7 +170,7 @@ export async function registerAffiliate(
     userId: string;
     email?: string | null;
     name: string;
-    refCode?: string | null;
+    refCode: string;
     bankName?: string | null;
     bankAccountNo?: string | null;
     bankAccountName?: string | null;
@@ -185,18 +186,15 @@ export async function registerAffiliate(
   const existing = await loadAffiliateByUserId(env, opts.userId);
   if (existing) return { affiliate: existing, created: false, parentCode: null };
 
-  let referredBy: string | null = null;
-  let parentCode: string | null = null;
-  if (opts.refCode) {
-    const parent = await loadAffiliateByCode(env, opts.refCode);
-    if (!parent) throw new Error('Kode referal tidak valid');
-    if (parent.user_id && parent.user_id === opts.userId) {
-      // self-referral — jangan ikat ke diri sendiri
-    } else {
-      referredBy = parent.id;
-      parentCode = parent.code;
-    }
+  // Invite-only: kode referal wajib dan parent harus valid + aktif.
+  if (!opts.refCode) throw new Error('Kode referal wajib diisi');
+  const parent = await loadAffiliateByCode(env, opts.refCode);
+  if (!parent) throw new Error('Kode referal tidak valid');
+  if (parent.user_id && parent.user_id === opts.userId) {
+    throw new Error('Kode referal tidak valid'); // self-referral: tidak bisa mengundang diri sendiri
   }
+  const referredBy = parent.id;
+  const parentCode = parent.code;
 
   const name = cleanText(opts.name, 120) || 'Affiliator';
   for (let attempt = 0; attempt < 5; attempt++) {

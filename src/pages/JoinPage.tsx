@@ -25,16 +25,26 @@ export default function JoinPage() {
   const [referrerName, setReferrerName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [me, setMe] = useState<AffiliateMeResult | null>(null);
+  // Invite-only: status validasi kode undangan di URL.
+  const [refState, setRefState] = useState<'missing' | 'checking' | 'valid' | 'invalid'>(
+    new URLSearchParams(window.location.search).get('ref')?.trim() ? 'checking' : 'missing',
+  );
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() || '';
     if (!code) return;
     lookupAffiliate(code)
       .then((r) => {
-        if (r.valid && r.name) setReferrerName(r.name);
+        if (r.valid) {
+          if (r.name) setReferrerName(r.name);
+          setRefState('valid');
+        } else {
+          setRefState('invalid');
+        }
       })
       .catch(() => {
-        /* lookup best-effort */
+        /* lookup best-effort — offline: tetap izinkan alur undangan */
+        setRefState('valid');
       });
   }, []);
 
@@ -127,6 +137,7 @@ export default function JoinPage() {
   };
 
   const isAffiliate = me?.registered === true;
+  const showInviteOnly = !isAffiliate && (refState === 'missing' || refState === 'invalid');
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-10">
@@ -183,6 +194,32 @@ export default function JoinPage() {
               </div>
 
               <p className="text-[10px] text-muted-foreground leading-relaxed">{t('join.cloudNote')}</p>
+            </CardContent>
+          </Card>
+        ) : showInviteOnly ? (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 space-y-4 text-center">
+              <div className="mx-auto w-14 h-14 rounded-2xl bg-muted/40 text-muted-foreground flex items-center justify-center">
+                <Share2 className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-lg font-bold leading-tight">
+                  {refState === 'invalid' ? t('join.invalidRef') : t('join.inviteOnlyTitle')}
+                </h1>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t('join.inviteOnlyDesc')}</p>
+              </div>
+              <div className="pt-1 space-y-2">
+                <Link to="/" className="block">
+                  <Button className="w-full h-11 gap-1.5 font-semibold">
+                    {t('join.inviteOnlyApp')} <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <a href={BRAND.affiliateOrigin} className="block">
+                  <Button variant="outline" className="w-full h-10 gap-1.5">
+                    <Share2 className="w-4 h-4" /> {t('join.inviteOnlyProgram')}
+                  </Button>
+                </a>
+              </div>
             </CardContent>
           </Card>
         ) : (

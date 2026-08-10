@@ -486,6 +486,34 @@ memberikan komisi ke affiliator pengundang.
 
 ---
 
+## 2026-08-10 — Affiliate invite-only: registrasi manual ditutup
+
+**Status:** Accepted
+
+User TIDAK bisa mendaftar sebagai affiliator secara mandiri. Satu-satunya jalur
+user menjadi affiliator adalah membuka link undangan `join?ref=KODE` dari
+affiliator terdaftar lalu login Google.
+
+**Decision:**
+1. `POST /api/affiliate/register` dihapus (404). `registerAffiliate()` server
+   kini mewajibkan `refCode`; parent harus valid + aktif; self-referral ditolak.
+2. `POST /api/affiliate/claim` = satu-satunya entry point user (invite-only,
+   idempotent, first valid referral wins).
+3. `/join` tanpa `?ref` valid menampilkan kartu "akun affiliate hanya lewat
+   undangan" (tanpa CTA login/daftar affiliate); kode tidak valid → pesan
+   khusus.
+4. `affiliate.profitku.my.id` = landing program saja; `affiliate.profitku.my.id/
+   dashboard` = beranda affiliator (tanpa form daftar; user belum diundang
+   melihat status kartu).
+5. Admin/root tetap bisa membuat affiliator via Profitku Admin (jalur
+   operasional, bukan endpoint user).
+
+**Implications:** Tidak ada migrasi DB. Struktur `referred_by` + unique index
+`affiliates_user_uidx` sudah sesuai. `captureAffiliateRef` di POS tetap
+menyimpan kode format-valid saat offline (claim tetap divalidasi server).
+
+---
+
 ## 2026-08-10 — Dashboard affiliate canonical di affiliate.profitku.my.id/dashboard
 
 **Status:** Accepted
