@@ -1,0 +1,5 @@
+# Redirect legacy affiliate → portal (edge, tanpa menunggu React/PWA).
+# Urutan penting: rule spesifik dulu, fallback SPA terakhir.
+/affiliate   https://affiliate.profitku.my.id/dashboard   302
+/affiliate/  https://affiliate.profitku.my.id/dashboard   302
+/*           /index.html                                  200
