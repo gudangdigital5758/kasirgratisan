@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged, type Product, type Category } from '@/lib/db';
+import { addStockLot, consumeFifo, reconcileProductFromLots } from '@/lib/inventory';
 import { useState, useRef } from 'react';
 import { Plus, Search, Edit2, Trash2, Package as PackageIcon, Camera, X, Copy, Infinity as InfinityIcon, ScanLine, Upload, Download, AlertTriangle, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Percent } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -175,16 +176,47 @@ export default function Produk() {
     };
 
     if (editProduct?.id) {
-      await db.products.update(editProduct.id, data);
+      // FIFO: edit stok produk = penyesuaian batch (delta stok).
+      await db.transaction('rw', db.products, db.stockLots, async () => {
+        await db.products.update(editProduct.id!, data);
+        if (trackStock && editProduct.trackStock !== false) {
+          const delta = (data.stock ?? 0) - (editProduct.stock ?? 0);
+          if (delta > 0) {
+            await addStockLot({
+              productId: editProduct.id!,
+              quantity: delta,
+              unitCost: data.hpp,
+              date: new Date(),
+              source: 'adjustment',
+            });
+          } else if (delta < 0) {
+            const fresh = (await db.products.get(editProduct.id!))!;
+            await consumeFifo(fresh, Math.abs(delta));
+          }
+          await reconcileProductFromLots(editProduct.id!);
+        }
+      });
       trackEvent('edit_product');
     } else {
-      await db.products.add({
+      const productId = (await db.products.add({
         ...data,
         createdAt: new Date(),
         createdBy: currentUser?.id,
         isDeleted: 0,
         deletedAt: null,
-      } as Product);
+      } as Product)) as number;
+      // FIFO: stok awal produk baru = batch saldo awal.
+      if (trackStock && data.stock > 0) {
+        await db.transaction('rw', db.stockLots, db.products, async () => {
+          await addStockLot({
+            productId,
+            quantity: data.stock,
+            unitCost: data.hpp,
+            date: new Date(),
+            source: 'opening_balance',
+          });
+        });
+      }
       trackEvent('create_product');
     }
     setDialogOpen(false);
@@ -551,6 +583,20 @@ export default function Produk() {
       });
 
       await db.products.bulkAdd(newProducts);
+      // FIFO: stok awal hasil import Excel = batch saldo awal per produk.
+      await db.transaction('rw', db.stockLots, db.products, async () => {
+        for (const p of newProducts) {
+          if (p.trackStock && p.stock > 0) {
+            await addStockLot({
+              productId: p.id as number,
+              quantity: p.stock,
+              unitCost: p.hpp,
+              date: now,
+              source: 'opening_balance',
+            });
+          }
+        }
+      });
       trackEvent('import_products_excel');
 
       toast.success(t('excel.toastSuccess', { count: newProducts.length }));

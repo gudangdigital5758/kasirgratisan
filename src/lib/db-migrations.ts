@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type {
   Category, Product, Supplier, Customer, StockIn, StockOut, StockOpname, StockOpnameItem,
-  HppHistory, PaymentMethod, Transaction, TransactionItemRecord, Unit, ExpenseCategory,
+  HppHistory, StockLot, StockLotAllocation, PaymentMethod, Transaction, TransactionItemRecord, Unit, ExpenseCategory,
   Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role, SyncMeta,
   LocalBackup,
 } from './db-schema';
@@ -16,6 +16,8 @@ export class PosDatabase extends Dexie {
   stockIns!: Table<StockIn>;
   stockOuts!: Table<StockOut>;
   hppHistory!: Table<HppHistory>;
+  stockLots!: Table<StockLot>;
+  stockLotAllocations!: Table<StockLotAllocation>;
   paymentMethods!: Table<PaymentMethod>;
   transactions!: Table<Transaction>;
   transactionItems!: Table<TransactionItemRecord>;
@@ -793,6 +795,60 @@ export class PosDatabase extends Dexie {
       cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
       syncMeta:          'id',
       localBackups:      '++id, createdAt',
+    });
+
+    // Version 21 — FIFO stock lots (STOK-FIFO): batch stok per produk + alokasi
+    // batch per item transaksi. Upgrade men-seed batch saldo awal dari stok
+    // tersisa produk lama dengan HPP produk saat ini (keputusan:
+    // docs/DECISIONS.md). Riwayat transaksi lama tidak disentuh — laba
+    // historis tetap memakai snapshot hpp di transactionItems.
+    this.version(21).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+      syncMeta:          'id',
+      localBackups:      '++id, createdAt',
+      stockLots:         '++id, productId, date, source, updatedAt, syncedAt',
+      stockLotAllocations: '++id, stockLotId, transactionItemId, transactionId, productId, syncedAt',
+    }).upgrade(async (tx) => {
+      const prodTable = tx.table<Product, number>('products');
+      const lotTable = tx.table<StockLot, number>('stockLots');
+      const now = new Date();
+      const products = await prodTable.toArray();
+      const lots: StockLot[] = [];
+      for (const p of products) {
+        const qty = p.stock ?? 0;
+        const cost = p.hpp ?? 0;
+        if (!(qty > 0) || p.trackStock === false) continue;
+        lots.push({
+          productId: p.id as number,
+          quantity: qty,
+          quantityRemaining: qty,
+          unitCost: Math.round(cost),
+          date: now,
+          source: 'opening_balance',
+        });
+      }
+      if (lots.length) await lotTable.bulkAdd(lots);
     });
   }
 }

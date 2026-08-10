@@ -101,7 +101,7 @@ export default function Laporan() {
 
   const totalRevenue = transactions?.reduce((s, t) => s + t.subtotal, 0) ?? 0;
   const totalDiscount = transactions?.reduce((s, t) => s + t.discountAmount, 0) ?? 0;
-  const totalHpp = allItems.reduce((s, item) => s + item.hpp * item.quantity, 0);
+  const totalHpp = allItems.reduce((s, item) => s + (item.costAmount ?? item.hpp * item.quantity), 0);
   const netSales = totalRevenue - totalDiscount;
   const grossProfit = netSales - totalHpp;
   const marginPercent = netSales > 0 ? (grossProfit / netSales * 100) : 0;
@@ -153,7 +153,7 @@ export default function Laporan() {
     if (!productSales[item.productName]) productSales[item.productName] = { name: item.productName, qty: 0, revenue: 0, profit: 0 };
     productSales[item.productName].qty += item.quantity;
     productSales[item.productName].revenue += item.subtotal;
-    productSales[item.productName].profit += (item.price - item.hpp) * item.quantity - item.discountAmount;
+    productSales[item.productName].profit += (item.price * item.quantity - (item.costAmount ?? item.hpp * item.quantity)) - item.discountAmount;
   });
   const topProducts = Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, period === 'daily' ? 10 : 5);
 

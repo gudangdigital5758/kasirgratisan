@@ -203,6 +203,56 @@ export interface HppHistory {
   syncedAt?: Date | null;
 }
 
+/**
+ * Lapisan/batch stok FIFO. Setiap stok masuk (stock in, stok awal produk,
+ * penyesuaian opname) membuat satu baris; setiap pengurangan (penjualan,
+ * stock out, opname negatif, edit stok) memakai batch tertua lebih dulu.
+ * `products.stock` harus selalu sama dengan total quantityRemaining
+ * per produk (dijaga oleh layanan inventory).
+ */
+export interface StockLot {
+  id?: number;
+  productId: number;
+  /** Kuantitas awal saat batch dibuat. */
+  quantity: number;
+  /** Kuantitas batch yang belum terpakai (>= 0). */
+  quantityRemaining: number;
+  /** Harga modal per unit batch ini (FIFO — bukan rata-rata). */
+  unitCost: number;
+  date: Date;
+  /** Asal batch: saldo awal (migrasi/stok produk), stock in, atau penyesuaian. */
+  source: 'opening_balance' | 'stock_in' | 'adjustment' | 'restore';
+  /** Referensi stockIn (untuk source 'stock_in'); undefined untuk lainnya. */
+  stockInId?: number;
+  /** Referensi stockOut (untuk source 'restore' dari stock out); undefined lainnya. */
+  stockOutId?: number;
+  updatedAt?: Date;
+  syncId?: string;        // UUID unik lintas perangkat (Phase A)
+  productSyncId?: string; // relasi dual ke products
+  syncedAt?: Date | null;
+}
+
+/**
+ * Rincian pemakaian batch FIFO per baris item transaksi (penjualan /
+ * reservasi open bill). Immutable: saat item diganti/dihapus, baris alokasi
+ * ikut dihapus lalu stok dikembalikan ke batch asal.
+ */
+export interface StockLotAllocation {
+  id?: number;
+  stockLotId: number;
+  transactionItemId: number;
+  transactionId: number;
+  productId: number;
+  quantity: number;
+  /** Total modal batch ini pada baris transaksi (quantity × unitCost). */
+  costAmount: number;
+  syncId?: string;        // UUID unik lintas perangkat (Phase A)
+  stockLotSyncId?: string;      // relasi dual ke stockLots
+  transactionSyncId?: string;   // relasi dual ke transactions
+  productSyncId?: string;       // relasi dual ke products
+  syncedAt?: Date | null;
+}
+
 export interface PaymentMethod {
   id?: number;
   name: string;
@@ -252,6 +302,11 @@ export interface TransactionItemRecord {
   quantity: number;
   price: number;
   hpp: number;
+  /**
+   * Total modal (COGS) baris sesuai alokasi batch FIFO, mis. 100 pcs × 10.000
+   * + 20 pcs × 11.000 = 1.220.000. Fallback laporan lama: hpp × quantity.
+   */
+  costAmount?: number;
   discountType: 'percentage' | 'nominal' | null;
   discountValue: number;
   discountAmount: number;

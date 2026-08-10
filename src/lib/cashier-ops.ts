@@ -9,8 +9,10 @@ import {
   type Product,
   type Transaction,
   type TransactionItemRecord,
+  type StockLotAllocation,
   type Debt,
 } from '@/lib/db';
+import { consumeFifo, restoreToLot, type FifoConsumption } from '@/lib/inventory';
 
 export class CashierOpsError extends Error {
   constructor(message: string) {
@@ -53,10 +55,50 @@ export interface CheckoutPayment {
 }
 
 function tables() {
-  return [db.transactions, db.transactionItems, db.products, db.debts] as const;
+  return [
+    db.transactions,
+    db.transactionItems,
+    db.products,
+    db.stockLots,
+    db.stockLotAllocations,
+  ] as const;
 }
 
-/** deltaSold > 0 mengurangi stok; < 0 mengembalikan stok. */
+async function runAtomic<R>(fn: () => Promise<R>): Promise<R> {
+  return db.transaction('rw', ...tables(), fn);
+}
+
+/** Tulis alokasi batch hasil konsumsi FIFO untuk sebuah item transaksi. */
+async function writeAllocations(
+  consumption: FifoConsumption,
+  transactionId: number,
+  transactionItemId: number,
+): Promise<void> {
+  if (consumption.allocations.length === 0) return;
+  const rows: StockLotAllocation[] = consumption.allocations.map((a) => ({
+    ...a,
+    transactionId,
+    transactionItemId,
+  }));
+  await db.stockLotAllocations.bulkAdd(rows);
+}
+
+/**
+ * Konsumsi FIFO satu baris cart (dipakai untuk snapshot HPP & alokasi batch).
+ * `lineTxId`/`itemId` boleh 0 bila pemanggil hanya butuh angka (pratinjau).
+ */
+async function consumeForLine(
+  line: CartLine,
+  transactionId: number,
+  itemId: number,
+): Promise<FifoConsumption> {
+  const product = (await db.products.get(line.product.id!)) ?? line.product;
+  const consumption = await consumeFifo(product, line.qty);
+  await writeAllocations(consumption, transactionId, itemId);
+  return consumption;
+}
+
+/** deltaSold > 0 mengurangi stok; < 0 mengembalikan stok. (Jalur legacy tanpa batch.) */
 export async function applyStockSoldDelta(productId: number, deltaSold: number): Promise<void> {
   if (deltaSold === 0) return;
   const product = await db.products.get(productId);
@@ -76,56 +118,60 @@ async function replaceItems(
   lines: CartLine[],
 ): Promise<TransactionItemRecord[]> {
   await db.transactionItems.where('transactionId').equals(transactionId).delete();
-  const itemRecords: TransactionItemRecord[] = lines.map((c) => ({
-    transactionId,
-    productId: c.product.id!,
-    productName: c.product.name,
-    quantity: c.qty,
-    price: c.product.price,
-    hpp: c.product.hpp,
-    discountType: c.discountType,
-    discountValue: c.discountValue,
-    discountAmount: c.discountAmount,
-    subtotal: c.lineSubtotal,
-    notes: c.notes,
-  }));
-  if (itemRecords.length) await db.transactionItems.bulkAdd(itemRecords);
+  const itemRecords: TransactionItemRecord[] = [];
+  for (const c of lines) {
+    const consumption = await consumeForLine(c, transactionId, 0);
+    const id = (await db.transactionItems.add({
+      transactionId,
+      productId: c.product.id!,
+      productName: c.product.name,
+      quantity: c.qty,
+      price: c.product.price,
+      hpp: consumption.unitCost > 0 ? consumption.unitCost : c.product.hpp,
+      costAmount: consumption.costAmount,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      discountAmount: c.discountAmount,
+      subtotal: c.lineSubtotal,
+      notes: c.notes,
+    })) as number;
+    await db.stockLotAllocations
+      .where('transactionItemId')
+      .equals(0)
+      .and((a) => a.transactionId === transactionId)
+      .modify({ transactionItemId: id, transactionId });
+    itemRecords.push((await db.transactionItems.get(id)) as TransactionItemRecord);
+  }
   return itemRecords;
 }
 
-/** Sesuaikan stok dari open bill lama → cart baru (delta per productId). */
-async function applyOpenBillStockDeltas(
-  oldItems: TransactionItemRecord[],
-  lines: CartLine[],
+/** Kembalikan stok + hapus alokasi untuk item transaksi lama (open bill lama). */
+async function restoreItems(
+  items: TransactionItemRecord[],
+  transactionId: number,
 ): Promise<void> {
-  const oldByProduct = new Map<number, number>();
-  for (const oi of oldItems) {
-    oldByProduct.set(oi.productId, (oldByProduct.get(oi.productId) ?? 0) + oi.quantity);
-  }
-  const newByProduct = new Map<number, { qty: number; managed: boolean }>();
-  for (const line of lines) {
-    const id = line.product.id!;
-    const prev = newByProduct.get(id);
-    newByProduct.set(id, {
-      qty: (prev?.qty ?? 0) + line.qty,
-      managed: isStockManaged(line.product),
-    });
-  }
-
-  const allIds = new Set([...oldByProduct.keys(), ...newByProduct.keys()]);
-  for (const productId of allIds) {
-    const oldQty = oldByProduct.get(productId) ?? 0;
-    const neu = newByProduct.get(productId);
-    const newQty = neu?.qty ?? 0;
-    // Jika produk di cart menandai managed; jika hanya di old bill, cek DB
-    let managed = neu?.managed;
-    if (managed === undefined) {
-      const p = await db.products.get(productId);
-      managed = p ? isStockManaged(p) : false;
+  for (const item of items) {
+    const allocations = await db.stockLotAllocations
+      .where('transactionId')
+      .equals(transactionId)
+      .and((a) => a.transactionItemId === item.id!)
+      .toArray();
+    if (allocations.length === 0) {
+      // Legacy (transaksi lama tanpa alokasi FIFO): kembalikan langsung ke
+      // batch saldo awal bila produk dikelola stoknya.
+      const product = await db.products.get(item.productId);
+      if (product && isStockManaged(product)) {
+        await db.products.update(item.productId, {
+          stock: (product.stock ?? 0) + item.quantity,
+          updatedAt: new Date(),
+        });
+      }
+      continue;
     }
-    if (!managed) continue;
-    const deltaSold = newQty - oldQty; // positive = more reserved
-    await applyStockSoldDelta(productId, deltaSold);
+    for (const a of allocations) {
+      await restoreToLot(a);
+      await db.stockLotAllocations.delete(a.id!);
+    }
   }
 }
 
@@ -152,7 +198,7 @@ export async function saveOpenBillAtomic(input: SaveOpenBillInput): Promise<Save
 
   const now = new Date();
 
-  return db.transaction('rw', ...tables(), async () => {
+  return runAtomic(async () => {
     if (input.editingTxId) {
       const oldItems = await db.transactionItems
         .where('transactionId')
@@ -172,8 +218,10 @@ export async function saveOpenBillAtomic(input: SaveOpenBillInput): Promise<Save
         date: now,
       });
 
+      await restoreItems(oldItems, input.editingTxId);
+      await db.transactionItems.where('transactionId').equals(input.editingTxId).delete();
+
       const items = await replaceItems(input.editingTxId, input.lines);
-      await applyOpenBillStockDeltas(oldItems, input.lines);
 
       const transaction = await db.transactions.get(input.editingTxId);
       if (!transaction) throw new CashierOpsError('Transaksi open bill tidak ditemukan');
@@ -204,7 +252,6 @@ export async function saveOpenBillAtomic(input: SaveOpenBillInput): Promise<Save
 
     const txId = (await db.transactions.add(txData)) as number;
     const items = await replaceItems(txId, input.lines);
-    await applyOpenBillStockDeltas([], input.lines);
 
     return { transaction: { ...txData, id: txId }, items };
   });
@@ -214,11 +261,9 @@ export async function cancelOpenBillAtomic(tx: Transaction): Promise<void> {
   if (!tx.id) throw new CashierOpsError('ID transaksi tidak valid');
   const txId = tx.id;
 
-  await db.transaction('rw', ...tables(), async () => {
+  await runAtomic(async () => {
     const items = await db.transactionItems.where('transactionId').equals(txId).toArray();
-    for (const item of items) {
-      await applyStockSoldDelta(item.productId, -item.quantity);
-    }
+    await restoreItems(items, txId);
     await db.transactionItems.where('transactionId').equals(txId).delete();
     await db.transactions.delete(txId);
   });
@@ -233,6 +278,8 @@ export interface CheckoutInput extends BillTotals, CustomerFields, CheckoutPayme
 export interface CheckoutResult {
   transaction: Transaction;
   items: TransactionItemRecord[];
+  /** Profit aktual = total − Σ costAmount FIFO (bukan estimasi UI). */
+  realProfit: number;
 }
 
 export async function checkoutAtomic(input: CheckoutInput): Promise<CheckoutResult> {
@@ -240,12 +287,16 @@ export async function checkoutAtomic(input: CheckoutInput): Promise<CheckoutResu
 
   const now = new Date();
 
-  return db.transaction('rw', ...tables(), async () => {
+  return runAtomic(async () => {
     if (input.editingTxId) {
       const oldItems = await db.transactionItems
         .where('transactionId')
         .equals(input.editingTxId)
         .toArray();
+
+      // Kembalikan stok open bill lama ke batch asal sebelum item baru dibuat.
+      await restoreItems(oldItems, input.editingTxId);
+      await db.transactionItems.where('transactionId').equals(input.editingTxId).delete();
 
       await db.transactions.update(input.editingTxId, {
         status: 'completed',
@@ -282,11 +333,12 @@ export async function checkoutAtomic(input: CheckoutInput): Promise<CheckoutResu
       }
 
       const items = await replaceItems(input.editingTxId, input.lines);
-      await applyOpenBillStockDeltas(oldItems, input.lines);
+      const realProfit = input.total - items.reduce((s, i) => s + (i.costAmount ?? 0), 0);
+      await db.transactions.update(input.editingTxId, { profit: realProfit });
 
       const transaction = await db.transactions.get(input.editingTxId);
       if (!transaction) throw new CashierOpsError('Transaksi tidak ditemukan');
-      return { transaction, items };
+      return { transaction, items, realProfit };
     }
 
     const receiptNumber = makeReceiptNumber();
@@ -299,7 +351,7 @@ export async function checkoutAtomic(input: CheckoutInput): Promise<CheckoutResu
       paymentMethodId: input.paymentAmount > 0 ? input.paymentMethodId : 0,
       paymentAmount: input.paymentAmount,
       change: input.change,
-      profit: input.profit,
+      profit: 0, // diisi realProfit setelah item dibuat
       date: now,
       receiptNumber,
       status: 'completed',
@@ -329,9 +381,9 @@ export async function checkoutAtomic(input: CheckoutInput): Promise<CheckoutResu
     }
 
     const items = await replaceItems(txId, input.lines);
-    // New completed sale: reserve full cart qty from stock
-    await applyOpenBillStockDeltas([], input.lines);
+    const realProfit = input.total - items.reduce((s, i) => s + (i.costAmount ?? 0), 0);
+    await db.transactions.update(txId, { profit: realProfit });
 
-    return { transaction: { ...txData, id: txId }, items };
+    return { transaction: { ...txData, id: txId, profit: realProfit }, items, realProfit };
   });
 }

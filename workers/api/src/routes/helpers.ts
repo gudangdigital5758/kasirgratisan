@@ -50,7 +50,7 @@ export async function resolveOwnedStoreId(
 
 export const SYNC_TABLES = new Set([
   'categories', 'products', 'suppliers', 'customers', 'stockIns', 'stockOuts',
-  'hppHistory', 'paymentMethods', 'transactions', 'transactionItems', 'units',
+  'hppHistory', 'stockLots', 'stockLotAllocations', 'paymentMethods', 'transactions', 'transactionItems', 'units',
   'users', 'roles', 'expenseCategories', 'expenses', 'debts', 'debtPayments',
   'stockOpnames', 'stockOpnameItems', 'cashierShifts',
 ]);

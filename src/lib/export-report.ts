@@ -121,7 +121,7 @@ export async function exportReportToExcel(rangeStart: Date, rangeEnd: Date): Pro
   const totalProfit = transactions.reduce((s, t) => s + t.profit, 0);
   const totalRevenue = transactions.reduce((s, t) => s + t.subtotal, 0);
   const totalDiscount = transactions.reduce((s, t) => s + t.discountAmount, 0);
-  const totalHpp = items.reduce((s, i) => s + i.hpp * i.quantity, 0);
+  const totalHpp = items.reduce((s, i) => s + (i.costAmount ?? i.hpp * i.quantity), 0);
   const netSales = totalRevenue - totalDiscount;
   const grossProfit = netSales - totalHpp;
   const grossMargin = netSales > 0 ? (grossProfit / netSales) * 100 : 0;
@@ -407,7 +407,7 @@ function buildItemsSheet(
       hpp: item.hpp,
       discount: item.discountAmount,
       subtotal: item.subtotal,
-      profit: (item.price - item.hpp) * item.quantity - item.discountAmount,
+      profit: (item.price * item.quantity - (item.costAmount ?? item.hpp * item.quantity)) - item.discountAmount,
     });
   }
 
@@ -415,7 +415,7 @@ function buildItemsSheet(
     qty: items.reduce((s, i) => s + i.quantity, 0),
     discount: items.reduce((s, i) => s + i.discountAmount, 0),
     subtotal: items.reduce((s, i) => s + i.subtotal, 0),
-    profit: items.reduce((s, i) => s + ((i.price - i.hpp) * i.quantity - i.discountAmount), 0),
+    profit: items.reduce((s, i) => s + ((i.price * i.quantity - (i.costAmount ?? i.hpp * i.quantity)) - i.discountAmount), 0),
   });
   applyMoneyFormat(ws, columns);
 }

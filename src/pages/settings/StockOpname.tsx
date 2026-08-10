@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type StockOpname, type StockOpnameItem, type Product } from '@/lib/db';
+import { db, isStockManaged, type StockOpname, type StockOpnameItem, type Product } from '@/lib/db';
+import { addStockLot, consumeFifo } from '@/lib/inventory';
 import { ClipboardCheck, ChevronLeft, Plus, Download, Upload, Search, Trash2, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -354,7 +355,7 @@ export default function StockOpnamePage() {
     try {
       const now = new Date();
 
-      await db.transaction('rw', [db.products, db.stockOpnames, db.stockOpnameItems, db.stockIns, db.stockOuts], async () => {
+      await db.transaction('rw', [db.products, db.stockOpnames, db.stockOpnameItems, db.stockIns, db.stockOuts, db.stockLots], async () => {
         // 1. Update main opname status
         await db.stockOpnames.update(activeOpname.id!, {
           status: 'completed',
@@ -366,17 +367,11 @@ export default function StockOpnamePage() {
         for (const item of draftItems) {
           const diff = item.realStock - item.systemStock;
 
-          // Update product stock
-          await db.products.update(item.productId, {
-            stock: item.realStock,
-            updatedAt: now
-          });
-
           // Insert stock movements if difference is non-zero
           if (diff > 0) {
             // positive adjustment = Stock In
             const prod = await db.products.get(item.productId);
-            await db.stockIns.add({
+            const stockInId = (await db.stockIns.add({
               productId: item.productId,
               supplierId: 0, // 0 = adjustment / no supplier
               quantity: diff,
@@ -385,7 +380,18 @@ export default function StockOpnamePage() {
               date: now,
               notes: `Adjustment Stock Opname (Sesi #${activeOpname.id})`,
               createdBy: currentUser?.id
-            });
+            })) as number;
+            // FIFO: penyesuaian positif = batch baru dengan HPP produk saat ini.
+            if (prod && isStockManaged(prod)) {
+              await addStockLot({
+                productId: item.productId,
+                quantity: diff,
+                unitCost: prod.hpp ?? 0,
+                date: now,
+                source: 'adjustment',
+                stockInId,
+              });
+            }
           } else if (diff < 0) {
             // negative adjustment = Stock Out
             await db.stockOuts.add({
@@ -396,7 +402,19 @@ export default function StockOpnamePage() {
               notes: `Adjustment Stock Opname (Sesi #${activeOpname.id})`,
               createdBy: currentUser?.id
             });
+            // FIFO: penyesuaian negatif memakai batch tertua.
+            // updateProductStock=false → opname menetapkan stok ke nilai riil.
+            const prod = await db.products.get(item.productId);
+            if (prod && isStockManaged(prod)) {
+              await consumeFifo(prod, Math.abs(diff), db, { updateProductStock: false });
+            }
           }
+
+          // Update product stock
+          await db.products.update(item.productId, {
+            stock: item.realStock,
+            updatedAt: now
+          });
         }
       });
 

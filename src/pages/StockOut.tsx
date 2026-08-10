@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged } from '@/lib/db';
+import { consumeFifo, reconcileProductFromLots } from '@/lib/inventory';
 import { useState, useMemo } from 'react';
 import { ArrowUpFromLine, Plus, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -71,18 +72,21 @@ export default function StockOutPage() {
       return;
     }
 
-    await db.stockOuts.add({
-      productId: Number(productId),
-      quantity: qty,
-      reason,
-      date: new Date(),
-      notes: notes.trim(),
-      createdBy: currentUser?.id,
-    });
+    const now = new Date();
+    await db.transaction('rw', db.stockOuts, db.stockLots, db.products, async () => {
+      const stockOutId = (await db.stockOuts.add({
+        productId: Number(productId),
+        quantity: qty,
+        reason,
+        date: now,
+        notes: notes.trim(),
+        createdBy: currentUser?.id,
+      })) as number;
 
-    await db.products.update(product.id!, {
-      stock: Math.round((product.stock - qty) * 1e6) / 1e6,
-      updatedAt: new Date(),
+      // FIFO: pengurangan memakai batch tertua lebih dulu.
+      await consumeFifo(product, qty);
+      // HPP = batch tertua yang tersisa (FIFO), bukan rata-rata.
+      await reconcileProductFromLots(product.id!);
     });
 
     toast.success(t('stockOut.toast.success', { product: product.name, qty }));

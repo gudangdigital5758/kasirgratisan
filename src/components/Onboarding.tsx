@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { db, type Product } from '@/lib/db';
+import { addStockLot } from '@/lib/inventory';
 import { profileForCategory, type BusinessCategory } from '@/lib/product-fields';
 import { syncStoreEntryFromSettings } from '@/lib/store-registry';
 import BusinessCategoryPicker from '@/components/BusinessCategoryPicker';
@@ -152,6 +153,20 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
     await db.products.bulkAdd(dummyProducts);
     await db.suppliers.bulkAdd(dummySuppliers);
+
+    // FIFO: stok awal produk demo = batch saldo awal (HPP produk).
+    for (const p of dummyProducts) {
+      const created = await db.products.where('sku').equals(p.sku).first();
+      if (created?.id && p.stock > 0) {
+        await addStockLot({
+          productId: created.id,
+          quantity: p.stock,
+          unitCost: p.hpp,
+          date: now,
+          source: 'opening_balance',
+        });
+      }
+    }
 
     const discNull: 'percentage' | 'nominal' | null = null;
 

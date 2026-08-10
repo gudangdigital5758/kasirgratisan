@@ -14,7 +14,7 @@ import { syncPush, syncPull, type SyncPushItem, type SyncTombstoneItem, type Syn
 
 export const SYNC_TABLES = [
   'categories', 'products', 'suppliers', 'customers', 'stockIns', 'stockOuts',
-  'hppHistory', 'paymentMethods', 'transactions', 'transactionItems', 'units',
+  'hppHistory', 'stockLots', 'stockLotAllocations', 'paymentMethods', 'transactions', 'transactionItems', 'units',
   'users', 'roles', 'expenseCategories', 'expenses', 'debts', 'debtPayments',
   'stockOpnames', 'stockOpnameItems', 'cashierShifts',
 ] as const;
@@ -38,6 +38,11 @@ const FK_RESOLVE: Record<string, [syncField: string, parentTable: string, localF
   debts: [['transactionSyncId', 'transactions', 'transactionId'], ['customerSyncId', 'customers', 'customerId']],
   debtPayments: [['debtSyncId', 'debts', 'debtId'], ['paymentMethodSyncId', 'paymentMethods', 'paymentMethodId']],
   stockOpnameItems: [['opnameSyncId', 'stockOpnames', 'opnameId'], ['productSyncId', 'products', 'productId']],
+  stockLotAllocations: [
+    ['stockLotSyncId', 'stockLots', 'stockLotId'],
+    ['transactionSyncId', 'transactions', 'transactionId'],
+    ['productSyncId', 'products', 'productId'],
+  ],
 };
 
 export function toIso(value: Date | string | undefined): string {

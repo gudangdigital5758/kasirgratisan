@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isStockManaged } from '@/lib/db';
+import { addStockLot, reconcileProductFromLots } from '@/lib/inventory';
 import { useState } from 'react';
 import { ArrowDownToLine, Plus, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -69,37 +70,38 @@ export default function StockInPage() {
     const product = products?.find(p => p.id === Number(productId));
     if (!product) return;
 
-    await db.stockIns.add({
-      productId: Number(productId),
-      supplierId: Number(supplierId),
-      quantity: qty,
-      buyPrice: price,
-      totalPrice: qty * price,
-      date: new Date(),
-      notes: notes.trim(),
-      createdBy: currentUser?.id,
+    const now = new Date();
+    await db.transaction('rw', db.stockIns, db.stockLots, db.products, async () => {
+      const stockInId = (await db.stockIns.add({
+        productId: Number(productId),
+        supplierId: Number(supplierId),
+        quantity: qty,
+        buyPrice: price,
+        totalPrice: qty * price,
+        date: now,
+        notes: notes.trim(),
+        createdBy: currentUser?.id,
+      })) as number;
+
+      // FIFO: stok masuk = batch baru dengan harga beli yang diinput.
+      await addStockLot({
+        productId: product.id!,
+        quantity: qty,
+        unitCost: price,
+        date: now,
+        source: 'stock_in',
+        stockInId,
+      });
+
+      await db.products.update(product.id!, {
+        stock: Math.round((product.stock + qty) * 1e6) / 1e6,
+        updatedAt: now,
+      });
+      // HPP = harga batch tertua (FIFO), bukan rata-rata.
+      await reconcileProductFromLots(product.id!);
     });
 
-    const oldStock = product.stock;
-    const oldHpp = product.hpp;
-    const newStock = Math.round((oldStock + qty) * 1e6) / 1e6;
-    const newHpp = newStock > 0 ? ((oldStock * oldHpp) + (qty * price)) / newStock : price;
-
-    await db.hppHistory.add({
-      productId: product.id!,
-      oldHpp,
-      newHpp,
-      source: 'stock_in',
-      date: new Date(),
-    });
-
-    await db.products.update(product.id!, {
-      stock: newStock,
-      hpp: Math.round(newHpp),
-      updatedAt: new Date(),
-    });
-
-    toast.success(t('stockIn.toast.success', { product: product.name, qty, hpp: Math.round(newHpp).toLocaleString(numberLocale) }));
+    toast.success(t('stockIn.toast.success', { product: product.name, qty, hpp: Math.round(price).toLocaleString(numberLocale) }));
     setDialogOpen(false);
   };
 

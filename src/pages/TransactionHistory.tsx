@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Transaction, type TransactionItemRecord } from '@/lib/db';
+import { deleteTransactionAtomic } from '@/lib/inventory';
 import { useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale, enUS, ms } from 'date-fns/locale';
@@ -159,17 +160,7 @@ export default function TransactionHistory() {
         }
         await db.debts.delete(debt.id);
       }
-      if (restoreStock) {
-        const items = getTxItems(selectedTx.id);
-        for (const item of items) {
-          const product = await db.products.get(item.productId);
-          if (product) {
-            await db.products.update(item.productId, { stock: product.stock + item.quantity });
-          }
-        }
-      }
-      await db.transactionItems.where('transactionId').equals(selectedTx.id).delete();
-      await db.transactions.delete(selectedTx.id);
+      await deleteTransactionAtomic(selectedTx.id, restoreStock);
       setDeleteDialogOpen(false);
       setDetailOpen(false);
       setSelectedTx(null);

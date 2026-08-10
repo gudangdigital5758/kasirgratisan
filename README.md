@@ -31,7 +31,7 @@ Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan
 - **Product Management** — Complete CRUD with categories, SKU (unique & required), units, optional descriptions (searchable, previewable in cashier), photos, and barcode support
 - **Master Data Satuan (Units)** — Manage units of measurement with CRUD; safe deletion blocked when in use by products
 - **Stock Management** — Stock in (from suppliers) and stock out (damaged, lost, returned, etc.)
-- **Automatic COGS (HPP)** — Cost of Goods Sold is automatically calculated using the weighted average method on each stock-in
+- **Automatic COGS (HPP)** — Cost of Goods Sold is calculated automatically with the FIFO method (oldest stock lot is consumed first) on each sale
 - **Sales Reports** — 7/30 day sales charts, top products, total revenue & profit
 - **Transaction History** — Browse completed transactions with open bill filter tabs; delete transactions with optional stock restore
 - **Supplier Management** — Manage supplier contacts and details
@@ -240,18 +240,33 @@ Data POS inti (kasir, stok, dan laporan) tersimpan lokal di browser menggunakan 
 | `stockIns` | Stock-in records |
 | `stockOuts` | Stock-out records |
 | `hppHistory` | COGS change audit trail |
+| `stockLots` | FIFO stock lots/batches per product (qty, remaining, unit cost) |
+| `stockLotAllocations` | FIFO lot usage per transaction item (for historical COGS & restore) |
 | `paymentMethods` | Payment methods (Cash, Bank Transfer, QRIS, etc.) |
 | `transactions` | Sales transactions (status: open/completed, customer name, table number, remarks) |
 | `transactionItems` | Individual items within each transaction (per-item notes & discount) |
 | `storeSettings` | Store settings & app state (incl. multi-user toggle) |
 
-### COGS Calculation (Weighted Average)
+### COGS Calculation (FIFO)
 
-When stock is received, COGS is automatically recalculated:
+Cost of Goods Sold uses the **FIFO (First-In, First-Out)** method. Every stock-in
+creates a separate lot; sales/stock-outs consume the **oldest lot first**:
 
 ```
-New COGS = ((Old Stock × Old COGS) + (New Qty × Buy Price)) / (Old Stock + New Qty)
+Lot A: 100 pcs @ Rp 10.000   (masuk duluan)
+Lot B:  50 pcs @ Rp 11.000
+Jual 120 pcs → 100 pcs dari Lot A + 20 pcs dari Lot B
+COGS transaksi = 100×10.000 + 20×11.000 = Rp 1.220.000
+Sisa stok = 30 pcs @ Rp 11.000 (Lot B)
 ```
+
+- Lot usage per transaction item is stored in `stockLotAllocations` so historic
+  profit never changes when new stock arrives.
+- Product `hpp` shows the cost of the oldest remaining lot (display/fallback).
+- Existing stock at upgrade becomes a single opening-balance lot at the product's
+  current HPP; historic transactions keep their saved HPP snapshots.
+- Cancelling an open bill or deleting a transaction with "restore stock" returns
+  quantities to their original lots.
 
 ---
 

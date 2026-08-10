@@ -8,7 +8,7 @@ import { db, type Product, type PosDatabase, sanitizeDatabaseDates } from '@/lib
  * Dipisah dari komponen UI supaya logika yang sama tidak terduplikasi.
  */
 
-export const BACKUP_VERSION = 8;
+export const BACKUP_VERSION = 9;
 
 // Bentuk longgar — file backup bisa berasal dari versi lama (v1–v6).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,6 +26,8 @@ export async function buildBackupData(target: PosDatabase = db) {
     stockIns: await target.stockIns.toArray(),
     stockOuts: await target.stockOuts.toArray(),
     hppHistory: await target.hppHistory.toArray(),
+    stockLots: await target.stockLots.toArray(),
+    stockLotAllocations: await target.stockLotAllocations.toArray(),
     paymentMethods: await target.paymentMethods.toArray(),
     transactions: await target.transactions.toArray(),
     transactionItems: await target.transactionItems.toArray(),
@@ -73,6 +75,8 @@ async function clearAllTables(includeConditional: BackupData) {
   await db.stockIns.clear();
   await db.stockOuts.clear();
   await db.hppHistory.clear();
+  await db.stockLots.clear();
+  await db.stockLotAllocations.clear();
   await db.paymentMethods.clear();
   await db.transactions.clear();
   await db.transactionItems.clear();
@@ -113,6 +117,8 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     stockIns: await db.stockIns.toArray(),
     stockOuts: await db.stockOuts.toArray(),
     hppHistory: await db.hppHistory.toArray(),
+    stockLots: await db.stockLots.toArray(),
+    stockLotAllocations: await db.stockLotAllocations.toArray(),
     paymentMethods: await db.paymentMethods.toArray(),
     transactions: await db.transactions.toArray(),
     transactionItems: await db.transactionItems.toArray(),
@@ -144,6 +150,8 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     if (data.stockIns?.length) await db.stockIns.bulkAdd(data.stockIns);
     if (data.stockOuts?.length) await db.stockOuts.bulkAdd(data.stockOuts);
     if (data.hppHistory?.length) await db.hppHistory.bulkAdd(data.hppHistory);
+    if (data.stockLots?.length) await db.stockLots.bulkAdd(data.stockLots);
+    if (data.stockLotAllocations?.length) await db.stockLotAllocations.bulkAdd(data.stockLotAllocations);
     if (data.paymentMethods?.length) await db.paymentMethods.bulkAdd(data.paymentMethods);
     if (data.transactions?.length) await db.transactions.bulkAdd(data.transactions);
     if (data.storeSettings?.length) await db.storeSettings.bulkAdd(data.storeSettings);
@@ -219,6 +227,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     try {
       await db.categories.clear(); await db.products.clear(); await db.suppliers.clear();
       await db.stockIns.clear(); await db.stockOuts.clear(); await db.hppHistory.clear();
+      await db.stockLots.clear(); await db.stockLotAllocations.clear();
       await db.paymentMethods.clear(); await db.transactions.clear(); await db.transactionItems.clear();
       await db.storeSettings.clear();
       await db.users.clear();
@@ -240,6 +249,8 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       if (snapshot.stockIns.length) await db.stockIns.bulkAdd(snapshot.stockIns);
       if (snapshot.stockOuts.length) await db.stockOuts.bulkAdd(snapshot.stockOuts);
       if (snapshot.hppHistory.length) await db.hppHistory.bulkAdd(snapshot.hppHistory);
+      if (snapshot.stockLots.length) await db.stockLots.bulkAdd(snapshot.stockLots);
+      if (snapshot.stockLotAllocations.length) await db.stockLotAllocations.bulkAdd(snapshot.stockLotAllocations);
       if (snapshot.paymentMethods.length) await db.paymentMethods.bulkAdd(snapshot.paymentMethods);
       if (snapshot.transactions.length) await db.transactions.bulkAdd(snapshot.transactions);
       if (snapshot.transactionItems.length) await db.transactionItems.bulkAdd(snapshot.transactionItems);

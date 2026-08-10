@@ -22,6 +22,8 @@ export type {
   StockOpname,
   StockOpnameItem,
   HppHistory,
+  StockLot,
+  StockLotAllocation,
   PaymentMethod,
   Transaction,
   TransactionItemRecord,
@@ -100,6 +102,8 @@ export async function sanitizeDatabaseDates() {
   await sanitizeTableDates(db.stockIns, ['date', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.stockOuts, ['date', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.hppHistory, ['date', 'updatedAt', 'syncedAt']);
+  await sanitizeTableDates(db.stockLots, ['date', 'updatedAt', 'syncedAt']);
+  await sanitizeTableDates(db.stockLotAllocations, ['updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.paymentMethods, ['createdAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.transactions, ['date', 'openedAt', 'closedAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.users, ['createdAt', 'lastLoginAt', 'updatedAt', 'syncedAt']);
@@ -129,6 +133,8 @@ export function setupSyncHooks(db: PosDatabase) {
     'stockIns',
     'stockOuts',
     'hppHistory',
+    'stockLots',
+    'stockLotAllocations',
     'debts',
     'debtPayments',
     'stockOpnames',
