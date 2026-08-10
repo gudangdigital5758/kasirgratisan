@@ -455,3 +455,31 @@ User boleh menghapus toko yang sudah tutup/tidak beroperasi dari daftar toko.
   (yang sudah ada, kini berfungsi); hapus cloud juga membersihkan toko lokal yang
   terhubung (`cloudStoreId`) + reload bila toko lokal aktif ikut terhapus.
 - Data tidak bisa dipulihkan setelah penghapusan — konfirmasi harus jelas.
+
+---
+
+## 2026-08-10 — Jendela atribusi affiliate 3650 hari (10 tahun)
+
+**Status:** Accepted
+
+Jalur referral di perangkat (localStorage `profitku_affiliate_ref`) berlaku
+**3650 hari** sejak klik link — praktis permanen. User yang berlangganan cloud
+jauh setelah klik link (bulan/tahun kemudian, di perangkat yang sama) tetap
+memberikan komisi ke affiliator pengundang.
+
+**Decision:**
+
+1. `platform_settings` key `affiliate` → `attribution_days: 3650` (migrasi
+   `20260810120000_affiliate_attribution_3650.sql`; dibaca Worker per-request,
+   aktif tanpa redeploy).
+2. Default/fallback disamakan: Worker `DEFAULT_AFFILIATE_SETTINGS`, admin UI
+   (default form, fallback simpan, placeholder), konstanta info client.
+3. Admin tetap bisa mengubah 1–3650 via Profitku Admin (input sudah `max=3650`).
+4. Link share affiliator → `https://profitku.my.id/settings/cloud?ref=CODE` (langsung
+   buka Cloud Hub; `?ref` tetap ditangkap `captureAffiliateRef` di semua route).
+
+**Implications:**
+- Atribusi tetap terikat perangkat (localStorage); ganti device / clear browser
+  → jalur hilang. Binding server-side lintas device (claim) belum dibangun —
+  bisa ditambahkan belakangan tanpa konflik (prioritas: kode eksplisit dulu).
+- `capturedAt` lama (klik > 90 hari lalu) kembali valid selama < 10 tahun.

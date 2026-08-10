@@ -10,7 +10,7 @@ const defaultSettings: AffiliateSettings = {
   enabled: true,
   commission_percent: 10,
   tiers: [20, 5, 3, 2, 1],
-  attribution_days: 90,
+  attribution_days: 3650,
   min_amount_idr: 0,
 };
 
@@ -83,7 +83,7 @@ export default function AffiliatesPage() {
       const res = await adminApi.patchAffiliateSettings({
         enabled: cfg.enabled,
         tiers: cfg.tiers.map((t) => toNum(t, 0, 0, 100)),
-        attribution_days: toNum(cfg.attribution_days, 90, 1, 3650),
+        attribution_days: toNum(cfg.attribution_days, 3650, 1, 3650),
         min_amount_idr: toNum(cfg.min_amount_idr, 0, 0),
       });
       setCfg({
@@ -237,7 +237,7 @@ export default function AffiliatesPage() {
               max={3650}
               value={cfg.attribution_days}
               onChange={(e) => setCfg((s) => ({ ...s, attribution_days: e.target.value }))}
-              placeholder="90"
+              placeholder="3650"
             />
           </label>
           <label className="stack" style={{ flex: '0 1 170px' }}>
@@ -465,12 +465,12 @@ export default function AffiliatesPage() {
 
           <p className="muted" style={{ margin: 0 }}>
             Link:{' '}
-            <code>https://profitku.my.id/?ref={detail?.affiliate.code}</code>{' '}
+            <code>https://profitku.my.id/settings/cloud?ref={detail?.affiliate.code}</code>{' '}
             <button
               type="button"
               className="btn ghost"
               style={{ fontSize: 12, padding: '2px 8px' }}
-              onClick={() => void copyText(`https://profitku.my.id/?ref=${detail?.affiliate.code ?? ''}`)}
+              onClick={() => void copyText(`https://profitku.my.id/settings/cloud?ref=${detail?.affiliate.code ?? ''}`)}
             >
               📋 Copy
             </button>

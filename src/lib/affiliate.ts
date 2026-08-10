@@ -2,7 +2,7 @@
  * Affiliate Profitku — penangkapan & penyimpanan jalur referral di perangkat.
  *
  * Alur:
- *  1. User membuka link https://profitku.my.id/?ref=KODE
+ *  1. User membuka link https://profitku.my.id/settings/cloud?ref=KODE
  *  2. captureAffiliateRef() dipanggil sekali saat app start → validasi via API
  *     (best-effort) → simpan kode ke localStorage.
  *  3. Saat checkout/perpanjangan cloud, kode dikirim sebagai affiliateCode.
@@ -15,7 +15,7 @@ import { lookupAffiliate } from './cloud-api';
 
 const STORAGE_KEY = 'profitku_affiliate_ref';
 /** Jendela atribusi default (hari) — dipakai untuk info; jalur tidak dihapus otomatis. */
-export const AFFILIATE_ATTRIBUTION_DAYS = 90;
+export const AFFILIATE_ATTRIBUTION_DAYS = 3650;
 
 export interface AffiliateRef {
   code: string;

@@ -30,7 +30,7 @@ export const DEFAULT_AFFILIATE_SETTINGS: AffiliateSettings = {
   enabled: true,
   commission_percent: 10,
   tiers: [20, 5, 3, 2, 1],
-  attribution_days: 90,
+  attribution_days: 3650,
   min_amount_idr: 0,
 };
 
@@ -90,7 +90,7 @@ export async function getAffiliateSettings(env: Env): Promise<AffiliateSettings>
         enabled: v.enabled !== false,
         commission_percent: clampPercent(Number(v.commission_percent) || 0),
         tiers: tiers.length ? tiers : [clampPercent(Number(v.commission_percent) || 0)],
-        attribution_days: Math.max(1, Math.min(3650, Number(v.attribution_days) || 90)),
+        attribution_days: Math.max(1, Math.min(3650, Number(v.attribution_days) || 3650)),
         min_amount_idr: Math.max(0, Math.floor(Number(v.min_amount_idr) || 0)),
       };
     }

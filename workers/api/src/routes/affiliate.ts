@@ -174,7 +174,7 @@ affiliateRoutes.post('/register', async (c) => {
       affiliate: mapAffiliate(result.affiliate),
       parentCode: result.parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/?ref=${result.affiliate.code}`,
+      link: `https://profitku.my.id/settings/cloud?ref=${result.affiliate.code}`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gagal mendaftar';
@@ -209,7 +209,7 @@ affiliateRoutes.get('/me', async (c) => {
       affiliate: mapAffiliate(me),
       parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/?ref=${me.code}`,
+      link: `https://profitku.my.id/settings/cloud?ref=${me.code}`,
     });
   } catch (err) {
     console.warn('[affiliate me]', err);
