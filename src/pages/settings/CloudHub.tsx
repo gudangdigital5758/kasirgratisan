@@ -45,6 +45,7 @@ import {
   checkoutPlan,
   verifyPayment,
   fetchStores,
+  createStore,
   uploadBackup,
   previewVoucher,
   type Plan,
@@ -57,7 +58,7 @@ import { getAffiliateRef } from '@/lib/affiliate';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { storeRegistry, getActiveStoreKey } from '@/lib/store-registry';
+import { storeRegistry, getActiveStoreKey, updateStore, type LocalStoreEntry } from '@/lib/store-registry';
 import { syncNow, getSyncStatus } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
@@ -169,6 +170,30 @@ export default function CloudHub() {
     }
   }, []);
 
+  const handleRegisterLocalStore = async (localStore: LocalStoreEntry) => {
+    if (!isLoggedIn) return;
+    setBusy(`register:${localStore.storeKey}`);
+    try {
+      const cloud = await createStore(localStore.name);
+      await updateStore(localStore.storeKey, {
+        mode: 'cloud',
+        cloudStoreId: cloud.id,
+      });
+
+      // Keep the active DB binding aligned with the registry immediately.
+      if (localStore.storeKey === activeLocalKey && storeSettings?.id) {
+        await db.storeSettings.update(storeSettings.id, { cloudStoreId: cloud.id });
+      }
+
+      await Promise.all([loadStores(), refreshProfile()]);
+      toast.success(t('cloudStores.registerSuccess'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('cloudStores.registerFailed'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const handleBindStore = async (storeId: string) => {
     if (!storeSettings?.id) return;
     await db.storeSettings.update(storeSettings.id, { cloudStoreId: storeId || null });
@@ -199,6 +224,7 @@ export default function CloudHub() {
         const result = await verifyPayment(pendingTxId);
         if (result.transaction.status === 'COMPLETED') {
           await refreshProfile();
+          await loadStores();
           setPendingTxId(null);
           setPaymentLink(null);
           setShowPlanPicker(false);
@@ -212,7 +238,7 @@ export default function CloudHub() {
         if (!silent) setBusy(null);
       }
     },
-    [pendingTxId, refreshProfile, t],
+    [pendingTxId, refreshProfile, loadStores, t],
   );
 
   useEffect(() => {
@@ -290,6 +316,7 @@ export default function CloudHub() {
       });
       if (result.completed || result.transaction.status === 'COMPLETED') {
         await refreshProfile();
+        await loadStores();
         clearVoucher();
         setShowPlanPicker(false);
         toast.success(result.message || t('cloudBackup.toast.paymentSuccess'));
@@ -538,28 +565,52 @@ export default function CloudHub() {
               </p>
               {(localStores ?? []).map((s) => {
                 const isActive = s.storeKey === activeLocalKey;
-                const online = s.mode === 'cloud';
-                const ent = online
+                const isLinked = !!s.cloudStoreId;
+                const ent = isLinked
                   ? (profile?.stores ?? []).find((x) => x.id === s.cloudStoreId)?.entitlement
                   : undefined;
                 const hasSync = !!ent?.hasSync;
+                const expiry = ent?.syncExpiry ? new Date(ent.syncExpiry) : null;
+                const expiryLabel = expiry && !Number.isNaN(expiry.getTime())
+                  ? format(expiry, 'dd MMM yyyy', { locale: dateLocale })
+                  : null;
                 return (
                   <div key={s.storeKey} className="flex items-center gap-2.5 rounded-xl border border-border p-2.5">
                     <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      {online ? <Cloud className="w-4 h-4 text-primary" /> : <Store className="w-4 h-4 text-muted-foreground" />}
+                      {isLinked ? <Cloud className="w-4 h-4 text-primary" /> : <Store className="w-4 h-4 text-muted-foreground" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{s.name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {online ? t('stores.modeCloud') : t('stores.modeLocal')}
-                        {online ? ` · ${s.cloudStoreId ? t('cloudStores.linked') : t('cloudStores.notLinked')}` : ''}
+                        {isLinked ? t('stores.modeCloud') : t('stores.modeLocal')}
+                        {` · ${isLinked ? t('cloudStores.linked') : t('cloudStores.notRegistered')}`}
                         {isActive ? ` · ${t('cloudStores.active')}` : ''}
-                        {online && ent
+                        {isLinked && ent
                           ? ` · ${t('cloudStores.storage', { used: ent.usedMb, max: ent.storageLimitMb })}`
                           : ''}
                       </p>
+                      {isLinked && ent && (
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {hasSync && expiryLabel
+                            ? t('cloudStores.expiry', { date: expiryLabel })
+                            : t('cloudStores.planInactive')}
+                          {` · ${t('cloudStores.remaining', { mb: Math.max(0, ent.remainingMb) })}`}
+                        </p>
+                      )}
                     </div>
-                    {online && (
+                    {!isLinked ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] shrink-0"
+                        disabled={busy === `register:${s.storeKey}`}
+                        onClick={() => void handleRegisterLocalStore(s)}
+                      >
+                        {busy === `register:${s.storeKey}`
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : t('cloudStores.register')}
+                      </Button>
+                    ) : (
                       <span
                         className={cn(
                           'text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0',

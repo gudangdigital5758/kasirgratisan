@@ -562,10 +562,16 @@
     "title": "Kedai & Langganan",
     "linked": "Pautan cloud",
     "notLinked": "Belum dipautkan",
+    "notRegistered": "Cloud belum didaftarkan",
+    "register": "Daftar",
+    "registerSuccess": "Kedai berjaya didaftarkan ke cloud. Pilih langganan untuk mengaktifkan backup dan sync.",
+    "registerFailed": "Gagal mendaftarkan kedai ke cloud",
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tiada langganan",
     "storage": "Storan {{used}}/{{max}} MB",
+    "remaining": "baki {{mb}} MB",
+    "expiry": "Berkuat hingga {{date}}",
     "note": "1 langganan ({{price}}/bulan) = 1 kedai online. Kedai offline percuma, tanpa had."
   },
   "cloudStore": {

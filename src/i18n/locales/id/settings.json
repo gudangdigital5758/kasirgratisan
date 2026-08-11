@@ -562,10 +562,16 @@
     "title": "Toko & Langganan",
     "linked": "Terhubung cloud",
     "notLinked": "Belum terhubung",
+    "notRegistered": "Cloud belum terdaftar",
+    "register": "Daftarkan",
+    "registerSuccess": "Toko berhasil didaftarkan ke cloud. Pilih langganan untuk mengaktifkan backup dan sync.",
+    "registerFailed": "Gagal mendaftarkan toko ke cloud",
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tanpa langganan",
     "storage": "Penyimpanan {{used}}/{{max}} MB",
+    "remaining": "sisa {{mb}} MB",
+    "expiry": "Berlaku s.d. {{date}}",
     "note": "1 langganan ({{price}}/bulan) = 1 toko online. Toko offline gratis tanpa batas."
   },
   "cloudStore": {

@@ -562,10 +562,16 @@
     "title": "Stores & Subscriptions",
     "linked": "Linked to cloud",
     "notLinked": "Not linked",
+    "notRegistered": "Cloud not registered",
+    "register": "Register",
+    "registerSuccess": "Store registered to cloud. Choose a subscription to enable backup and sync.",
+    "registerFailed": "Failed to register store to cloud",
     "active": "Active",
     "planActive": "Plan active",
     "planInactive": "No plan",
     "storage": "Storage {{used}}/{{max}} MB",
+    "remaining": "{{mb}} MB left",
+    "expiry": "Valid until {{date}}",
     "note": "1 subscription ({{price}}/month) = 1 online store. Offline stores are free, unlimited."
   },
   "cloudStore": {

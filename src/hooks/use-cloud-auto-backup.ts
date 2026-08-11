@@ -57,10 +57,10 @@ export function useCloudAutoBackup() {
     }
 
     const ms = intervalMs(storeSettings.cloudAutoBackupInterval, storeSettings.cloudAutoBackupHours);
-    if (ms === null) return;
-
     const last = storeSettings.lastCloudBackupAt ? new Date(storeSettings.lastCloudBackupAt).getTime() : 0;
-    const due = Date.now() - last >= ms;
+    // A newly activated store always receives one initial backup, even when the
+    // recurring schedule is currently switched off.
+    const due = last === 0 || (ms !== null && Date.now() - last >= ms);
     if (!due) return;
 
     // A backup can be restored without binding the device to a cloud store.
@@ -79,6 +79,7 @@ export function useCloudAutoBackup() {
         await refreshProfile();
         toast.success('Backup otomatis ke cloud berhasil');
       } catch (err) {
+        ranRef.current = false;
         if (err instanceof CloudApiError && err.status === 400) {
           toast.error('Auto-backup gagal: kuota cloud penuh. Hapus backup lama atau upgrade paket.');
         } else {
