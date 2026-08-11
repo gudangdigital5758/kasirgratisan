@@ -54,15 +54,15 @@ import {
   type CloudStore,
   type VoucherPreviewResult,
 } from '@/lib/cloud-api';
-import { buildBackupJsonString, backupFileName } from '@/lib/backup';
+import { buildBackupJsonString, backupFileName, buildCloudBackupJsonString } from '@/lib/backup';
 import { getDb } from '@/lib/db';
 import { BRAND } from '@/lib/brand';
 import { getAffiliateRef } from '@/lib/affiliate';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { storeRegistry, getActiveStoreKey, updateStore, type LocalStoreEntry } from '@/lib/store-registry';
-import { syncNow, getSyncStatus } from '@/lib/sync';
+import { storeRegistry, getActiveStoreKey, updateStore, bindActiveLocalStoreToCloud, type LocalStoreEntry } from '@/lib/store-registry';
+import { syncNow, getSyncStatus, hasLocalSyncData, resolveInitialSync, type InitialSyncChoice } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -76,6 +76,7 @@ export default function CloudHub() {
   const { can } = useAuth();
   const { isLoggedIn, googleUser, profile, loadingProfile, isSyncSubscribed, login, logout, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const syncMeta = useLiveQuery(() => db.syncMeta.get(1));
   const localStores = useLiveQuery(() => storeRegistry.stores.orderBy('createdAt').toArray());
   const activeLocalKey = getActiveStoreKey();
   const { t, i18n } = useTranslation('settings');
@@ -100,6 +101,7 @@ export default function CloudHub() {
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [lastConflictCount, setLastConflictCount] = useState(0);
   const [dirtyCount, setDirtyCount] = useState(0);
+  const [initialSyncBusy, setInitialSyncBusy] = useState(false);
 
   useEffect(() => {
     getSyncStatus().then((s) => {
@@ -136,6 +138,7 @@ export default function CloudHub() {
   const activeStore = stores.find((s) => s.id === activeStoreId);
   const isStorePublic = activeStore?.isPublic ?? false;
   const activeStoreHasSync = !!activeStore?.entitlement?.hasSync;
+  const initialSyncRequired = !!activeStoreId && !!syncMeta?.initialSyncRequired;
 
   // Single plan: Profitku Cloud (fallback ke brand id bila API belum siap)
   const cloudPlans =
@@ -197,11 +200,7 @@ export default function CloudHub() {
 
       const targetDb = getDb(localStore.storeKey);
       const targetSettings = await targetDb.storeSettings.toCollection().first();
-      const [productCount, transactionCount] = await Promise.all([
-        targetDb.products.count(),
-        targetDb.transactions.count(),
-      ]);
-      const hasLocalData = productCount > 0 || transactionCount > 0;
+      const hasLocalData = await hasLocalSyncData(targetDb);
       const hasActiveCloud = !!cloud.entitlement?.hasSync || !!claimResult?.claimed;
 
       await updateStore(localStore.storeKey, {
@@ -218,25 +217,30 @@ export default function CloudHub() {
         await targetDb.storeSettings.update(targetSettings.id, { cloudStoreId: cloud.id });
       }
 
+      // Existing local data must be reviewed before it can participate in an
+      // existing store's sync stream. Set the gate even before subscription is
+      // active so renewal cannot silently bypass source selection later.
+      if (existing && hasLocalData && targetSettings?.id) {
+        const meta = await targetDb.syncMeta.get(1);
+        await targetDb.syncMeta.put({
+          ...meta,
+          id: 1,
+          lastPullCursor: meta?.lastPullCursor ?? null,
+          lastSyncAt: meta?.lastSyncAt ?? null,
+          initialSyncRequired: true,
+          lastSyncError: 'Pilih sumber data sebelum initial sync antar-device.',
+        });
+      }
+
       if (hasActiveCloud && targetSettings?.deviceId) {
         await bindCloudStoreDevice(cloud.id, targetSettings.deviceId, localStore.name);
 
         // A new cloud store has no remote data, so the registering device is the
-        // safe source for the first push. Existing local data must be reviewed
-        // before it can participate in an existing store's sync stream.
+        // safe source for the first push. An empty device can pull an existing
+        // store after binding; non-empty existing stores remain gated above.
         if (!existing || !hasLocalData) {
           const initialSync = await syncNow(targetDb);
           if (!initialSync.ok) console.warn('[cloud] initial sync:', initialSync.message);
-        } else {
-          const meta = await targetDb.syncMeta.get(1);
-          await targetDb.syncMeta.put({
-            ...meta,
-            id: 1,
-            lastPullCursor: meta?.lastPullCursor ?? null,
-            lastSyncAt: meta?.lastSyncAt ?? null,
-            initialSyncRequired: true,
-            lastSyncError: 'Pilih sumber data sebelum initial sync antar-device.',
-          });
         }
       }
 
@@ -251,9 +255,37 @@ export default function CloudHub() {
     }
   };
 
+  const handleInitialSyncChoice = async (choice: InitialSyncChoice) => {
+    setInitialSyncBusy(true);
+    try {
+      const result = await resolveInitialSync(choice);
+      if (result.ok) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+      const status = await getSyncStatus();
+      setLastSyncAt(status.lastSyncAt);
+      setLastSyncError(status.lastSyncError);
+      setLastConflictCount(status.lastConflictCount);
+      setDirtyCount(status.dirtyCount);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('cloudBackup.realSync.error', { message: 'Initial sync gagal' }));
+    } finally {
+      setInitialSyncBusy(false);
+    }
+  };
+
   const handleBindStore = async (storeId: string) => {
     if (!storeSettings?.id) return;
+    if (storeId && storeId !== storeSettings.cloudStoreId && await hasLocalSyncData()) {
+      toast.error(t('cloudStore.toast.bindRequiresEmpty'));
+      return;
+    }
     await db.storeSettings.update(storeSettings.id, { cloudStoreId: storeId || null });
+    // CLOUD-002: registry lokal ikut diperbarui agar tidak terpisah dari
+    // storeSettings (scope sync memakai storeSettings, daftar toko memakai registry).
+    await bindActiveLocalStoreToCloud(storeId || null);
     toast.success(t('cloudStore.toast.bind'));
   };
 
@@ -402,7 +434,8 @@ export default function CloudHub() {
     }
     setBusy('sync');
     try {
-      const json = await buildBackupJsonString();
+      // CLOUD-005: backup cloud tidak membawa credential lokal (pinHash/deviceId).
+      const json = await buildCloudBackupJsonString();
       await uploadBackup(json, backupFileName(), storeId);
       if (storeSettings?.id) await db.storeSettings.update(storeSettings.id, { lastCloudBackupAt: new Date() });
       await refreshProfile();
@@ -540,6 +573,37 @@ export default function CloudHub() {
               </Button>
             </CardContent>
           </Card>
+
+          {profile?.legacyMigrationRequired && (localStores ?? []).length > 0 && (
+            <Card className="border-0 shadow-sm border-l-4 border-l-warning bg-warning/5">
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">{t('cloudStores.legacyTitle')}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+                    {t('cloudStores.legacyDescription', {
+                      date: profile.legacySubscription?.endDate
+                        ? new Date(profile.legacySubscription.endDate).toLocaleDateString(numberLocale)
+                        : '-',
+                    })}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {(localStores ?? []).map((localStore) => (
+                    <Button
+                      key={localStore.storeKey}
+                      variant="outline"
+                      className="w-full h-9 justify-between"
+                      disabled={busy === `register:${localStore.storeKey}`}
+                      onClick={() => void handleRegisterLocalStore(localStore)}
+                    >
+                      <span className="truncate">{t('cloudStores.legacyConnect', { name: localStore.name })}</span>
+                      {busy === `register:${localStore.storeKey}` && <Loader2 className="w-4 h-4 animate-spin" />}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Toko & langganan per toko (multi-toko M3) */}
           <Card className="border-0 shadow-sm">
@@ -883,6 +947,36 @@ export default function CloudHub() {
           </p>
         </>
       )}
+
+      <Dialog open={initialSyncRequired} onOpenChange={() => undefined}>
+        <DialogContent className="max-w-[90vw] rounded-2xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('cloudBackup.realSync.initialTitle')}</DialogTitle>
+            <DialogDescription>{t('cloudBackup.realSync.initialDescription')}</DialogDescription>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground rounded-xl bg-muted/50 p-3">
+            {t('cloudBackup.realSync.initialSnapshotNote')}
+          </p>
+          <div className="space-y-2">
+            <Button
+              className="w-full h-10"
+              disabled={initialSyncBusy}
+              onClick={() => void handleInitialSyncChoice('cloud')}
+            >
+              {initialSyncBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {t('cloudBackup.realSync.useCloud')}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-10"
+              disabled={initialSyncBusy}
+              onClick={() => void handleInitialSyncChoice('local')}
+            >
+              {t('cloudBackup.realSync.keepLocal')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!pendingTxId} onOpenChange={(o) => !o && closePaymentModal()}>
         <DialogContent className="max-w-[88vw] rounded-2xl sm:max-w-sm">

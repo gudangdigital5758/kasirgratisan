@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { buildBackupJsonString, backupFileName } from '@/lib/backup';
+import { buildCloudBackupJsonString, backupFileName } from '@/lib/backup';
 import { uploadBackup, CloudApiError } from '@/lib/cloud-api';
 import { syncNow, initSyncListeners } from '@/lib/sync';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
@@ -71,7 +71,8 @@ export function useCloudAutoBackup() {
 
     (async () => {
       try {
-        const json = await buildBackupJsonString();
+        // CLOUD-005: backup cloud tidak membawa credential lokal.
+        const json = await buildCloudBackupJsonString();
         await uploadBackup(json, backupFileName(), storeId);
         if (storeSettings.id) {
           await db.storeSettings.update(storeSettings.id, { lastCloudBackupAt: new Date() });

@@ -38,7 +38,7 @@ import {
   uploadBackup,
   type CloudBackup,
 } from '@/lib/cloud-api';
-import { buildBackupJsonString, backupFileName, restoreFromBackupData } from '@/lib/backup';
+import { buildCloudBackupJsonString, backupFileName, restoreFromBackupData } from '@/lib/backup';
 import { useTranslation } from 'react-i18next';
 
 const LOCALES: Record<string, Locale> = { id: idLocale, en: enUS, ms };
@@ -51,7 +51,7 @@ function fmtSize(bytes: number): string {
 
 export default function CloudBackupsListSettings() {
   const { can } = useAuth();
-  const { isLoggedIn, isSyncSubscribed, profile, refreshProfile } = useCloudAuth();
+  const { isLoggedIn, profile, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? idLocale;
@@ -65,14 +65,16 @@ export default function CloudBackupsListSettings() {
   const activeStoreEntitlement = activeStoreId
     ? profile?.stores?.find((store) => store.id === activeStoreId)?.entitlement
     : undefined;
-  const activeStoreHasSync = activeStoreId ? !!activeStoreEntitlement?.hasSync : isSyncSubscribed;
+  const activeStoreHasSync = !!activeStoreId && !!activeStoreEntitlement?.hasSync;
 
   const load = useCallback(async () => {
     if (!isLoggedIn) return;
     setLoading(true);
     try {
       const { items } = await listBackups({ page: 1, limit: 50, storeId: activeStoreId });
-      setBackups(items);
+      // Tanpa local binding, hanya legacy account-level backup yang aman
+      // ditampilkan; backup toko lain tidak boleh dipulihkan ke DB aktif.
+      setBackups(activeStoreId ? items : items.filter((item) => !item.storeId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudBackupsList.toast.loadFailed'));
       setBackups([]);
@@ -107,9 +109,14 @@ export default function CloudBackupsListSettings() {
       : null;
 
   const handleUploadNow = async () => {
+    if (!activeStoreId) {
+      toast.error(t('cloudBackup.toast.selectStoreFirst'));
+      return;
+    }
     setBusy('upload');
     try {
-      const json = await buildBackupJsonString();
+      // CLOUD-005: backup cloud tidak membawa credential lokal.
+      const json = await buildCloudBackupJsonString();
       await uploadBackup(json, backupFileName(), activeStoreId);
       if (storeSettings?.id) {
         await db.storeSettings.update(storeSettings.id, { lastCloudBackupAt: new Date() });
@@ -128,7 +135,8 @@ export default function CloudBackupsListSettings() {
     if (!restoreTarget) return;
     setBusy(`restore:${restoreTarget.id}`);
     try {
-      const data = await downloadBackup(restoreTarget.id);
+      // CLOUD-007: server memvalidasi backup milik toko aktif (storeId).
+      const data = await downloadBackup(restoreTarget.id, activeStoreId);
       await restoreFromBackupData(data);
       toast.success(t('cloudBackupsList.toast.restoreSuccess'));
       setRestoreTarget(null);

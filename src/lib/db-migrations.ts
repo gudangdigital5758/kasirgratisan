@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Category, Product, Supplier, Customer, StockIn, StockOut, StockOpname, StockOpnameItem,
   HppHistory, StockLot, StockLotAllocation, PaymentMethod, Transaction, TransactionItemRecord, Unit, ExpenseCategory,
-  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role, SyncMeta,
+  Expense, Debt, DebtPayment, DeletedRecord, CashierShift, StoreSettings, User, Role, SyncMeta, SyncQueueBatch,
   LocalBackup,
 } from './db-schema';
 import { ALL_PERMISSIONS } from './db-schema';
@@ -34,6 +34,7 @@ export class PosDatabase extends Dexie {
   deletedRecords!: Table<DeletedRecord>;
   cashierShifts!: Table<CashierShift>;
   syncMeta!: Table<SyncMeta>;
+  syncQueue!: Table<SyncQueueBatch>;
   localBackups!: Table<LocalBackup>;
 
   constructor(dbName: string = 'kasirgratisan-db') {
@@ -849,6 +850,105 @@ export class PosDatabase extends Dexie {
         });
       }
       if (lots.length) await lotTable.bulkAdd(lots);
+    });
+
+    // Version 22 — Phase A sync (CLOUD-003): lengkapi metadata sync untuk tabel
+    // child (transactionItems, stockOpnameItems, roles) dan stockLotAllocations
+    // yang sebelumnya tidak punya hook sync. Backfill syncId/updatedAt/syncedAt
+    // untuk record existing agar tidak selamanya "dirty invalid".
+    this.version(22).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+      syncMeta:          'id',
+      localBackups:      '++id, createdAt',
+      stockLots:         '++id, productId, date, source, updatedAt, syncedAt',
+      stockLotAllocations: '++id, stockLotId, transactionItemId, transactionId, productId, syncedAt',
+    }).upgrade(async (tx) => {
+      const uuid = () => newSyncId();
+      const now = new Date();
+      type SyncableRecord = Record<string, unknown> & {
+        updatedAt?: Date | null;
+        syncedAt?: Date | null;
+        syncId?: string;
+      };
+      const backfill = async (tableName: string, dateFields: string[]) => {
+        await tx
+          .table<SyncableRecord, number>(tableName)
+          .toCollection()
+          .modify((record) => {
+            if (!record.syncId) record.syncId = uuid();
+            if (!record.updatedAt) {
+              let base: Date | null = null;
+              for (const field of dateFields) {
+                const v = record[field];
+                if (v) {
+                  const parsed = new Date(v as string | number | Date);
+                  if (!isNaN(parsed.getTime())) {
+                    base = parsed;
+                    break;
+                  }
+                }
+              }
+              record.updatedAt = base ?? now;
+            }
+            if (record.syncedAt === undefined) record.syncedAt = null;
+          });
+      };
+      await backfill('transactionItems', []);
+      await backfill('stockOpnameItems', []);
+      await backfill('roles', ['createdAt']);
+      await backfill('stockLotAllocations', ['updatedAt']);
+    });
+
+    // Version 23 — persistent sync queue (CLOUD-009).
+    this.version(23).stores({
+      categories:        '++id, name, isDeleted, updatedAt, syncedAt',
+      products:          '++id, name, &sku, categoryId, barcode, isDeleted, createdBy, updatedBy, unit, updatedAt, syncedAt',
+      suppliers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      customers:         '++id, name, isDeleted, updatedAt, syncedAt',
+      stockIns:          '++id, productId, supplierId, date, createdBy, updatedAt, syncedAt',
+      stockOuts:         '++id, productId, date, createdBy, updatedAt, syncedAt',
+      hppHistory:        '++id, productId, date, syncedAt',
+      paymentMethods:    '++id, name, category, updatedAt, syncedAt',
+      transactions:      '++id, date, &receiptNumber, paymentMethodId, status, orderNumber, createdBy, updatedAt, syncedAt',
+      transactionItems:  '++id, transactionId, productId',
+      storeSettings:     '++id',
+      units:             '++id, &name, isDeleted, updatedAt, syncedAt',
+      users:             '++id, &username, role, isActive, updatedAt, syncedAt',
+      roles:             '++id, name, isBuiltIn, isActive, updatedAt, syncedAt',
+      expenseCategories: '++id, name, isDeleted, updatedAt, syncedAt',
+      expenses:          '++id, date, categoryId, paymentMethodId, createdBy, isDeleted, updatedAt, syncedAt',
+      debts:             '++id, &transactionId, customerId, status, createdAt, updatedAt, syncedAt',
+      debtPayments:      '++id, debtId, date, paymentMethodId, createdBy, updatedAt, syncedAt',
+      stockOpnames:      '++id, date, status, createdBy, updatedAt, syncedAt',
+      stockOpnameItems:  '++id, opnameId, productId, [opnameId+productId]',
+      deletedRecords:    '++id, tableName, recordId, deletedAt, syncedAt',
+      cashierShifts:     '++id, status, userId, openedAt, closedAt, updatedAt, syncedAt',
+      syncMeta:          'id',
+      syncQueue:         '++id, storeId, createdAt, nextAttemptAt',
+      localBackups:      '++id, createdAt',
+      stockLots:         '++id, productId, date, source, updatedAt, syncedAt',
+      stockLotAllocations: '++id, stockLotId, transactionItemId, transactionId, productId, syncedAt',
     });
   }
 }

@@ -374,9 +374,9 @@
       "fallbackName": "Akun Google",
       "logout": "Keluar"
     },
-    "syncNow": "Sync Sekarang",
-    "lastSync": "Terakhir sync: {{time}}",
-    "neverSynced": "Belum pernah disinkronkan",
+    "syncNow": "Backup Sekarang",
+    "lastSync": "Terakhir backup: {{time}}",
+    "neverSynced": "Belum pernah backup",
     "realSync": {
       "title": "Sinkronisasi Antar-Perangkat",
       "button": "Sync Sekarang",
@@ -384,7 +384,12 @@
       "never": "Belum pernah sync data antar-perangkat",
       "dirty": "{{count}} perubahan menunggu sinkronisasi",
       "conflicts": "{{count}} konflik diselesaikan (versi terbaru menang)",
-      "error": "Sync terakhir gagal: {{message}}"
+      "error": "Sync terakhir gagal: {{message}}",
+      "initialTitle": "Pilih sumber data untuk perangkat ini",
+      "initialDescription": "Database lokal dan cloud sama-sama berisi data. Pilih data mana yang menjadi sumber awal sebelum sinkronisasi dilanjutkan.",
+      "initialSnapshotNote": "Snapshot lokal otomatis dibuat sebelum pilihan diterapkan. Snapshot tersedia di Backup Lokal jika perlu rollback.",
+      "useCloud": "Gunakan Data Cloud",
+      "keepLocal": "Pertahankan Data Lokal"
     },
     "manageFromAnywhere": "Kelola toko dari mana saja",
     "subscription": {
@@ -452,8 +457,8 @@
       "paymentNotDetected": "Pembayaran belum terdeteksi. Selesaikan dulu pembayarannya, ya.",
       "verifyFailed": "Gagal verifikasi pembayaran",
       "selectStoreFirst": "Pilih toko terlebih dahulu di menu Kelola Toko.",
-      "syncSuccess": "Sinkronisasi ke cloud berhasil",
-      "syncFailed": "Gagal sinkronisasi ke cloud"
+      "syncSuccess": "Backup berhasil diunggah ke cloud",
+      "syncFailed": "Gagal mengunggah backup ke cloud"
     },
     "voucher": {
       "title": "Kode promo / voucher",
@@ -574,6 +579,9 @@
     "storage": "Penyimpanan {{used}}/{{max}} MB",
     "remaining": "sisa {{mb}} MB",
     "expiry": "Berlaku s.d. {{date}}",
+    "legacyTitle": "Subscription Cloud lama ditemukan",
+    "legacyDescription": "Subscription aktif sampai {{date}} belum terhubung ke toko. Pilih toko tujuan agar backup dan sync aktif tanpa membayar ulang.",
+    "legacyConnect": "Hubungkan subscription ke {{name}}",
     "note": "1 langganan ({{price}}/bulan) = 1 toko online. Toko offline gratis tanpa batas."
   },
   "cloudStore": {
@@ -638,6 +646,7 @@
     "upgrade": "Upgrade Paket",
     "toast": {
       "bind": "Device ini terhubung ke toko.",
+      "bindRequiresEmpty": "Database lokal berisi data. Gunakan alur Hubungkan Existing agar sumber data dapat dipilih dengan aman.",
       "unbind": "Device terputus dari toko.",
       "create": "Toko berhasil dibuat.",
       "createFailed": "Gagal membuat toko",
@@ -651,7 +660,8 @@
       "checkoutFailed": "Gagal memulai checkout",
       "noBackup": "Belum ada backup cloud untuk toko ini.",
       "backupSaved": "Backup terakhir diunduh ke perangkat.",
-      "backupFailed": "Gagal mengunduh backup"
+      "backupFailed": "Gagal mengunduh backup",
+      "cannotDeleteActive": "Toko yang sedang aktif tidak bisa dihapus. Putuskan dulu perangkat ini dari toko tersebut."
     }
   },
   "transactionHistory": {

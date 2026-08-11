@@ -122,6 +122,21 @@ export async function updateStore(storeKey: string, patch: Partial<LocalStoreEnt
 }
 
 /**
+ * Ikat database lokal AKTIF ke cloud store (atau lepaskan). Memperbarui entry
+ * registry + mode agar konsisten dengan `storeSettings.cloudStoreId`
+ * (CLOUD-002). Tidak menyentuh data toko; keputusan sumber data / snapshot
+ * ditangani pemanggil.
+ */
+export async function bindActiveLocalStoreToCloud(cloudStoreId: string | null): Promise<void> {
+  const key = getActiveStoreKey();
+  if (cloudStoreId) {
+    await updateStore(key, { mode: 'cloud', cloudStoreId });
+  } else {
+    await updateStore(key, { mode: 'local', cloudStoreId: null });
+  }
+}
+
+/**
  * Sinkronkan entry registry toko AKTIF dari storeSettings (nama/kategori/tipe).
  * Dipanggil setelah onboarding / edit nama toko / ubah kategori usaha, agar
  * dropdown toko di Beranda ikut ter-update (nama, emoji kategori, tipe produk).

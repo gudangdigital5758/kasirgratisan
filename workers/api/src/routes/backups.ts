@@ -5,7 +5,7 @@
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireUser } from './helpers';
-import { sbGet } from '../lib/supabase';
+import { sbGet, sbPost, sbPatch, sbDelete } from '../lib/supabase';
 import {
   deleteBackupMeta,
   deleteBackupObject,
@@ -16,16 +16,17 @@ import {
   listBackupMeta,
   putBackupObject,
   r2Configured,
-  sumBackupBytes,
 } from '../lib/backups';
 
 const backupsRoutes = new Hono<AppEnv>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // --- Backups (R2 + metadata Supabase) ---
 backupsRoutes.get('/backups', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
   const storeId = c.req.query('storeId') ?? '';
+  if (storeId && !UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
   if (storeId) {
     const own = await sbGet<{ id: string }[]>(
       c.env,
@@ -38,6 +39,7 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
     const rows = await listBackupMeta(c.env, String(userId), 50, storeId || undefined);
     const backups = rows.map((b) => ({
       id: b.id,
+      storeId: b.store_id,
       fileName: b.file_name,
       fileSize: b.file_size,
       createdAt: b.created_at,
@@ -83,6 +85,7 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
     const storeIdRaw = form.get('storeId');
     const storeId =
       typeof storeIdRaw === 'string' && storeIdRaw.trim() ? storeIdRaw.trim() : null;
+    if (storeId && !UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
 
     // Kepemilikan toko bila upload per toko (kuota & metadata ikut toko itu).
     if (storeId) {
@@ -121,24 +124,28 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
       return c.json({ error: 'Ukuran backup maksimal 50 MB' }, 400);
     }
 
-    // Kuota storage per toko (default 1024 MB bila mock tanpa ent — BRAND.cloudStorageMb)
-    const limitBytes = (limitMb > 0 ? limitMb : 1024) * 1024 * 1024;
-    const used = storeId
-      ? await sumBackupBytes(c.env, String(userId), storeId)
-      : await sumBackupBytes(c.env, String(userId));
-    if (used + fileSize > limitBytes) {
+    // CLOUD-011: reservation atomik per scope menutup race dua upload
+    // concurrent sebelum object R2 ditulis.
+    const id = crypto.randomUUID();
+    const quotaLimitMb = limitMb > 0 ? limitMb : 1024;
+    const reservation = await sbPost<boolean | boolean[]>(c.env, 'rpc/reserve_backup_quota', {
+      p_reservation_id: id,
+      p_user_id: String(userId),
+      p_store_id: storeId,
+      p_file_size: fileSize,
+      p_limit_mb: quotaLimitMb,
+    });
+    const reserved = Array.isArray(reservation) ? reservation[0] === true : reservation === true;
+    if (!reserved) {
       return c.json(
-        {
-          error: `Kuota backup penuh (${Math.round(used / 1024 / 1024)} / ${Math.round(limitBytes / 1024 / 1024)} MB). Hapus backup lama dulu.`,
-        },
+        { error: `Kuota backup penuh (${quotaLimitMb} MB). Hapus backup lama dulu.` },
         413,
       );
     }
 
-    const id = crypto.randomUUID();
-    const key = fileKeyFor(String(userId), fileName);
-    await putBackupObject(c.env, key, buf);
+    const key = fileKeyFor(String(userId), fileName, storeId);
     try {
+      await putBackupObject(c.env, key, buf);
       const meta = await insertBackupMeta(c.env, {
         id,
         user_id: String(userId),
@@ -147,6 +154,10 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
         file_key: key,
         file_size: fileSize,
       });
+
+      await sbPatch(c.env, `backup_quota_reservations?id=eq.${id}`, {
+        status: 'completed',
+      }).catch(() => undefined);
 
       return c.json({
         backup: {
@@ -164,6 +175,7 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
       } catch (cleanupError) {
         console.error('[backup upload] orphan cleanup failed', cleanupError);
       }
+      await sbDelete(c.env, `backup_quota_reservations?id=eq.${id}`).catch(() => undefined);
       throw metadataError;
     }
   } catch (err) {
@@ -177,10 +189,21 @@ backupsRoutes.get('/backups/:id/download', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
   const id = c.req.param('id') ?? '';
+  const storeId = c.req.query('storeId') ?? '';
+  if (storeId && !UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
 
   try {
     const meta = await getBackupMeta(c.env, id, String(userId));
     if (!meta) return c.json({ error: 'Backup tidak ditemukan' }, 404);
+    // CLOUD-007: backup hanya boleh direstore ke toko pemiliknya. Restore
+    // lintas toko dalam akun yang sama ditolak (hindari menimpa DB yang salah).
+    if (storeId) {
+      if (meta.store_id !== storeId) {
+        return c.json({ error: 'Backup ini bukan milik toko yang dipilih' }, 400);
+      }
+    } else if (meta.store_id) {
+      return c.json({ error: 'storeId wajib untuk mengunduh backup toko' }, 400);
+    }
     const obj = await getBackupObject(c.env, meta.file_key);
     if (!obj) return c.json({ error: 'File backup tidak ada di storage' }, 404);
     const text = await obj.text();

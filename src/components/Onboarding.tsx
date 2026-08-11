@@ -284,7 +284,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     setRestoring(true);
     const toastId = toast.loading(t('restore.restoring'));
     try {
-      const data = await downloadBackup(backup.id);
+      // Backup cloud baru selalu scoped ke storeId; legacy account-level
+      // backup tetap boleh direstore tanpa parameter.
+      const data = await downloadBackup(backup.id, backup.storeId ?? undefined);
       await restoreFromBackupData(data);
       toast.dismiss(toastId);
       await finishAfterRestore(t('toast.cloudRestoreSuccess'));

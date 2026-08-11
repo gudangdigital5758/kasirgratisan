@@ -28,6 +28,8 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
     },
     subscription: null as null | Record<string, unknown>,
     syncSubscription: null as null | Record<string, unknown>,
+    legacyMigrationRequired: false,
+    legacySubscription: null as null | Record<string, unknown>,
     storageUsage: { usedMb: 0, limitMb: 0, remainingMb: 0 },
     backups: [] as unknown[],
     stores: [] as unknown[],
@@ -98,6 +100,10 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
         );
       }
 
+      // CLOUD-015: akun dapat memiliki beberapa subscription per toko. Jangan
+      // menimpa syncSubscription secara arbitrer — pilih masa aktif terpanjang
+      // agar UI tidak menampilkan expiry toko yang salah.
+      let bestSyncEndMs = 0;
       for (const s of subs) {
         const plan = s.plans
           ? {
@@ -120,10 +126,21 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
           hasActiveSubscription: true,
           isLifetime: !!s.is_lifetime || !!ent?.is_lifetime,
         };
-        if (plan?.category === 'SYNC') profile.syncSubscription = mapped;
-        else if (plan?.category === 'STORAGE') profile.subscription = mapped;
+        if (!s.store_id && plan?.category === 'SYNC') {
+          profile.legacyMigrationRequired = true;
+          profile.legacySubscription = mapped;
+        }
+        const endMs = new Date(s.current_period_end).getTime() || 0;
+        if (plan?.category === 'SYNC') {
+          if (!profile.syncSubscription || endMs > bestSyncEndMs) {
+            profile.syncSubscription = mapped;
+            bestSyncEndMs = endMs;
+          }
+        } else if (plan?.category === 'STORAGE') {
+          profile.subscription = mapped;
+        }
         // cloud_monthly = SYNC; juga map ke subscription generik bila kosong
-        if (plan?.category === 'SYNC' && !profile.subscription) {
+        if (plan?.category === 'SYNC' && (!profile.subscription || endMs > bestSyncEndMs)) {
           profile.subscription = mapped;
         }
       }

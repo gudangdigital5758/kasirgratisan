@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireSyncStore, requireUser } from './helpers';
-import { sbGet, sbPost, sbDelete, SupabaseError } from '../lib/supabase';
+import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
 import { deleteBackupObject } from '../lib/backups';
 
 const storesRoutes = new Hono<AppEnv>();
@@ -121,6 +121,53 @@ storesRoutes.post('/stores', async (c: AppContext) => {
   }
 });
 
+/** Rename toko (CLOUD-012). */
+storesRoutes.put('/stores/:id', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as { name?: string };
+  if (!body.name?.trim()) return c.json({ error: 'Nama toko wajib' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+
+  try {
+    type S = {
+      id: string;
+      user_id: string;
+      name: string;
+      created_at: string;
+      updated_at: string;
+      is_public: boolean;
+      identifier: string | null;
+    };
+    const rows = await sbPatch<S[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}`,
+      { name: body.name.trim() },
+    );
+    const s = rows[0];
+    if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    return c.json({
+      store: {
+        id: s.id,
+        userId: s.user_id,
+        name: s.name,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+        isPublic: s.is_public,
+        identifier: s.identifier,
+      },
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores rename]', err);
+    return c.json({ error: 'Gagal mengubah nama toko' }, 500);
+  }
+});
+
 /** Claim subscription lama level akun ke toko cloud yang dipilih user. */
 storesRoutes.post('/stores/:id/claim-legacy-subscription', async (c: AppContext) => {
   const userId = requireUser(c);
@@ -195,6 +242,7 @@ storesRoutes.delete('/stores/:id', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
   const storeId = c.req.param('id');
+  if (!UUID_RE.test(storeId ?? '')) return c.json({ error: 'storeId tidak valid' }, 400);
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }

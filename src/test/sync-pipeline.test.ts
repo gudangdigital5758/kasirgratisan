@@ -37,6 +37,7 @@ describe('Sync applyPull (M2) — LWW + tombstone + FK resolve', () => {
     const p = await db.products.filter((r) => r.syncId === 'p-1').first();
     expect(p).toBeTruthy();
     expect(p?.name).toBe('Dari Cloud');
+    expect(p?.createdAt).toBeInstanceOf(Date);
     expect(p?.syncedAt).toBeInstanceOf(Date);
     expect(p?.updatedAt).toEqual(new Date('2026-08-05T09:30:00.000Z'));
   });

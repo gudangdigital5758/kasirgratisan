@@ -26,7 +26,7 @@ import { cors } from 'hono/cors';
 import type { Env } from './env';
 import { getUserFromJwt, sbGet, sbPatch } from './lib/supabase';
 import { sendEmail } from './lib/notify';
-import { r2Configured, cleanupExpiredBackups } from './lib/backups';
+import { r2Configured, cleanupExpiredBackups, cleanupQuotaReservations } from './lib/backups';
 import { runDunningCron } from './lib/lifecycle';
 import { resolveAdmin, writeEvent } from './lib/admin';
 import { isMaintenanceMode } from './lib/platform-settings';
@@ -588,6 +588,9 @@ export default {
         // Cleanup backup files > 30 hari
         cleanupExpiredBackups(env, 30).then((r) => {
           console.log('[cron cleanup-backups]', `deleted: ${r.deleted}, errors: ${r.errors}, cutoff: ${r.cutoffDate}`);
+        }),
+        cleanupQuotaReservations(env).catch((err) => {
+          console.error('[cron cleanup-quota-reservations]', err);
         }),
       ]),
     );

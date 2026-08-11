@@ -110,7 +110,7 @@ export async function applyStockSoldDelta(productId: number, deltaSold: number):
       `Stok tidak cukup untuk "${product.name}" (tersedia ${product.stock}, perubahan ${deltaSold}).`,
     );
   }
-  await db.products.update(productId, { stock: next, updatedAt: new Date() });
+  await db.products.update(productId, { stock: next, updatedAt: new Date(), syncedAt: null });
 }
 
 async function replaceItems(

@@ -6,6 +6,7 @@ import { type Context } from 'hono';
 import type { Env } from '../env';
 import { sbGet, sbPost, SupabaseError } from '../lib/supabase';
 import { writeEvent } from '../lib/admin';
+import { SYNC_MAX_BYTES, SYNC_ID_RE, sanitizeSyncData } from '../lib/sync-schema';
 
 type Variables = {
   userId: string | null;
@@ -56,6 +57,8 @@ export const SYNC_TABLES = new Set([
 ]);
 export const SYNC_MAX_RECORDS = 2000;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export type SyncRow = {
   table_name: string;
   sync_id: string;
@@ -71,6 +74,9 @@ export async function requireSyncStore(c: AppContext, storeId: string): Promise<
   if (userId instanceof Response) return userId;
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  if (!UUID_RE.test(storeId)) {
+    return c.json({ error: 'storeId tidak valid' }, 400);
   }
   try {
     // Kepemilikan toko + entitlement langganan PER TOKO (model per-toko berbayar).
@@ -113,33 +119,58 @@ export async function handlePushSync(c: AppContext, explicitStoreId?: string) {
   const guard = await requireSyncStore(c, storeId);
   if (guard) return guard;
 
+  // CLOUD-008: batas ukuran payload total (fail-closed sebelum diproses).
+  const rawLength = new TextEncoder().encode(JSON.stringify(body)).byteLength;
+  if (rawLength > SYNC_MAX_BYTES) {
+    return c.json({ error: 'Payload sync terlalu besar (maks 5 MB)' }, 413);
+  }
+
   const items: Record<string, unknown>[] = [];
 
-  for (const [table, rows] of Object.entries(body.records ?? {})) {
-    if (!SYNC_TABLES.has(table)) return c.json({ error: `Tabel tidak dikenal: ${table}` }, 400);
-    for (const raw of rows ?? []) {
-      const r = raw as { syncId?: string; data?: unknown; updatedAt?: string };
-      if (!r.syncId || !r.updatedAt) continue;
+  try {
+    for (const [table, rows] of Object.entries(body.records ?? {})) {
+      if (!SYNC_TABLES.has(table)) return c.json({ error: `Tabel tidak dikenal: ${table}` }, 400);
+      for (const raw of rows ?? []) {
+        const r = raw as { syncId?: string; data?: unknown; updatedAt?: string };
+        if (!r.syncId || !r.updatedAt) continue;
+        // syncId harus UUID (CLOUD-008) dan updatedAt harus timestamp valid.
+        if (!SYNC_ID_RE.test(r.syncId)) {
+          return c.json({ error: `syncId tidak valid pada tabel ${table}` }, 400);
+        }
+        if (Number.isNaN(Date.parse(r.updatedAt))) {
+          return c.json({ error: `updatedAt tidak valid pada tabel ${table}` }, 400);
+        }
+        const data = sanitizeSyncData(table, r.data);
+        items.push({
+          table_name: table,
+          sync_id: r.syncId,
+          data,
+          updated_at: r.updatedAt,
+          deleted: false,
+          deleted_at: null,
+        });
+      }
+    }
+    for (const t of body.tombstones ?? []) {
+      if (!t?.table || !SYNC_TABLES.has(t.table) || !t.syncId || !t.deletedAt) continue;
+      if (!SYNC_ID_RE.test(t.syncId)) {
+        return c.json({ error: `syncId tombstone tidak valid pada tabel ${t.table}` }, 400);
+      }
+      if (Number.isNaN(Date.parse(t.deletedAt))) continue;
       items.push({
-        table_name: table,
-        sync_id: r.syncId,
-        data: r.data ?? {},
-        updated_at: r.updatedAt,
-        deleted: false,
-        deleted_at: null,
+        table_name: t.table,
+        sync_id: t.syncId,
+        data: {},
+        updated_at: t.deletedAt,
+        deleted: true,
+        deleted_at: t.deletedAt,
       });
     }
-  }
-  for (const t of body.tombstones ?? []) {
-    if (!t?.table || !SYNC_TABLES.has(t.table) || !t.syncId || !t.deletedAt) continue;
-    items.push({
-      table_name: t.table,
-      sync_id: t.syncId,
-      data: {},
-      updated_at: t.deletedAt,
-      deleted: true,
-      deleted_at: t.deletedAt,
-    });
+  } catch (err) {
+    if (err instanceof Error) {
+      return c.json({ error: err.message }, 400);
+    }
+    return c.json({ error: 'Payload sync tidak valid' }, 400);
   }
   if (items.length === 0) return c.json({ error: 'Tidak ada record valid untuk di-push' }, 400);
   if (items.length > SYNC_MAX_RECORDS) return c.json({ error: 'Batch terlalu besar (maks 2000)' }, 413);
@@ -156,17 +187,23 @@ export async function handlePushSync(c: AppContext, explicitStoreId?: string) {
         // best-effort — jangan gagalkan push karena device metadata
       }
     }
-    const accepted = await sbPost<string[]>(c.env, 'rpc/sync_upsert_batch', {
+    // Backward-compatible with the pre-winner RPC (array response) while the
+    // new migration is rolled out. New RPC returns { accepted, winners }.
+    const rpcResult = await sbPost<
+      string[] | { accepted?: string[]; winners?: unknown[] }
+    >(c.env, 'rpc/sync_upsert_batch', {
       p_store_id: storeId,
       p_items: items,
     });
+    const accepted = Array.isArray(rpcResult) ? rpcResult : rpcResult.accepted ?? [];
+    const winners = Array.isArray(rpcResult) ? [] : rpcResult.winners ?? [];
     await writeEvent(c.env, {
       type: 'sync_push',
       message: `push ${accepted?.length ?? 0} records`,
       actorUserId: c.get('userId'),
-      payload: { count: accepted?.length ?? 0, tables: Object.keys(body.records ?? {}) },
+      payload: { count: accepted.length, winners: winners.length, tables: Object.keys(body.records ?? {}) },
     });
-    return c.json({ accepted: accepted ?? [], count: accepted?.length ?? 0, serverTime: new Date().toISOString() });
+    return c.json({ accepted, count: accepted.length, winners, serverTime: new Date().toISOString() });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[sync push]', err);

@@ -21,6 +21,7 @@ describe('Sync pipeline PUSH (M2)', () => {
     await db.storeSettings.clear();
     await db.deletedRecords.clear();
     await db.syncMeta.clear();
+    await db.syncQueue.clear();
 
     await db.storeSettings.add({
       storeName: 'Test Sync Store',
@@ -43,6 +44,7 @@ describe('Sync pipeline PUSH (M2)', () => {
     await db.storeSettings.clear();
     await db.deletedRecords.clear();
     await db.syncMeta.clear();
+    await db.syncQueue.clear();
     vi.unstubAllGlobals();
   });
 
@@ -128,5 +130,74 @@ describe('Sync pipeline PUSH (M2)', () => {
     expect(res.ok).toBe(false);
     const dirty = await db.products.filter((p) => p.syncedAt === null).count();
     expect(dirty).toBeGreaterThan(0);
+    expect(await db.syncQueue.count()).toBe(1);
+  });
+
+  it('retry queue mengirim ulang batch dan menghapus queue setelah ack', async () => {
+    await db.products.add({
+      name: 'Queued', sku: 'QUEUE-1', categoryId: 1, price: 1000, hpp: 500, stock: 1, unit: 'pcs',
+      isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date(),
+    });
+    let pushCalls = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/api/sync/push')) {
+        pushCalls++;
+        if (pushCalls === 1) return jsonResponse({ error: 'temporary' }, 503);
+        const body = JSON.parse(String(init?.body ?? '{}')) as { records?: Record<string, { syncId: string }[]> };
+        const syncId = body.records?.products?.[0]?.syncId;
+        return jsonResponse({ accepted: syncId ? [syncId] : [], count: syncId ? 1 : 0, serverTime: '2026-08-05T10:00:00.000Z' });
+      }
+      if (url.includes('/api/sync/pull')) {
+        return jsonResponse({ records: [], tombstones: [], serverTime: '2026-08-05T10:00:01.000Z', cursor: '2026-08-05T10:00:00.000Z|1', hasMore: false });
+      }
+      return jsonResponse({ error: 'unexpected' }, 404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect((await syncNow()).ok).toBe(false);
+    const queued = await db.syncQueue.toArray();
+    expect(queued).toHaveLength(1);
+    await db.syncQueue.update(queued[0].id as number, { nextAttemptAt: new Date(0) });
+
+    expect((await syncNow()).ok).toBe(true);
+    expect(await db.syncQueue.count()).toBe(0);
+    expect(await db.products.filter((p) => p.syncedAt !== null).count()).toBe(1);
+  });
+
+  it('menerapkan winner server dari acknowledgement push', async () => {
+    const syncId = '44444444-4444-4444-8444-444444444444';
+    const id = await db.products.add({
+      name: 'Versi Lokal', sku: 'WINNER-1', categoryId: 1, price: 1000, hpp: 500, stock: 1, unit: 'pcs',
+      syncId, isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date('2026-08-05T09:00:00.000Z'),
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/sync/push')) {
+        return jsonResponse({
+          accepted: [syncId],
+          count: 1,
+          serverTime: '2026-08-05T10:00:00.000Z',
+          winners: [{
+            table: 'products',
+            syncId,
+            data: { name: 'Versi Server', sku: 'WINNER-1', categoryId: 1, price: 2000, hpp: 500, stock: 1, unit: 'pcs', isDeleted: 0, deletedAt: null, createdAt: '2026-08-05T08:00:00.000Z' },
+            updatedAt: '2026-08-05T10:00:00.000Z',
+            deleted: false,
+            deletedAt: null,
+          }],
+        });
+      }
+      if (url.includes('/api/sync/pull')) {
+        return jsonResponse({ records: [], tombstones: [], serverTime: '2026-08-05T10:00:01.000Z', cursor: '2026-08-05T10:00:00.000Z|1', hasMore: false });
+      }
+      return jsonResponse({ error: 'unexpected' }, 404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect((await syncNow()).ok).toBe(true);
+    const product = await db.products.get(id as number);
+    expect(product?.name).toBe('Versi Server');
+    expect(product?.price).toBe(2000);
   });
 });

@@ -407,7 +407,7 @@ export interface DeletedRecord {
 /** Metadata sync lintas perangkat (Phase A M1/M2) — satu baris (id=1). */
 export interface SyncMeta {
   id?: number;
-  /** Kursor pull terakhir (ISO server time). */
+  /** Kursor pull terakhir: `server_updated_at|sync_records.id` (legacy ISO diterima). */
   lastPullCursor: string | null;
   lastSyncAt: Date | null;
   /** Pesan error sync terakhir (UX: ditampilkan di CloudHub). */
@@ -416,6 +416,17 @@ export interface SyncMeta {
   lastConflictCount?: number;
   /** Block auto-sync until a non-empty local DB chooses an initial source. */
   initialSyncRequired?: boolean;
+}
+
+/** Batch push persisten untuk retry offline/temporary failure (CLOUD-009). */
+export interface SyncQueueBatch {
+  id?: number;
+  storeId: string;
+  createdAt: Date;
+  payload: string;
+  attempts: number;
+  nextAttemptAt: Date;
+  lastError?: string | null;
 }
 
 /** Snapshot backup lokal otomatis (OFFLINE-BACKUP M0) — disimpan di IndexedDB. */

@@ -374,9 +374,9 @@
       "fallbackName": "Akaun Google",
       "logout": "Log Keluar"
     },
-    "syncNow": "Sync Sekarang",
-    "lastSync": "Selaras terakhir: {{time}}",
-    "neverSynced": "Belum pernah diselaraskan",
+    "syncNow": "Backup Sekarang",
+    "lastSync": "Sandaran terakhir: {{time}}",
+    "neverSynced": "Belum pernah dibuat sandaran",
     "realSync": {
       "title": "Sinkronisasi Antara Peranti",
       "button": "Sync Sekarang",
@@ -384,7 +384,12 @@
       "never": "Belum pernah sync data antara peranti",
       "dirty": "{{count}} perubahan menunggu sinkronisasi",
       "conflicts": "{{count}} konflik diselesaikan (versi terbaru menang)",
-      "error": "Sync terakhir gagal: {{message}}"
+      "error": "Sync terakhir gagal: {{message}}",
+      "initialTitle": "Pilih sumber data untuk peranti ini",
+      "initialDescription": "Pangkalan data setempat dan cloud kedua-duanya mempunyai data. Pilih sumber awal sebelum sync diteruskan.",
+      "initialSnapshotNote": "Snapshot setempat dibuat sebelum pilihan digunakan. Ia kekal tersedia dalam Backup Lokal untuk rollback.",
+      "useCloud": "Gunakan Data Cloud",
+      "keepLocal": "Kekalkan Data Setempat"
     },
     "manageFromAnywhere": "Urus kedai dari mana saja",
     "subscription": {
@@ -452,8 +457,8 @@
       "paymentNotDetected": "Pembayaran belum dikesan. Selesaikan dulu pembayarannya, ya.",
       "verifyFailed": "Gagal verifikasi pembayaran",
       "selectStoreFirst": "Pilih kedai terlebih dahulu di menu Urus Kedai.",
-      "syncSuccess": "Penyelarasan ke cloud berjaya",
-      "syncFailed": "Gagal menyelaraskan ke cloud"
+      "syncSuccess": "Sandaran berjaya dimuat naik ke awan",
+      "syncFailed": "Gagal memuat naik sandaran ke awan"
     },
     "voucher": {
       "title": "Kod promo / baucar",
@@ -574,6 +579,9 @@
     "storage": "Storan {{used}}/{{max}} MB",
     "remaining": "baki {{mb}} MB",
     "expiry": "Berkuat hingga {{date}}",
+    "legacyTitle": "Langganan Cloud lama ditemui",
+    "legacyDescription": "Langganan aktif anda tamat pada {{date}} tetapi belum dipautkan ke kedai. Pilih kedai sasaran untuk mengaktifkan backup dan sync tanpa bayaran semula.",
+    "legacyConnect": "Hubungkan langganan ke {{name}}",
     "note": "1 langganan ({{price}}/bulan) = 1 kedai online. Kedai offline percuma, tanpa had."
   },
   "cloudStore": {
@@ -637,6 +645,7 @@
     "upgrade": "Naik Taraf Pakej",
     "toast": {
       "bind": "Peranti ini disambungkan ke kedai.",
+      "bindRequiresEmpty": "Pangkalan data setempat ini mempunyai data. Gunakan aliran Hubungkan Sedia Ada supaya sumber data boleh dipilih dengan selamat.",
       "unbind": "Peranti diputuskan dari kedai.",
       "create": "Kedai berjaya dibuat.",
       "createFailed": "Gagal membuat kedai",
@@ -650,7 +659,8 @@
       "checkoutFailed": "Gagal memulakan checkout",
       "noBackup": "Belum ada backup cloud untuk kedai ini.",
       "backupSaved": "Backup terakhir dimuat turun ke peranti.",
-      "backupFailed": "Gagal memuat turun backup"
+      "backupFailed": "Gagal memuat turun backup",
+      "cannotDeleteActive": "Kedai yang sedang aktif tidak boleh dipadam. Putuskan peranti ini daripada kedai tersebut dahulu."
     },
     "syncActive": "Sinkronisasi automatik latar belakang aktif"
   },

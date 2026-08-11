@@ -10,7 +10,8 @@
  */
 
 import { db, type PosDatabase } from '@/lib/db';
-import { syncPush, syncPull, type SyncPushItem, type SyncTombstoneItem, type SyncPullResult } from '@/lib/cloud-api';
+import { syncPush, syncPull, CloudApiError, type SyncPushItem, type SyncTombstoneItem, type SyncPullRecord, type SyncPullResult, type SyncWinner } from '@/lib/cloud-api';
+import { captureLocalBackup } from '@/lib/local-backup';
 
 export const SYNC_TABLES = [
   'categories', 'products', 'suppliers', 'customers', 'stockIns', 'stockOuts',
@@ -19,6 +20,8 @@ export const SYNC_TABLES = [
   'stockOpnames', 'stockOpnameItems', 'cashierShifts',
 ] as const;
 
+const INITIAL_SYNC_TABLES = SYNC_TABLES.filter((tableName) => tableName !== 'users');
+
 type AnyRow = Record<string, unknown> & {
   id?: number;
   syncId?: string;
@@ -26,6 +29,11 @@ type AnyRow = Record<string, unknown> & {
   updatedAt?: Date | string;
   isDeleted?: number;
   deletedAt?: Date | null;
+};
+
+/** Field sensitif yang TIDAK boleh dikirim ke cloud (CLOUD-005). */
+const SENSITIVE_FIELDS: Record<string, string[]> = {
+  users: ['pinHash'],
 };
 
 /** Resolusi FK lokal dari syncId parent saat menerapkan pull. */
@@ -44,6 +52,39 @@ const FK_RESOLVE: Record<string, [syncField: string, parentTable: string, localF
     ['productSyncId', 'products', 'productId'],
   ],
 };
+
+const PULLED_DATE_FIELDS: Record<string, string[]> = {
+  categories: ['createdAt', 'deletedAt', 'updatedAt'],
+  products: ['createdAt', 'updatedAt', 'deletedAt'],
+  suppliers: ['createdAt', 'deletedAt', 'updatedAt'],
+  customers: ['createdAt', 'deletedAt', 'updatedAt'],
+  stockIns: ['date', 'updatedAt'],
+  stockOuts: ['date', 'updatedAt'],
+  hppHistory: ['date', 'updatedAt'],
+  stockLots: ['date', 'updatedAt'],
+  paymentMethods: ['createdAt', 'updatedAt'],
+  transactions: ['date', 'openedAt', 'closedAt', 'updatedAt'],
+  transactionItems: ['updatedAt'],
+  units: ['createdAt', 'deletedAt', 'updatedAt'],
+  users: ['createdAt', 'lastLoginAt', 'updatedAt'],
+  roles: ['createdAt', 'updatedAt'],
+  expenseCategories: ['createdAt', 'deletedAt', 'updatedAt'],
+  expenses: ['date', 'createdAt', 'deletedAt', 'updatedAt'],
+  debts: ['createdAt', 'settledAt', 'updatedAt'],
+  debtPayments: ['date', 'updatedAt'],
+  stockOpnames: ['date', 'updatedAt'],
+  stockOpnameItems: ['updatedAt'],
+  cashierShifts: ['openedAt', 'closedAt', 'updatedAt'],
+};
+
+function normalizePulledDates(tableName: string, data: AnyRow): void {
+  for (const field of PULLED_DATE_FIELDS[tableName] ?? []) {
+    const value = data[field];
+    if (typeof value !== 'string') continue;
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) data[field] = parsed;
+  }
+}
 
 export function toIso(value: Date | string | undefined): string {
   if (!value) return new Date(0).toISOString();
@@ -68,6 +109,9 @@ export async function collectPushPayload(target: PosDatabase = db): Promise<{
     if (rows.length === 0) continue;
     records[tableName] = rows.map((r) => {
       const { id: _id, syncId, syncedAt: _syncedAt, ...data } = r;
+      for (const field of SENSITIVE_FIELDS[tableName] ?? []) {
+        delete data[field];
+      }
       return { syncId: r.syncId ?? '', data, updatedAt: toIso(r.updatedAt) };
     });
   }
@@ -96,12 +140,26 @@ export async function markSynced(
     const table = target.table<AnyRow, number>(tableName);
     for (const item of items) {
       if (!set.has(item.syncId)) continue;
-      await table.filter((r) => r.syncId === item.syncId).modify({ syncedAt } as never);
+      const current = await table.filter((r) => r.syncId === item.syncId).toArray();
+      for (const row of current) {
+        // An edit may happen while the request is in flight. Do not mark the
+        // newer local version as synced by an older queued acknowledgement.
+        if (toIso(row.updatedAt) !== item.updatedAt) continue;
+        await table.update(row.id as number, { syncedAt } as never);
+      }
     }
   }
-  await target.deletedRecords
+  const currentTombstones = await target.deletedRecords
     .filter((r) => r.recordSyncId && set.has(String(r.recordSyncId)))
-    .modify({ syncedAt } as never);
+    .toArray();
+  for (const tombstone of currentTombstones) {
+    const payloadTombstone = payload.tombstones.find(
+      (item) => item.syncId === String(tombstone.recordSyncId),
+    );
+    if (payloadTombstone && toIso(tombstone.deletedAt) === payloadTombstone.deletedAt) {
+      await target.deletedRecords.update(tombstone.id as number, { syncedAt });
+    }
+  }
 }
 
 /** Resolve FK lokal dari syncId parent (cache per parent table). */
@@ -128,10 +186,44 @@ async function resolveFk(tableName: string, data: AnyRow, target: PosDatabase = 
 
 /** Terapkan hasil pull (LWW) ke DB lokal. Mengembalikan jumlah konflik LWW. */
 export async function applyPull(result: SyncPullResult, target: PosDatabase = db): Promise<number> {
-  let conflicts = 0;
-  for (const rec of result.records) {
+  // Include every sync table because resolveFk() may read a parent that is
+  // not present in this particular pull batch. A fixed tuple is required by
+  // Dexie's transaction overloads.
+  const transactionTables = [
+    target.categories,
+    target.products,
+    target.suppliers,
+    target.customers,
+    target.stockIns,
+    target.stockOuts,
+    target.hppHistory,
+    target.stockLots,
+    target.stockLotAllocations,
+    target.paymentMethods,
+    target.transactions,
+    target.transactionItems,
+    target.units,
+    target.users,
+    target.roles,
+    target.expenseCategories,
+    target.expenses,
+    target.debts,
+    target.debtPayments,
+    target.stockOpnames,
+    target.stockOpnameItems,
+    target.cashierShifts,
+    target.deletedRecords,
+  ] as const;
+
+  return target.transaction('rw', transactionTables, async () => {
+    let conflicts = 0;
+    for (const rec of result.records) {
     const serverTime = new Date(rec.updatedAt);
     const data = (rec.data ?? {}) as AnyRow;
+    normalizePulledDates(rec.table, data);
+    // User PIN adalah device-local credential. Worker payload sengaja tidak
+    // membawa pinHash, jadi jangan menimpa atau membuat user lokal tanpa PIN.
+    if (rec.table === 'users' && !('pinHash' in data)) continue;
     const table = target.table<AnyRow, number>(rec.table);
     const existing = await table.filter((r) => r.syncId === rec.syncId).first();
 
@@ -158,9 +250,10 @@ export async function applyPull(result: SyncPullResult, target: PosDatabase = db
         deletedAt: (data.deletedAt as Date | null) ?? null,
       } as never);
     }
-  }
+    }
 
-  for (const tomb of result.tombstones) {
+    for (const tomb of result.tombstones) {
+    if (tomb.table === 'users') continue;
     const table = target.table<AnyRow, number>(tomb.table);
     const existing = await table.filter((r) => r.syncId === tomb.syncId).first();
     if (!existing) continue;
@@ -178,11 +271,18 @@ export async function applyPull(result: SyncPullResult, target: PosDatabase = db
       await table.delete(existing.id as number);
     }
     conflicts++;
-  }
-  return conflicts;
+    }
+    return conflicts;
+  });
 }
 
-/** Push data dirty → tandai ack → pull → apply. Return ringkas untuk UI. */
+/** Maksimal batch pull dalam satu siklus syncNow (proteksi infinite loop). */
+const PULL_MAX_BATCHES = 200;
+
+/** Lock per storeId agar push/pull tidak overlap (CLOUD-009). */
+const syncInFlight = new Map<string, Promise<unknown>>();
+
+/** Push data dirty → tandai ack → pull (paginasi) → apply. Return ringkas untuk UI. */
 export async function syncNow(target: PosDatabase = db): Promise<{
   ok: boolean;
   message: string;
@@ -192,44 +292,228 @@ export async function syncNow(target: PosDatabase = db): Promise<{
   const storeId = settings?.cloudStoreId ?? null;
   if (!storeId) return { ok: false, message: 'Hubungkan toko ke cloud terlebih dahulu' };
 
-  const existingMeta = await target.syncMeta.get(1);
-  if (existingMeta?.initialSyncRequired) {
-    return { ok: false, message: 'Pilih sumber data sebelum initial sync antar-device' };
+  if (syncInFlight.has(storeId)) {
+    return { ok: false, message: 'Sinkronisasi sedang berjalan di perangkat ini' };
   }
 
-  const payload = await collectPushPayload(target);
-  if (Object.keys(payload.records).length > 0 || payload.tombstones.length > 0) {
+  // Reserve the lock before the first await after the check. Without this
+  // placeholder promise, two callers could both pass the check while waiting
+  // for syncMeta.get() and then start concurrent push/pull cycles.
+  let releaseLock!: () => void;
+  const lock = new Promise<void>((resolve) => {
+    releaseLock = resolve;
+  });
+  syncInFlight.set(storeId, lock);
+
+  try {
+    const existingMeta = await target.syncMeta.get(1);
+    if (existingMeta?.initialSyncRequired) {
+      return { ok: false, message: 'Pilih sumber data sebelum initial sync antar-device' };
+    }
+
+    const task = (async () => {
+    const queuedResult = await flushQueuedBatch(target, storeId, settings.deviceId);
+    if (!queuedResult.ok) {
+      await recordSyncError(target, queuedResult.message || 'Queue sync belum selesai');
+      return { ok: false, message: queuedResult.message || 'Queue sync belum selesai' };
+    }
+    let pushConflicts = queuedResult.conflicts ?? 0;
+
+    const payload = await collectPushPayload(target);
+    if (Object.keys(payload.records).length > 0 || payload.tombstones.length > 0) {
+      try {
+        const pushed = await syncPush(storeId, payload, settings.deviceId);
+        await markSynced(payload, pushed.accepted, pushed.serverTime, target);
+        if (pushed.winners?.length) {
+          pushConflicts += await applyPushWinners(pushed.winners, target);
+        }
+      } catch (err) {
+        if (isRetryablePushError(err)) {
+          await enqueuePushBatch(target, storeId, payload, err);
+        }
+        await recordSyncError(target, err);
+        return { ok: false, message: err instanceof Error ? err.message : 'Push gagal' };
+      }
+    }
+
     try {
-      const pushed = await syncPush(storeId, payload, settings.deviceId);
-      await markSynced(payload, pushed.accepted, pushed.serverTime, target);
+      const meta = await target.syncMeta.get(1);
+      // CLOUD-004: pull berjalan multi-batch dengan keyset cursor "ISO|id".
+      // Cursor hanya disimpan setelah seluruh batch sukses diterapkan.
+      const since = meta?.lastPullCursor ?? new Date(0).toISOString();
+      const records: SyncPullRecord[] = [];
+      const tombstones: SyncTombstoneItem[] = [];
+      let serverTime = '';
+      let cursor = since;
+      let batches = 0;
+      let hasMore = true;
+      while (hasMore && batches < PULL_MAX_BATCHES) {
+        const res: SyncPullResult = await syncPull(storeId, cursor);
+        records.push(...res.records);
+        tombstones.push(...res.tombstones);
+        serverTime = res.serverTime;
+        cursor = res.nextCursor ?? res.cursor ?? res.serverTime;
+        hasMore = !!res.hasMore;
+        batches++;
+        if (!res.nextCursor) break; // worker baru: berhenti bila batch terakhir
+      }
+
+      const conflicts = pushConflicts + await applyPull({ records, tombstones, serverTime }, target);
+      await target.syncMeta.put({
+        id: 1,
+        lastPullCursor: cursor,
+        lastSyncAt: new Date(),
+        lastSyncError: null,
+        lastConflictCount: conflicts,
+        initialSyncRequired: false,
+      });
+      return {
+        ok: true,
+        message: `${records.length + tombstones.length} perubahan dari cloud`,
+        conflicts,
+      };
     } catch (err) {
       await recordSyncError(target, err);
-      return { ok: false, message: err instanceof Error ? err.message : 'Push gagal' };
+      return { ok: false, message: err instanceof Error ? err.message : 'Pull gagal' };
     }
+    })();
+    return await task;
+  } finally {
+    releaseLock();
+    syncInFlight.delete(storeId);
+  }
+}
+
+type PushPayload = { records: Record<string, SyncPushItem[]>; tombstones: SyncTombstoneItem[] };
+
+async function applyPushWinners(winners: SyncWinner[], target: PosDatabase): Promise<number> {
+  return applyPull({
+    records: winners
+      .filter((winner) => !winner.deleted)
+      .map(({ table, syncId, data, updatedAt }) => ({ table, syncId, data, updatedAt })),
+    tombstones: winners
+      .filter((winner) => winner.deleted)
+      .map(({ table, syncId, deletedAt, updatedAt }) => ({
+        table,
+        syncId,
+        deletedAt: deletedAt ?? updatedAt,
+      })),
+    serverTime: new Date().toISOString(),
+  }, target);
+}
+
+function isRetryablePushError(err: unknown): boolean {
+  if (!(err instanceof CloudApiError)) return true;
+  // Invalid payload, auth, entitlement, and quota errors need user action;
+  // retry network/server/rate-limit failures via the persistent queue.
+  return err.status === 408 || err.status === 429 || err.status >= 500;
+}
+
+function retryDelayMs(attempts: number): number {
+  return Math.min(60 * 60 * 1000, Math.max(60 * 1000, 2 ** Math.min(attempts, 10) * 1000));
+}
+
+async function enqueuePushBatch(
+  target: PosDatabase,
+  storeId: string,
+  payload: PushPayload,
+  error: unknown,
+): Promise<void> {
+  const message = error instanceof Error ? error.message : String(error);
+  const now = new Date();
+  await target.syncQueue.add({
+    storeId,
+    createdAt: now,
+    payload: JSON.stringify(payload),
+    attempts: 1,
+    nextAttemptAt: new Date(now.getTime() + retryDelayMs(1)),
+    lastError: message,
+  });
+}
+
+/** Retry one due batch. Returns false when the current sync must stop. */
+async function flushQueuedBatch(
+  target: PosDatabase,
+  storeId: string,
+  deviceId: string,
+): Promise<{ ok: boolean; message?: string; conflicts?: number }> {
+  const now = Date.now();
+  const queued = await target.syncQueue.where('storeId').equals(storeId).toArray();
+  const batch = queued
+    .filter((item) => item.nextAttemptAt.getTime() <= now)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+  if (!batch) {
+    const waiting = queued.sort((a, b) => a.nextAttemptAt.getTime() - b.nextAttemptAt.getTime())[0];
+    if (waiting) return { ok: false, message: waiting.lastError || 'Menunggu retry sync berikutnya' };
+    return { ok: true };
+  }
+
+  let payload: PushPayload;
+  try {
+    payload = JSON.parse(batch.payload) as PushPayload;
+  } catch {
+    await target.syncQueue.delete(batch.id as number);
+    return { ok: false, message: 'Queue sync rusak dan telah dibuang' };
   }
 
   try {
-    const meta = await target.syncMeta.get(1);
-    const since = meta?.lastPullCursor ?? new Date(0).toISOString();
-    const pulled = await syncPull(storeId, since);
-    const conflicts = await applyPull(pulled, target);
-    await target.syncMeta.put({
-      id: 1,
-      lastPullCursor: pulled.serverTime,
-      lastSyncAt: new Date(),
-      lastSyncError: null,
-      lastConflictCount: conflicts,
-      initialSyncRequired: false,
-    });
-    return {
-      ok: true,
-      message: `${pulled.records.length + pulled.tombstones.length} perubahan dari cloud`,
-      conflicts,
-    };
+    const pushed = await syncPush(storeId, payload, deviceId);
+    await markSynced(payload, pushed.accepted, pushed.serverTime, target);
+    const conflicts = pushed.winners?.length ? await applyPushWinners(pushed.winners, target) : 0;
+    await target.syncQueue.delete(batch.id as number);
+    return { ok: true, conflicts };
   } catch (err) {
-    await recordSyncError(target, err);
-    return { ok: false, message: err instanceof Error ? err.message : 'Pull gagal' };
+    const attempts = batch.attempts + 1;
+    const retryable = isRetryablePushError(err);
+    await target.syncQueue.update(batch.id as number, {
+      attempts,
+      nextAttemptAt: new Date(Date.now() + (retryable ? retryDelayMs(attempts) : 24 * 60 * 60 * 1000)),
+      lastError: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false, message: err instanceof Error ? err.message : 'Retry push gagal' };
   }
+}
+
+export type InitialSyncChoice = 'cloud' | 'local';
+
+/**
+ * Selesaikan initial sync yang sebelumnya diblokir oleh `initialSyncRequired`.
+ * Selalu membuat snapshot lokal sebelum operasi destructive/merge.
+ */
+export async function resolveInitialSync(
+  choice: InitialSyncChoice,
+  target: PosDatabase = db,
+): Promise<{ ok: boolean; message: string; conflicts?: number }> {
+  await captureLocalBackup(target);
+  await target.syncQueue.clear();
+
+  if (choice === 'cloud') {
+    for (const tableName of INITIAL_SYNC_TABLES) {
+      await target.table<AnyRow, number>(tableName).clear();
+    }
+    await target.deletedRecords.clear();
+  } else {
+    const now = new Date();
+    for (const tableName of INITIAL_SYNC_TABLES) {
+      await target.table<AnyRow, number>(tableName).toCollection().modify((row) => {
+        row.updatedAt = now;
+        row.syncedAt = null;
+      });
+    }
+    await target.deletedRecords
+      .filter((row) => !!row.recordSyncId)
+      .modify({ syncedAt: null });
+  }
+
+  await target.syncMeta.put({
+    id: 1,
+    lastPullCursor: null,
+    lastSyncAt: null,
+    lastSyncError: null,
+    lastConflictCount: 0,
+    initialSyncRequired: false,
+  });
+  return syncNow(target);
 }
 
 /** Simpan pesan error sync terakhir ke syncMeta (UX: tampil di CloudHub). */
@@ -257,6 +541,22 @@ export async function countPendingChanges(target: PosDatabase = db): Promise<num
   }
   count += await target.deletedRecords.filter((r) => r.syncedAt === null && !!r.recordSyncId).count();
   return count;
+}
+
+/**
+ * Apakah DB lokal sudah memiliki data yang berisiko tercampur saat direct bind
+ * ke cloud store lain? Dipakai UI sebagai safety gate sebelum binding tanpa
+ * initial-sync wizard (CLOUD-002/CLOUD-006).
+ */
+export async function hasLocalSyncData(target: PosDatabase = db): Promise<boolean> {
+  const counts = await Promise.all([
+    target.products.count(),
+    target.transactions.count(),
+    target.transactionItems.count(),
+    target.stockLots.count(),
+    target.stockOpnames.count(),
+  ]);
+  return counts.some((count) => count > 0);
 }
 
 /** Status sync ringkas untuk UI (CloudHub). */

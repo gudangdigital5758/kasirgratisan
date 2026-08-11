@@ -130,6 +130,8 @@ export async function consumeFifo(
       await target.products.update(product.id!, {
         stock: round2((fresh.stock ?? 0) - amount),
         updatedAt: new Date(),
+        // CLOUD-003: perubahan stok harus ikut sync → tandai dirty.
+        syncedAt: null,
       });
     }
     const legacyCost = Math.round(fresh.hpp ?? 0) * amount;
@@ -157,6 +159,7 @@ export async function consumeFifo(
     await target.stockLots.update(lot.id!, {
       quantityRemaining: round2(lot.quantityRemaining - take),
       updatedAt: new Date(),
+      syncedAt: null,
     });
     costAmount += take * lot.unitCost;
     remaining = round2(remaining - take);
@@ -173,7 +176,7 @@ export async function consumeFifo(
     const after = await lotsForProduct(product.id!, target);
     const stock = round2(after.reduce((s, l) => s + l.quantityRemaining, 0));
     const hpp = after.length > 0 ? after[0].unitCost : Math.round(fresh.hpp ?? 0);
-    await target.products.update(product.id!, { stock, hpp, updatedAt: new Date() });
+    await target.products.update(product.id!, { stock, hpp, updatedAt: new Date(), syncedAt: null });
   }
 
   const cost = Math.round(costAmount);
@@ -209,12 +212,14 @@ export async function restoreToLot(
     await target.stockLots.update(lot.id!, {
       quantityRemaining: round2(lot.quantityRemaining + qty),
       updatedAt: new Date(),
+      syncedAt: null,
     });
     const product = await target.products.get(allocation.productId);
     if (product && isStockManaged(product)) {
       await target.products.update(product.id!, {
         stock: round2((product.stock ?? 0) + qty),
         updatedAt: new Date(),
+        syncedAt: null,
       });
     }
     return;
@@ -236,6 +241,7 @@ export async function restoreToLot(
     await target.products.update(product.id!, {
       stock: round2((product.stock ?? 0) + qty),
       updatedAt: new Date(),
+      syncedAt: null,
     });
   }
 }
@@ -269,6 +275,7 @@ export async function reconcileProductFromLots(
     stock,
     hpp,
     updatedAt: new Date(),
+    syncedAt: null,
   });
 }
 

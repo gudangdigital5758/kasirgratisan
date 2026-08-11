@@ -374,9 +374,9 @@
       "fallbackName": "Google Account",
       "logout": "Logout"
     },
-    "syncNow": "Sync Now",
-    "lastSync": "Last sync: {{time}}",
-    "neverSynced": "Never synced",
+    "syncNow": "Backup Now",
+    "lastSync": "Last backup: {{time}}",
+    "neverSynced": "Never backed up",
     "realSync": {
       "title": "Cross-Device Sync",
       "button": "Sync Now",
@@ -384,7 +384,12 @@
       "never": "Cross-device sync never run yet",
       "dirty": "{{count}} changes waiting to sync",
       "conflicts": "{{count}} conflicts resolved (newest version wins)",
-      "error": "Last sync failed: {{message}}"
+      "error": "Last sync failed: {{message}}",
+      "initialTitle": "Choose the data source for this device",
+      "initialDescription": "Both the local database and cloud contain data. Choose the initial source before sync continues.",
+      "initialSnapshotNote": "A local snapshot is created before applying your choice. It remains available under Local Backup for rollback.",
+      "useCloud": "Use Cloud Data",
+      "keepLocal": "Keep Local Data"
     },
     "manageFromAnywhere": "Manage store from anywhere",
     "subscription": {
@@ -452,8 +457,8 @@
       "paymentNotDetected": "Payment not yet detected. Please complete the payment first.",
       "verifyFailed": "Failed to verify payment",
       "selectStoreFirst": "Select a store first in the Manage Store menu.",
-      "syncSuccess": "Cloud sync successful",
-      "syncFailed": "Failed to sync to cloud"
+      "syncSuccess": "Backup uploaded to the cloud",
+      "syncFailed": "Failed to upload backup to the cloud"
     },
     "voucher": {
       "title": "Promo / voucher code",
@@ -574,6 +579,9 @@
     "storage": "Storage {{used}}/{{max}} MB",
     "remaining": "{{mb}} MB left",
     "expiry": "Valid until {{date}}",
+    "legacyTitle": "Legacy Cloud subscription found",
+    "legacyDescription": "Your active subscription ends on {{date}} and is not linked to a store. Choose a target store to enable backup and sync without paying again.",
+    "legacyConnect": "Connect subscription to {{name}}",
     "note": "1 subscription ({{price}}/month) = 1 online store. Offline stores are free, unlimited."
   },
   "cloudStore": {
@@ -638,6 +646,7 @@
     "upgrade": "Upgrade Plan",
     "toast": {
       "bind": "This device is connected to the store.",
+      "bindRequiresEmpty": "This local database contains data. Use the Connect Existing flow so the data source can be selected safely.",
       "unbind": "Device disconnected from the store.",
       "create": "Store created successfully.",
       "createFailed": "Failed to create store",
@@ -651,7 +660,8 @@
       "checkoutFailed": "Failed to start checkout",
       "noBackup": "No cloud backup for this store yet.",
       "backupSaved": "Latest backup downloaded to this device.",
-      "backupFailed": "Failed to download backup"
+      "backupFailed": "Failed to download backup",
+      "cannotDeleteActive": "The active store cannot be deleted. Disconnect this device from the store first."
     }
   },
   "transactionHistory": {

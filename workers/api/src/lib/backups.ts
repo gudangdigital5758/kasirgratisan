@@ -16,9 +16,10 @@ export function r2Configured(env: Env): boolean {
   return Boolean(env.BACKUP_BUCKET);
 }
 
-export function fileKeyFor(userId: string, fileName: string): string {
+export function fileKeyFor(userId: string, fileName: string, storeId?: string | null): string {
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
-  return `backups/${userId}/${crypto.randomUUID()}-${safe}`;
+  const scope = storeId || 'account';
+  return `backups/${userId}/${scope}/${crypto.randomUUID()}-${safe}`;
 }
 
 export async function putBackupObject(
@@ -141,4 +142,17 @@ export async function cleanupExpiredBackups(env: Env, retentionDays = 30): Promi
   }
 
   return { deleted, errors, cutoffDate: cutoffIso };
+}
+
+/** Bersihkan reservation quota yang sudah expired/selesai agar metadata tidak tumbuh tanpa batas. */
+export async function cleanupQuotaReservations(env: Env): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const now = encodeURIComponent(new Date().toISOString());
+  const completedCutoff = new Date();
+  completedCutoff.setDate(completedCutoff.getDate() - 1);
+  const cutoff = encodeURIComponent(completedCutoff.toISOString());
+  await Promise.all([
+    sbDelete(env, `backup_quota_reservations?status=eq.pending&expires_at=lt.${now}`),
+    sbDelete(env, `backup_quota_reservations?status=in.(completed,released)&created_at=lt.${cutoff}`),
+  ]);
 }

@@ -37,6 +37,7 @@ export type {
   StoreSettings,
   StoreCustomField,
   SyncMeta,
+  SyncQueueBatch,
   LocalBackup,
 } from './db-schema';
 
@@ -106,13 +107,16 @@ export async function sanitizeDatabaseDates() {
   await sanitizeTableDates(db.stockLotAllocations, ['updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.paymentMethods, ['createdAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.transactions, ['date', 'openedAt', 'closedAt', 'updatedAt', 'syncedAt']);
+  await sanitizeTableDates(db.transactionItems, ['updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.users, ['createdAt', 'lastLoginAt', 'updatedAt', 'syncedAt']);
+  await sanitizeTableDates(db.roles, ['createdAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.units, ['createdAt', 'deletedAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.expenseCategories, ['createdAt', 'deletedAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.expenses, ['date', 'createdAt', 'deletedAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.debts, ['createdAt', 'settledAt', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.debtPayments, ['date', 'updatedAt', 'syncedAt']);
   await sanitizeTableDates(db.stockOpnames, ['date', 'updatedAt', 'syncedAt']);
+  await sanitizeTableDates(db.stockOpnameItems, ['syncedAt']);
   await sanitizeTableDates(db.deletedRecords, ['deletedAt', 'syncedAt']);
   await sanitizeTableDates(db.storeSettings, ['lastBackupAt', 'lastCloudBackupAt']);
   await sanitizeTableDates(db.cashierShifts, ['openedAt', 'closedAt', 'updatedAt', 'syncedAt']);
@@ -127,9 +131,11 @@ export function setupSyncHooks(db: PosDatabase) {
     'units',
     'paymentMethods',
     'users',
+    'roles',
     'expenseCategories',
     'expenses',
     'transactions',
+    'transactionItems',
     'stockIns',
     'stockOuts',
     'hppHistory',
@@ -138,6 +144,7 @@ export function setupSyncHooks(db: PosDatabase) {
     'debts',
     'debtPayments',
     'stockOpnames',
+    'stockOpnameItems',
     'cashierShifts',
   ];
 
@@ -173,13 +180,19 @@ export function setupSyncHooks(db: PosDatabase) {
     });
   });
 
-  // Track hard deletes in the deletedRecords tombstone table
+  // Track hard deletes in the deletedRecords tombstone table.
+  // CLOUD-003/CLOUD-010: tabel child (item transaksi, alokasi batch, opname item,
+  // roles) ikut dicatat agar penghapusan menyebar ke device lain.
   const hardDeleteTables = [
     'paymentMethods',
     'users',
     'transactions',
+    'transactionItems',
+    'stockLotAllocations',
+    'stockOpnameItems',
     'debts',
-    'stockOpnames'
+    'stockOpnames',
+    'roles',
   ];
 
   hardDeleteTables.forEach((tableName) => {
@@ -187,13 +200,15 @@ export function setupSyncHooks(db: PosDatabase) {
     table.hook('deleting', (primKey, obj) => {
       bumpChangeCounter();
       const rec = (obj ?? {}) as Record<string, unknown>;
+      // Catat tombstone setelah delete commit (pola setTimeout). Tidak memakai
+      // promise hook 'deleting' karena Dexie tidak menjamin await di sana.
       setTimeout(() => {
         db.deletedRecords.add({
           tableName,
           recordId: primKey,
           recordSyncId: typeof rec.syncId === 'string' ? rec.syncId : undefined,
           deletedAt: new Date(),
-          syncedAt: null
+          syncedAt: null,
         }).catch((err) => {
           console.error(`Failed to record deletedRecord tombstone for ${tableName} (ID: ${primKey}):`, err);
         });

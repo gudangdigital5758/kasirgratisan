@@ -116,6 +116,8 @@ export interface CloudUser {
 export interface CloudBackup {
   id: string;
   userId?: string;
+  /** Cloud store scope; null means legacy account-level backup. */
+  storeId?: string | null;
   fileName: string;
   fileKey?: string;
   fileSize: number;
@@ -159,6 +161,9 @@ export interface UserProfile {
   user: CloudUser;
   subscription: Subscription | null;
   syncSubscription: Subscription | null;
+  /** Subscription legacy account-level yang belum memiliki store_id. */
+  legacyMigrationRequired?: boolean;
+  legacySubscription?: Subscription | null;
   storageUsage: StorageUsage;
   backups: CloudBackup[];
   /** Daftar toko cloud + entitlement per toko (model per-toko berbayar). */
@@ -303,6 +308,17 @@ export interface SyncPushResult {
   accepted: string[];
   count: number;
   serverTime: string;
+  /** Versi server aktual untuk setiap item yang di-upsert/ditolak LWW. */
+  winners?: SyncWinner[];
+}
+
+export interface SyncWinner {
+  table: string;
+  syncId: string;
+  data: unknown;
+  updatedAt: string;
+  deleted: boolean;
+  deletedAt: string | null;
 }
 
 export interface SyncPullRecord {
@@ -316,6 +332,11 @@ export interface SyncPullResult {
   records: SyncPullRecord[];
   tombstones: SyncTombstoneItem[];
   serverTime: string;
+  /** Keyset cursor batch berikutnya ("id:<n>"); ada bila hasMore=true. */
+  nextCursor?: string;
+  /** Cursor akhir batch ini — client menyimpannya sebagai lastPullCursor. */
+  cursor?: string;
+  hasMore?: boolean;
 }
 
 /** Push batch record + tombstone (LWW server-side). */
@@ -334,7 +355,7 @@ export async function syncPush(
   return res.json() as Promise<SyncPushResult>;
 }
 
-/** Pull record yang berubah sejak `since` (ISO server time). */
+/** Pull record yang berubah sejak cursor `server_updated_at|sync_records.id`. */
 export async function syncPull(storeId: string, since: string): Promise<SyncPullResult> {
   const qs = new URLSearchParams({ storeId, since });
   const res = await fetch(`${BASE_URL}/api/sync/pull?${qs.toString()}`, { headers: authHeaders() });
@@ -390,10 +411,16 @@ export async function uploadBackup(jsonString: string, fileName: string, storeId
   return data.backup;
 }
 
-/** Unduh isi backup (JSON) untuk restore. */
+/** Unduh isi backup (JSON) untuk restore. storeId wajib agar server dapat
+ *  memvalidasi backup milik toko target (CLOUD-007). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function downloadBackup(id: string): Promise<any> {
-  const res = await fetch(`${BASE_URL}/api/backups/${id}/download`, { headers: authHeaders() });
+export async function downloadBackup(id: string, storeId?: string): Promise<any> {
+  const qs = new URLSearchParams();
+  if (storeId) qs.set('storeId', storeId);
+  const query = qs.toString();
+  const res = await fetch(`${BASE_URL}/api/backups/${id}/download${query ? `?${query}` : ''}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) await parseError(res);
   return res.json();
 }

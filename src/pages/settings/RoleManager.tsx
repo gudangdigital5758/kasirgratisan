@@ -67,7 +67,9 @@ export default function RoleManager() {
     if (!editRole?.id) return;
     setSaving(true);
     try {
-      const patch: Partial<Role> = { permissions: rolePerms, updatedAt: new Date() };
+      // CLOUD-003: jangan set updatedAt manual — hook sync yang menetapkan
+      // updatedAt + me-reset syncedAt agar edit role ikut tersinkron.
+      const patch: Partial<Role> = { permissions: rolePerms };
       if (editRole.isBuiltIn === 0 && roleName.trim()) patch.name = roleName.trim();
       await db.roles.update(editRole.id, patch);
       await syncUsersToRole({ id: editRole.id, permissions: rolePerms });

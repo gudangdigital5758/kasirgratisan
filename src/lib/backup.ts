@@ -12,7 +12,11 @@ export const BACKUP_VERSION = 9;
 
 // Bentuk longgar — file backup bisa berasal dari versi lama (v1–v6).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BackupData = Record<string, any> & { version?: number };
+export type BackupData = Record<string, any> & {
+  version?: number;
+  /** True when local credentials were intentionally omitted from cloud backup. */
+  cloudCredentialRedacted?: boolean;
+};
 
 /** Kumpulkan seluruh isi database menjadi satu objek backup. */
 export async function buildBackupData(target: PosDatabase = db) {
@@ -53,6 +57,34 @@ export function backupFileName(date = new Date()): string {
 /** Bangun JSON string siap simpan/upload. */
 export async function buildBackupJsonString(): Promise<string> {
   return JSON.stringify(await buildBackupData(), null, 2);
+}
+
+/**
+ * JSON backup khusus CLOUD (CLOUD-005): sama dengan buildBackupJsonString()
+ * tetapi credential lokal dihapus agar tidak tersimpan di R2:
+ *  - `users.pinHash` (hash PIN tidak valid lintas device & bersifat sensitif)
+ *  - `storeSettings.deviceId` (identitas device; diregenerasi saat restore)
+ * Backup file lokal tetap memakai buildBackupJsonString() (tanpa stripping)
+ * agar restore lokal tidak kehilangan akses login.
+ */
+export async function buildCloudBackupJsonString(target: PosDatabase = db): Promise<string> {
+  const data = (await buildBackupData(target)) as BackupData;
+  data.cloudCredentialRedacted = true;
+  if (Array.isArray(data.users)) {
+    data.users = data.users.map((u) => {
+      const clean: Partial<import('@/lib/db').User> = { ...u };
+      delete clean.pinHash;
+      return clean as import('@/lib/db').User;
+    });
+  }
+  if (Array.isArray(data.storeSettings)) {
+    data.storeSettings = data.storeSettings.map((s) => {
+      const clean: Partial<import('@/lib/db').StoreSettings> = { ...s };
+      delete clean.deviceId;
+      return clean as import('@/lib/db').StoreSettings;
+    });
+  }
+  return JSON.stringify(data, null, 2);
 }
 
 /**
@@ -99,6 +131,9 @@ async function clearAllTables(includeConditional: BackupData) {
     await db.cashierShifts.clear();
   }
   await db.deletedRecords.clear();
+  // A queued batch belongs to the pre-restore local state and must not be
+  // pushed after the restore completes.
+  await db.syncQueue.clear();
 }
 
 /**
@@ -107,6 +142,17 @@ async function clearAllTables(includeConditional: BackupData) {
  */
 export async function restoreFromBackupData(data: unknown): Promise<void> {
   validateBackupData(data);
+
+  const cloudCredentialRedacted = data.cloudCredentialRedacted === true;
+  const localSettingsBeforeRestore = await db.storeSettings.toCollection().first();
+  const localUsersBeforeRestore = cloudCredentialRedacted ? await db.users.toArray() : [];
+
+  // Cloud backups deliberately do not contain usable local PIN hashes. Keep
+  // existing users on this device; on a fresh device, avoid importing unusable
+  // user rows and disable multi-user until the owner creates local accounts.
+  if (cloudCredentialRedacted) {
+    data.users = undefined;
+  }
 
   // Snapshot untuk rollback.
   const snapshot = {
@@ -132,6 +178,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     stockOpnames: await db.stockOpnames.toArray(),
     stockOpnameItems: await db.stockOpnameItems.toArray(),
     deletedRecords: await db.deletedRecords.toArray(),
+    syncQueue: await db.syncQueue.toArray(),
     cashierShifts: await db.cashierShifts.toArray(),
   };
 
@@ -192,8 +239,18 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
     // cloudStoreId bersifat device-specific — jangan bawa dari backup
     // supaya user harus pilih ulang toko setelah restore.
     const restoredSettings = await db.storeSettings.toCollection().first();
-    if (restoredSettings?.id && restoredSettings.cloudStoreId) {
-      await db.storeSettings.update(restoredSettings.id, { cloudStoreId: null });
+    if (restoredSettings?.id) {
+      const patch: Partial<import('@/lib/db').StoreSettings> = {};
+      if (restoredSettings.cloudStoreId) patch.cloudStoreId = null;
+      if (!restoredSettings.deviceId) {
+        patch.deviceId = localSettingsBeforeRestore?.deviceId ?? crypto.randomUUID();
+      }
+      if (cloudCredentialRedacted && localUsersBeforeRestore.length === 0) {
+        patch.multiUserEnabled = false;
+      }
+      if (Object.keys(patch).length > 0) {
+        await db.storeSettings.update(restoredSettings.id, patch);
+      }
     }
 
     // transactionItems (v2+) atau migrasi dari items[] embedded (v1).
@@ -240,6 +297,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       await db.stockOpnames.clear();
       await db.stockOpnameItems.clear();
       await db.deletedRecords.clear();
+      await db.syncQueue.clear();
       await db.cashierShifts.clear();
 
       if (snapshot.categories.length) await db.categories.bulkAdd(snapshot.categories);
@@ -264,6 +322,7 @@ export async function restoreFromBackupData(data: unknown): Promise<void> {
       if (snapshot.stockOpnames.length) await db.stockOpnames.bulkAdd(snapshot.stockOpnames);
       if (snapshot.stockOpnameItems.length) await db.stockOpnameItems.bulkAdd(snapshot.stockOpnameItems);
       if (snapshot.deletedRecords.length) await db.deletedRecords.bulkAdd(snapshot.deletedRecords);
+      if (snapshot.syncQueue.length) await db.syncQueue.bulkAdd(snapshot.syncQueue);
       if (snapshot.cashierShifts?.length) await db.cashierShifts.bulkAdd(snapshot.cashierShifts);
     } catch {
       throw new Error('Import gagal dan rollback gagal. Coba restore dari file backup.');

@@ -42,7 +42,8 @@ import {
 } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { removeStoreByCloudId, getActiveStoreKey } from '@/lib/store-registry';
+import { removeStoreByCloudId, getActiveStoreKey, bindActiveLocalStoreToCloud, storeRegistry, updateStore } from '@/lib/store-registry';
+import { hasLocalSyncData } from '@/lib/sync';
 
 const LOCALES: Record<string, Locale> = { id: idLocale, en: enUS, ms };
 
@@ -107,13 +108,19 @@ export default function CloudStoreSettings() {
 
   const handleBind = async (storeId: string) => {
     if (!storeSettings?.id) return;
+    if (storeId !== storeSettings.cloudStoreId && await hasLocalSyncData()) {
+      toast.error(t('cloudStore.toast.bindRequiresEmpty'));
+      return;
+    }
     await db.storeSettings.update(storeSettings.id, { cloudStoreId: storeId });
+    await bindActiveLocalStoreToCloud(storeId);
     toast.success(t('cloudStore.toast.bind'));
   };
 
   const handleUnbind = async () => {
     if (!storeSettings?.id) return;
     await db.storeSettings.update(storeSettings.id, { cloudStoreId: null });
+    await bindActiveLocalStoreToCloud(null);
     toast.success(t('cloudStore.toast.unbind'));
   };
 
@@ -153,7 +160,7 @@ export default function CloudStoreSettings() {
         toast.error(t('cloudStore.toast.noBackup'));
         return;
       }
-      const data = await downloadBackup(latest.id);
+      const data = await downloadBackup(latest.id, storeId);
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -185,6 +192,7 @@ export default function CloudStoreSettings() {
       // Auto-bind jika ini toko pertama
       if (stores.length === 0 && storeSettings?.id) {
         await db.storeSettings.update(storeSettings.id, { cloudStoreId: store.id });
+        await bindActiveLocalStoreToCloud(store.id);
         toast.success(t('cloudStore.toast.createBound'));
       } else {
         toast.success(t('cloudStore.toast.create'));
@@ -202,7 +210,13 @@ export default function CloudStoreSettings() {
     setBusy(`rename:${id}`);
     try {
       const updated = await renameStore(id, name);
-      setStores((prev) => prev.map((s) => (s.id === id ? updated : s)));
+      // Worker response contains only store metadata; preserve entitlement and
+      // counters already loaded in the card (CLOUD-012).
+      setStores((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+      if (activeStoreId === id && storeSettings?.id) {
+        await db.storeSettings.update(storeSettings.id, { storeName: name });
+        await updateStore(getActiveStoreKey(), { name });
+      }
       setEditingId(null);
       setEditName('');
       toast.success(t('cloudStore.toast.rename'));
@@ -214,6 +228,17 @@ export default function CloudStoreSettings() {
   };
 
   const handleDelete = async (id: string) => {
+    // CLOUD-001: toko yang sedang dipakai (aktif) tidak boleh dihapus —
+    // user harus memutuskan/berpindah ke toko lain dulu (DECISIONS 2026-08-08).
+    const activeEntry = await storeRegistry.stores
+      .where('storeKey')
+      .equals(getActiveStoreKey())
+      .first();
+    if (activeStoreId === id || activeEntry?.cloudStoreId === id) {
+      toast.error(t('cloudStore.toast.cannotDeleteActive'));
+      setConfirmDeleteId(null);
+      return;
+    }
     setBusy(`delete:${id}`);
     try {
       await deleteStore(id);
@@ -337,6 +362,15 @@ export default function CloudStoreSettings() {
                     const isEditing = editingId === store.id;
                     const isDeleting = confirmDeleteId === store.id;
                     const counts = store._count;
+                    const entitlement = store.entitlement ?? {
+                      hasSync: false,
+                      syncExpiry: null,
+                      isLifetime: false,
+                      storageLimitMb: 0,
+                      backupBytes: 0,
+                      usedMb: 0,
+                      remainingMb: 0,
+                    };
 
                     return (
                       <div
@@ -410,14 +444,16 @@ export default function CloudStoreSettings() {
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive"
-                                  onClick={() => setConfirmDeleteId(store.id)}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                {!isBound && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive"
+                                    onClick={() => setConfirmDeleteId(store.id)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             {counts && (
@@ -432,39 +468,39 @@ export default function CloudStoreSettings() {
                             </p>
 
                             {/* Langganan per toko + penyimpanan per toko + perpanjangan */}
-                            {store.entitlement && (
+                            {(
                               <div className="rounded-lg bg-muted/40 p-2.5 space-y-2">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="text-[10px] text-muted-foreground">{t('cloudStore.plan')}</span>
-                                  {store.entitlement.hasSync ? (
+                                  {entitlement.hasSync ? (
                                     <span className="text-[10px] font-semibold text-success">{t('cloudStore.planActive')}</span>
                                   ) : (
                                     <span className="text-[10px] font-semibold text-warning">{t('cloudStore.planInactive')}</span>
                                   )}
                                 </div>
-                                {store.entitlement.hasSync && (
+                                {entitlement.hasSync && (
                                   <>
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-[10px] text-muted-foreground">{t('cloudStore.storage')}</span>
                                       <span className="text-[10px]">
-                                        {store.entitlement.usedMb} / {store.entitlement.storageLimitMb} MB · {t('cloudStore.storageRemaining', { mb: Math.max(0, store.entitlement.storageLimitMb - store.entitlement.usedMb) })}
+                                        {entitlement.usedMb} / {entitlement.storageLimitMb} MB · {t('cloudStore.storageRemaining', { mb: Math.max(0, entitlement.storageLimitMb - entitlement.usedMb) })}
                                       </span>
                                     </div>
                                     <Progress
-                                      value={Math.min(100, (store.entitlement.usedMb / (store.entitlement.storageLimitMb || 1)) * 100)}
+                                      value={Math.min(100, (entitlement.usedMb / (entitlement.storageLimitMb || 1)) * 100)}
                                       className="h-1.5"
                                     />
-                                    {store.entitlement.syncExpiry && (
+                                    {entitlement.syncExpiry && (
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="text-[10px] text-muted-foreground">{t('cloudStore.expiry')}</span>
                                         <span className="text-[10px]">
-                                          {format(new Date(store.entitlement.syncExpiry), 'dd MMM yyyy', { locale: dateLocale })}
+                                          {format(new Date(entitlement.syncExpiry), 'dd MMM yyyy', { locale: dateLocale })}
                                         </span>
                                       </div>
                                     )}
                                   </>
                                 )}
-                                {!store.entitlement.hasSync && store.entitlement.backupBytes > 0 && (
+                                {!entitlement.hasSync && entitlement.backupBytes > 0 && (
                                   <p className="text-[10px] text-warning leading-snug">
                                     {t('cloudStore.expiredNote')}
                                   </p>
@@ -503,20 +539,20 @@ export default function CloudStoreSettings() {
                                     <div className="flex gap-1.5">
                                       <Button
                                         size="sm"
-                                        variant={store.entitlement.hasSync ? 'outline' : 'default'}
+                                        variant={entitlement.hasSync ? 'outline' : 'default'}
                                         className="h-7 text-xs flex-1 gap-1"
                                         onClick={() => {
                                           setSubStoreId(store.id);
                                           setSubDuration(1);
                                         }}
                                       >
-                                        {store.entitlement.hasSync ? (
+                                        {entitlement.hasSync ? (
                                           <><RefreshCw className="w-3 h-3" /> {t('cloudStore.renew')}</>
                                         ) : (
                                           <><Package className="w-3 h-3" /> {t('cloudStore.subscribe')}</>
                                         )}
                                       </Button>
-                                      {!store.entitlement.hasSync && store.entitlement.backupBytes > 0 && (
+                                      {!entitlement.hasSync && entitlement.backupBytes > 0 && (
                                         <Button
                                           size="sm"
                                           variant="outline"
