@@ -192,6 +192,11 @@ export async function syncNow(target: PosDatabase = db): Promise<{
   const storeId = settings?.cloudStoreId ?? null;
   if (!storeId) return { ok: false, message: 'Hubungkan toko ke cloud terlebih dahulu' };
 
+  const existingMeta = await target.syncMeta.get(1);
+  if (existingMeta?.initialSyncRequired) {
+    return { ok: false, message: 'Pilih sumber data sebelum initial sync antar-device' };
+  }
+
   const payload = await collectPushPayload(target);
   if (Object.keys(payload.records).length > 0 || payload.tombstones.length > 0) {
     try {
@@ -214,6 +219,7 @@ export async function syncNow(target: PosDatabase = db): Promise<{
       lastSyncAt: new Date(),
       lastSyncError: null,
       lastConflictCount: conflicts,
+      initialSyncRequired: false,
     });
     return {
       ok: true,

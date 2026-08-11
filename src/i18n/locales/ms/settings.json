@@ -566,6 +566,8 @@
     "register": "Daftar",
     "registerSuccess": "Kedai berjaya didaftarkan ke cloud. Pilih langganan untuk mengaktifkan backup dan sync.",
     "registerFailed": "Gagal mendaftarkan kedai ke cloud",
+    "connectExisting": "Hubungkan",
+    "linkSuccess": "Kedai lokal berjaya dihubungkan ke cloud store sedia ada.",
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tiada langganan",

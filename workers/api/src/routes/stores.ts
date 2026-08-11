@@ -5,11 +5,12 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireUser } from './helpers';
+import { requireSyncStore, requireUser } from './helpers';
 import { sbGet, sbPost, sbDelete, SupabaseError } from '../lib/supabase';
 import { deleteBackupObject } from '../lib/backups';
 
 const storesRoutes = new Hono<AppEnv>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // --- Stores (minimal) ---
 storesRoutes.get('/stores', async (c: AppContext) => {
@@ -117,6 +118,67 @@ storesRoutes.post('/stores', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[stores create]', err);
     return c.json({ error: 'Gagal membuat toko cloud' }, 500);
+  }
+});
+
+/** Claim subscription lama level akun ke toko cloud yang dipilih user. */
+storesRoutes.post('/stores/:id/claim-legacy-subscription', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { moveLegacyBackups?: boolean };
+  try {
+    const result = await sbPost<{
+      claimed: boolean;
+      reason?: string;
+      subscriptionId?: string;
+      periodEnd?: string;
+      isLifetime?: boolean;
+      movedBackupCount?: number;
+    }>(c.env, 'rpc/claim_legacy_subscription', {
+      p_user_id: userId,
+      p_store_id: storeId,
+      p_move_legacy_backups: body.moveLegacyBackups === true,
+    });
+    return c.json({ ok: true, ...result });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores claim legacy]', err);
+    return c.json({ error: 'Gagal menghubungkan subscription lama ke toko' }, 500);
+  }
+});
+
+/** Bind device kedua ke cloud store existing yang sudah aktif. */
+storesRoutes.post('/stores/:id/bind-device', async (c: AppContext) => {
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const guard = await requireSyncStore(c, storeId);
+  if (guard) return guard;
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    deviceId?: string;
+    deviceName?: string;
+  };
+  const deviceId = String(body.deviceId || '').trim();
+  const deviceName = String(body.deviceName || '').trim().slice(0, 120);
+  if (!deviceId || deviceId.length > 128) return c.json({ error: 'deviceId wajib' }, 400);
+
+  try {
+    await sbPost(c.env, 'rpc/sync_register_device', {
+      p_store_id: storeId,
+      p_device_id: deviceId,
+      p_device_name: deviceName,
+    });
+    return c.json({ ok: true, storeId, deviceId, deviceName });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores bind device]', err);
+    return c.json({ error: 'Gagal menghubungkan device ke toko cloud' }, 500);
   }
 });
 

@@ -414,6 +414,8 @@ export interface SyncMeta {
   lastSyncError?: string | null;
   /** Jumlah konflik LWW yang ditimpa versi server pada pull terakhir. */
   lastConflictCount?: number;
+  /** Block auto-sync until a non-empty local DB chooses an initial source. */
+  initialSyncRequired?: boolean;
 }
 
 /** Snapshot backup lokal otomatis (OFFLINE-BACKUP M0) — disimpan di IndexedDB. */

@@ -566,6 +566,8 @@
     "register": "Register",
     "registerSuccess": "Store registered to cloud. Choose a subscription to enable backup and sync.",
     "registerFailed": "Failed to register store to cloud",
+    "connectExisting": "Connect",
+    "linkSuccess": "Local store connected to the existing cloud store.",
     "active": "Active",
     "planActive": "Plan active",
     "planInactive": "No plan",

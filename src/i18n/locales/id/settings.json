@@ -566,6 +566,8 @@
     "register": "Daftarkan",
     "registerSuccess": "Toko berhasil didaftarkan ke cloud. Pilih langganan untuk mengaktifkan backup dan sync.",
     "registerFailed": "Gagal mendaftarkan toko ke cloud",
+    "connectExisting": "Hubungkan",
+    "linkSuccess": "Toko lokal berhasil dihubungkan ke cloud store yang sudah ada.",
     "active": "Aktif",
     "planActive": "Langganan aktif",
     "planInactive": "Tanpa langganan",

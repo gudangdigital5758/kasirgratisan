@@ -68,6 +68,7 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
 
       type SubRow = {
         id: string;
+        store_id: string | null;
         plan_id: string;
         status: string;
         current_period_start: string;
@@ -88,12 +89,12 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
       try {
         subs = await sbGet<SubRow[]>(
           c.env,
-          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${nowIso})&select=id,plan_id,status,current_period_start,current_period_end,is_lifetime,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
+          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&or=(is_lifetime.eq.true,current_period_end.gt.${nowIso})&select=id,store_id,plan_id,status,current_period_start,current_period_end,is_lifetime,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
         );
       } catch {
         subs = await sbGet<SubRow[]>(
           c.env,
-          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&current_period_end=gt.${nowIso}&select=id,plan_id,status,current_period_start,current_period_end,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
+          `subscriptions?user_id=eq.${userId}&status=in.(active,trialing)&current_period_end=gt.${nowIso}&select=id,store_id,plan_id,status,current_period_start,current_period_end,plans(id,name,storage_limit_mb,price_idr,category,max_stores)`,
         );
       }
 
@@ -110,6 +111,7 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
           : null;
         const mapped = {
           id: s.id,
+          storeId: s.store_id,
           planId: s.plan_id,
           plan,
           startDate: s.current_period_start,

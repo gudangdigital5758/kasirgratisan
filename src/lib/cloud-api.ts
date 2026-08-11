@@ -90,6 +90,7 @@ export interface CloudProfileStore {
 
 export interface Subscription {
   id: string;
+  storeId: string | null;
   planId: string;
   plan: Plan;
   startDate: string;
@@ -645,6 +646,44 @@ export async function deleteStore(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) await parseError(res);
+}
+
+export interface ClaimLegacySubscriptionResult {
+  ok: boolean;
+  claimed: boolean;
+  reason?: string;
+  subscriptionId?: string;
+  periodEnd?: string;
+  isLifetime?: boolean;
+  movedBackupCount?: number;
+}
+
+/** Hubungkan subscription legacy level akun ke cloud store pilihan user. */
+export async function claimLegacySubscription(
+  storeId: string,
+  moveLegacyBackups = false,
+): Promise<ClaimLegacySubscriptionResult> {
+  const res = await fetch(`${BASE_URL}/api/stores/${storeId}/claim-legacy-subscription`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ moveLegacyBackups }),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
+export async function bindCloudStoreDevice(
+  storeId: string,
+  deviceId: string,
+  deviceName?: string,
+): Promise<{ ok: boolean; storeId: string; deviceId: string; deviceName: string }> {
+  const res = await fetch(`${BASE_URL}/api/stores/${storeId}/bind-device`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId, deviceName }),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
 }
 
 export interface CloudStoreUpdateInput {

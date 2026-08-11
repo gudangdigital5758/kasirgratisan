@@ -46,6 +46,8 @@ import {
   verifyPayment,
   fetchStores,
   createStore,
+  claimLegacySubscription,
+  bindCloudStoreDevice,
   uploadBackup,
   previewVoucher,
   type Plan,
@@ -53,6 +55,7 @@ import {
   type VoucherPreviewResult,
 } from '@/lib/cloud-api';
 import { buildBackupJsonString, backupFileName } from '@/lib/backup';
+import { getDb } from '@/lib/db';
 import { BRAND } from '@/lib/brand';
 import { getAffiliateRef } from '@/lib/affiliate';
 import { CLOUD_ROUTES } from '@/lib/cloud-routes';
@@ -174,7 +177,33 @@ export default function CloudHub() {
     if (!isLoggedIn) return;
     setBusy(`register:${localStore.storeKey}`);
     try {
-      const cloud = await createStore(localStore.name);
+      const existing = stores.find(
+        (store) => store.name.trim().toLowerCase() === localStore.name.trim().toLowerCase(),
+      );
+      const cloud = existing ?? await createStore(localStore.name);
+      const legacySubscription = [profile?.syncSubscription, profile?.subscription].find(
+        (subscription) => subscription?.hasActiveSubscription && !subscription.storeId,
+      );
+      let claimResult: Awaited<ReturnType<typeof claimLegacySubscription>> | null = null;
+      if (legacySubscription) {
+        claimResult = await claimLegacySubscription(
+          cloud.id,
+          (localStores?.length ?? 0) === 1,
+        );
+        if (!claimResult.claimed && claimResult.reason !== 'no_legacy_subscription') {
+          throw new Error('Subscription lama tidak dapat dihubungkan ke toko ini.');
+        }
+      }
+
+      const targetDb = getDb(localStore.storeKey);
+      const targetSettings = await targetDb.storeSettings.toCollection().first();
+      const [productCount, transactionCount] = await Promise.all([
+        targetDb.products.count(),
+        targetDb.transactions.count(),
+      ]);
+      const hasLocalData = productCount > 0 || transactionCount > 0;
+      const hasActiveCloud = !!cloud.entitlement?.hasSync || !!claimResult?.claimed;
+
       await updateStore(localStore.storeKey, {
         mode: 'cloud',
         cloudStoreId: cloud.id,
@@ -185,8 +214,36 @@ export default function CloudHub() {
         await db.storeSettings.update(storeSettings.id, { cloudStoreId: cloud.id });
       }
 
+      if (targetSettings?.id) {
+        await targetDb.storeSettings.update(targetSettings.id, { cloudStoreId: cloud.id });
+      }
+
+      if (hasActiveCloud && targetSettings?.deviceId) {
+        await bindCloudStoreDevice(cloud.id, targetSettings.deviceId, localStore.name);
+
+        // A new cloud store has no remote data, so the registering device is the
+        // safe source for the first push. Existing local data must be reviewed
+        // before it can participate in an existing store's sync stream.
+        if (!existing || !hasLocalData) {
+          const initialSync = await syncNow(targetDb);
+          if (!initialSync.ok) console.warn('[cloud] initial sync:', initialSync.message);
+        } else {
+          const meta = await targetDb.syncMeta.get(1);
+          await targetDb.syncMeta.put({
+            ...meta,
+            id: 1,
+            lastPullCursor: meta?.lastPullCursor ?? null,
+            lastSyncAt: meta?.lastSyncAt ?? null,
+            initialSyncRequired: true,
+            lastSyncError: 'Pilih sumber data sebelum initial sync antar-device.',
+          });
+        }
+      }
+
       await Promise.all([loadStores(), refreshProfile()]);
-      toast.success(t('cloudStores.registerSuccess'));
+      toast.success(
+        existing ? t('cloudStores.linkSuccess') : t('cloudStores.registerSuccess'),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudStores.registerFailed'));
     } finally {
@@ -566,6 +623,11 @@ export default function CloudHub() {
               {(localStores ?? []).map((s) => {
                 const isActive = s.storeKey === activeLocalKey;
                 const isLinked = !!s.cloudStoreId;
+                const matchingCloudStore = !isLinked
+                  ? stores.find(
+                      (store) => store.name.trim().toLowerCase() === s.name.trim().toLowerCase(),
+                    )
+                  : undefined;
                 const ent = isLinked
                   ? (profile?.stores ?? []).find((x) => x.id === s.cloudStoreId)?.entitlement
                   : undefined;
@@ -608,7 +670,9 @@ export default function CloudHub() {
                       >
                         {busy === `register:${s.storeKey}`
                           ? <Loader2 className="w-3 h-3 animate-spin" />
-                          : t('cloudStores.register')}
+                          : matchingCloudStore
+                            ? t('cloudStores.connectExisting')
+                            : t('cloudStores.register')}
                       </Button>
                     ) : (
                       <span
