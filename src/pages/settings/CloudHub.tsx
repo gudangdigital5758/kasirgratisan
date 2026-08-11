@@ -415,62 +415,6 @@ export default function CloudHub() {
   };
 
   const subscription = profile?.syncSubscription ?? profile?.subscription ?? null;
-  const isLifetime = !!subscription?.isLifetime;
-  const subEndDate = subscription?.endDate ? new Date(subscription.endDate) : null;
-  const subEndValid =
-    !isLifetime && subEndDate && !Number.isNaN(subEndDate.getTime()) ? subEndDate : null;
-  const isExpired =
-    isLoggedIn &&
-    !isSyncSubscribed &&
-    !!subscription &&
-    (subscription.status === 'EXPIRED' ||
-      (subEndValid != null && subEndValid.getTime() < Date.now()));
-
-  const hubStatus = !isLoggedIn
-    ? {
-        kind: 'loggedOut' as const,
-        stripClass: 'bg-muted/60 text-muted-foreground ring-border/60',
-        dotClass: 'bg-muted-foreground',
-        label: t('cloud.hub.status.loggedOut'),
-        detail: t('cloud.hub.status.loggedOutDetail', { price: rp(BRAND.cloudPriceIdr) }),
-      }
-    : loadingProfile && !profile
-      ? {
-          kind: 'loading' as const,
-          stripClass: 'bg-muted/40 text-muted-foreground ring-border/40',
-          dotClass: 'bg-muted-foreground animate-pulse',
-          label: t('cloud.hub.status.loading'),
-          detail: null as string | null,
-        }
-      : isSyncSubscribed
-        ? {
-            kind: 'active' as const,
-            stripClass: 'bg-success/10 text-success ring-success/20',
-            dotClass: 'bg-success',
-            label: t('cloud.hub.status.active'),
-            detail: isLifetime
-              ? t('cloud.hub.status.lifetime')
-              : subEndValid
-                ? t('cloud.hub.status.activeUntil', {
-                    date: format(subEndValid, 'd MMM yyyy', { locale: dateLocale }),
-                  })
-                : t('cloud.hub.status.activeNoDate'),
-          }
-        : isExpired
-          ? {
-              kind: 'expired' as const,
-              stripClass: 'bg-destructive/10 text-destructive ring-destructive/20',
-              dotClass: 'bg-destructive',
-              label: t('cloud.hub.status.expired'),
-              detail: t('cloud.hub.status.expiredDetail', { price: rp(BRAND.cloudPriceIdr) }),
-            }
-          : {
-              kind: 'inactive' as const,
-              stripClass: 'bg-warning/10 text-warning ring-warning/25',
-              dotClass: 'bg-warning',
-              label: t('cloud.hub.status.inactive'),
-              detail: t('cloud.hub.status.inactiveDetail', { price: rp(BRAND.cloudPriceIdr) }),
-            };
 
   const interval = storeSettings?.cloudAutoBackupInterval ?? 'off';
   const intervalSubtitle =
@@ -488,22 +432,6 @@ export default function CloudHub() {
           <Cloud className="w-5 h-5 text-primary" />
           {t('cloud.hub.title')}
         </h1>
-      </div>
-
-      {/* [A] Status strip */}
-      <div
-        className={cn(
-          'rounded-xl ring-1 px-3.5 py-2.5 flex items-start gap-2.5',
-          hubStatus.stripClass,
-        )}
-      >
-        <span className={cn('mt-1.5 h-2 w-2 rounded-full shrink-0', hubStatus.dotClass)} />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight">{hubStatus.label}</p>
-          {hubStatus.detail && (
-            <p className="text-[11px] opacity-90 mt-0.5 leading-snug">{hubStatus.detail}</p>
-          )}
-        </div>
       </div>
 
       {!isLoggedIn ? (
