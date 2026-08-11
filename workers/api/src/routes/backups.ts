@@ -78,23 +78,33 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
 
   // Gate: butuh langganan cloud aktif (atau dev mock tanpa entitlements)
   try {
+    const form = await c.req.formData();
+    const file = form.get('file');
+    const storeIdRaw = form.get('storeId');
+    const storeId =
+      typeof storeIdRaw === 'string' && storeIdRaw.trim() ? storeIdRaw.trim() : null;
+
+    // Kepemilikan toko bila upload per toko (kuota & metadata ikut toko itu).
+    if (storeId) {
+      const own = await sbGet<{ id: string }[]>(
+        c.env,
+        `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
+      );
+      if (!own[0]) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    }
+
+    // Model per-toko: entitlement diambil dari toko tujuan; tanpa storeId (legacy) pakai akun.
     type Ent = { storage_limit_mb: number; has_sync: boolean };
-    const ents = await sbGet<Ent[]>(
-      c.env,
-      `user_entitlements?user_id=eq.${userId}&select=storage_limit_mb,has_sync`,
-    );
+    const entQuery = storeId
+      ? `store_entitlements?store_id=eq.${storeId}&select=storage_limit_mb,has_sync`
+      : `user_entitlements?user_id=eq.${userId}&select=storage_limit_mb,has_sync`;
+    const ents = await sbGet<Ent[]>(c.env, entQuery);
     const ent = ents[0];
     const limitMb = ent?.storage_limit_mb ?? 0;
     const hasCloud = ent?.has_sync || limitMb > 0;
     if (!hasCloud && (c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
       return c.json({ error: 'Langganan Profitku Cloud diperlukan untuk backup cloud.' }, 403);
     }
-
-    const form = await c.req.formData();
-    const file = form.get('file');
-    const storeIdRaw = form.get('storeId');
-    const storeId =
-      typeof storeIdRaw === 'string' && storeIdRaw.trim() ? storeIdRaw.trim() : null;
 
     if (!file || typeof file !== 'object' || !('arrayBuffer' in file)) {
       return c.json({ error: 'File backup wajib (field: file)' }, 400);
@@ -111,9 +121,11 @@ backupsRoutes.post('/backups', async (c: AppContext) => {
       return c.json({ error: 'Ukuran backup maksimal 50 MB' }, 400);
     }
 
-    // Kuota storage (default 1024 MB bila mock tanpa ent — BRAND.cloudStorageMb)
+    // Kuota storage per toko (default 1024 MB bila mock tanpa ent — BRAND.cloudStorageMb)
     const limitBytes = (limitMb > 0 ? limitMb : 1024) * 1024 * 1024;
-    const used = await sumBackupBytes(c.env, String(userId));
+    const used = storeId
+      ? await sumBackupBytes(c.env, String(userId), storeId)
+      : await sumBackupBytes(c.env, String(userId));
     if (used + fileSize > limitBytes) {
       return c.json(
         {

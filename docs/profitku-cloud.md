@@ -85,7 +85,7 @@ Deploy Pages: build `npm run build`, output `dist/`, custom domain `profitku.my.
 
 | ID | Nama | Harga/bln | Termasuk |
 |----|------|-----------|----------|
-| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000/toko** | Backup cloud s/d 1 GB, auto-backup, hide watermark; sinkronisasi data antar-perangkat belum tersedia |
+| `cloud_monthly` | **Profitku Cloud** | **Rp 25.000/toko** | Backup cloud s/d 1 GB, auto-backup, hide watermark, dan sync LWW per toko |
 
 Tidak ada multi-tier. Seed: `supabase/seed.sql` + fallback Worker `SEED_PLANS`.
 
@@ -127,8 +127,8 @@ Tanpa `VITE_SUPABASE_*`, fitur cloud dinonaktifkan; POS offline tetap berjalan. 
 | **1** | **Backup R2** upload/list/download/delete + kuota | ✅ |
 | **2** | **Resend invoice + Fonnte** aktivasi + dunning H-3/H-1 (cron) | ✅ |
 | **3** | **Supabase Auth** (Google ID token → session, auto-refresh) | ✅ |
-| M3 | Sync push penuh | belum tersedia — Worker menolak payload agar data lokal tidak salah ditandai tersinkron |
-| M4 | Pull + conflict | belum |
+| M3 | Sync push penuh | baseline tersedia; hardening payload dan acknowledgement mengikuti rencana |
+| M4 | Pull + conflict | baseline LWW tersedia; pagination dan rollout gate mengikuti rencana |
 | M5 | Midtrans/Xendit production | skeleton |
 
 ### Setup Supabase Auth + Google

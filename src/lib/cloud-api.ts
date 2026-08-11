@@ -78,6 +78,7 @@ export interface CloudStoreEntitlement {
   storageLimitMb: number;
   backupBytes: number;
   usedMb: number;
+  remainingMb: number;
 }
 
 export interface CloudProfileStore {
@@ -360,8 +361,10 @@ export async function fetchProfile(): Promise<UserProfile> {
 export async function listBackups(params?: PageParams & { storeId?: string }): Promise<Paginated<CloudBackup>> {
   const qs = new URLSearchParams();
   if (params?.storeId) qs.set('storeId', params.storeId);
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.limit) qs.set('limit', String(params.limit));
   const query = qs.toString();
-  const res = await fetch(`${BASE_URL}/api/backups${query ? `?${query}` : ''}${buildPageQuery(params)}`, {
+  const res = await fetch(`${BASE_URL}/api/backups${query ? `?${query}` : ''}`, {
     headers: authHeaders(),
   });
   if (!res.ok) await parseError(res);
@@ -753,8 +756,9 @@ export async function deleteStoreLogo(id: string): Promise<CloudStore> {
   return data.store;
 }
 
-// Cross-device sync is intentionally not exposed until the Worker can
-// durably persist records and resolve pull/conflict behavior.
+// Cross-device sync is exposed through the Worker for entitled stores.
+// Protocol hardening and rollout gates are tracked in
+// docs/CLOUD-IMPLEMENTATION-PLAN.md.
 
 // === App Settings (public, no auth) ===
 export interface AppSetting {

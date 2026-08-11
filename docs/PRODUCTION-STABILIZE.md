@@ -177,7 +177,7 @@ Lihat [MIDTRANS.md](./MIDTRANS.md).
 - Xendit (tidak dipakai fase ini)
 - Fonnte jika belum ada token
 - Play Store listing
-- Sync multi-device penuh
+- Sync multi-device penuh belum boleh dirilis tanpa rollout gate
 
 ---
 

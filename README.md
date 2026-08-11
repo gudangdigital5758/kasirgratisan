@@ -4,7 +4,7 @@
 
 Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan laporan berjalan 100% di perangkat (IndexedDB) — gratis, tanpa wajib daftar.
 
-**Profitku Cloud** (opsional): **Rp 25.000/bulan per toko** — backup cloud (1 GB) dan auto-backup. Sinkronisasi data antar-perangkat belum tersedia. Stack: **Git · Cloudflare · Supabase · Resend · Fonnte**. Distribusi utama: **PWA** (`profitku.my.id`); listing Play Store ditunda.
+**Profitku Cloud** (opsional): **Rp 25.000/bulan per toko** — backup cloud (1 GB), auto-backup, dan sinkronisasi otomatis antar-perangkat per toko. Rollout sync mengikuti hardening dan acceptance criteria di [docs/CLOUD-IMPLEMENTATION-PLAN.md](docs/CLOUD-IMPLEMENTATION-PLAN.md). Stack: **Git · Cloudflare · Supabase · Resend · Fonnte**. Distribusi utama: **PWA** (`profitku.my.id`); listing Play Store ditunda.
 
 ### Documentation map
 

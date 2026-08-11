@@ -99,7 +99,9 @@ Worker memvalidasi token lewat Supabase `/auth/v1/user` (bukan trust decode JWT 
 
 - Portal B2B member catalog / sales CRM (domain MSC Grosir).
 - AI multi-provider render studio (domain MSC Studio).
-- Sinkronisasi data antar-perangkat, termasuk realtime sync penuh (belum tersedia; endpoint Worker menolak payload agar data lokal tidak salah ditandai tersinkron).
+- Sinkronisasi realtime collaborative editing dan conflict merge per field belum
+  tersedia. Sync LWW per toko tersedia sebagai baseline; hardening dan rollout
+  mengikuti [CLOUD-IMPLEMENTATION-PLAN.md](CLOUD-IMPLEMENTATION-PLAN.md).
 
 ## Prinsip desain
 

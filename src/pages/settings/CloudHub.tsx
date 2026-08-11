@@ -131,6 +131,7 @@ export default function CloudHub() {
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
   const activeStore = stores.find((s) => s.id === activeStoreId);
   const isStorePublic = activeStore?.isPublic ?? false;
+  const activeStoreHasSync = !!activeStore?.entitlement?.hasSync;
 
   // Single plan: Profitku Cloud (fallback ke brand id bila API belum siap)
   const cloudPlans =
@@ -143,7 +144,7 @@ export default function CloudHub() {
             storageLimitMb: BRAND.cloudStorageMb,
             price: BRAND.cloudPriceIdr,
             category: 'SYNC' as const,
-            maxStores: BRAND.cloudMaxStores,
+            maxStores: null,
           },
         ];
 
@@ -187,8 +188,8 @@ export default function CloudHub() {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (isLoggedIn && isSyncSubscribed) loadStores();
-  }, [isLoggedIn, isSyncSubscribed, loadStores]);
+    if (isLoggedIn) loadStores();
+  }, [isLoggedIn, loadStores]);
 
   const checkPayment = useCallback(
     async (silent: boolean) => {
@@ -268,6 +269,10 @@ export default function CloudHub() {
   };
 
   const handleSubscribe = async (planId: string) => {
+    if (!activeStoreId) {
+      toast.error(t('cloudBackup.toast.selectStoreFirst'));
+      return;
+    }
     setBusy(`checkout:${planId}`);
     try {
       const voucherCode =
@@ -278,6 +283,7 @@ export default function CloudHub() {
       // Amount 0 (voucher gratis/lifetime) di-fulfill server tanpa Snap.
       const result = await checkoutPlan(planId, {
         redirectURL: `${window.location.origin}${CLOUD_ROUTES.hub}`,
+        storeId: activeStoreId,
         voucherCode,
         affiliateCode: getAffiliateRef()?.code,
         affiliateCapturedAt: getAffiliateRef()?.capturedAt,
@@ -485,7 +491,7 @@ export default function CloudHub() {
                   title={t('cloudBackup.benefits.quota.title')}
                   desc={t('cloudBackup.benefits.quota.desc', {
                     storageMb: BRAND.cloudStorageMb,
-                    stores: BRAND.cloudMaxStores,
+                    stores: t('cloudBackup.subscription.unlimitedStores'),
                   })}
                 />
                 <BenefitItem
@@ -572,7 +578,7 @@ export default function CloudHub() {
             </CardContent>
           </Card>
 
-          {isSyncSubscribed && (
+          {isLoggedIn && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 space-y-4">
                 {/* Store Selector Dropdown */}
@@ -624,7 +630,7 @@ export default function CloudHub() {
 
                 <Button
                   className="w-full h-11 gap-2 font-semibold"
-                  disabled={busy === 'sync' || !storeSettings?.cloudStoreId}
+                  disabled={busy === 'sync' || !activeStoreId || !activeStoreHasSync}
                   onClick={handleSyncNow}
                 >
                   {busy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -640,7 +646,7 @@ export default function CloudHub() {
           )}
 
           {/* Sinkronisasi lintas perangkat (Phase A M2) */}
-          {storeSettings?.cloudStoreId && (
+          {activeStoreId && activeStoreHasSync && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -675,7 +681,7 @@ export default function CloudHub() {
             </Card>
           )}
 
-          {isSyncSubscribed && activeStoreId && !isStorePublic && (
+          {activeStoreHasSync && activeStoreId && !isStorePublic && (
             <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/10 to-transparent ring-1 ring-primary/20">
               <CardContent className="p-4 space-y-3.5">
                 <div className="flex items-start gap-3">
@@ -744,7 +750,7 @@ export default function CloudHub() {
                         title={t('cloudBackup.benefits.quota.title')}
                         desc={t('cloudBackup.benefits.quota.desc', {
                           storageMb: BRAND.cloudStorageMb,
-                          stores: BRAND.cloudMaxStores,
+                          stores: t('cloudBackup.subscription.unlimitedStores'),
                         })}
                       />
                       <BenefitItem
@@ -763,13 +769,21 @@ export default function CloudHub() {
                 description={t('cloudBackup.subscription.description')}
                 plans={cloudPlans}
                 subscription={subscription}
-                isActive={isSyncSubscribed}
+                isActive={activeStoreHasSync}
                 showPlans={showPlanPicker}
                 onTogglePlans={() => setShowPlanPicker((v) => !v)}
                 busy={busy}
                 onSubscribe={handleSubscribe}
                 backupSizeBytes={backupSizeBytes}
-                storageUsage={profile?.storageUsage ?? null}
+                storageUsage={
+                  activeStore?.entitlement
+                    ? {
+                        usedMb: activeStore.entitlement.usedMb,
+                        limitMb: activeStore.entitlement.storageLimitMb,
+                        remainingMb: activeStore.entitlement.remainingMb,
+                      }
+                    : profile?.storageUsage ?? null
+                }
                 voucherPreview={voucherPreview}
                 voucherInput={voucherInput}
                 voucherBusy={voucherBusy}
@@ -787,7 +801,7 @@ export default function CloudHub() {
           )}
 
           <div className="space-y-4">
-            {isSyncSubscribed && (
+            {activeStoreHasSync && (
               <>
                 <MenuCard
                   to={CLOUD_ROUTES.onlineStore}

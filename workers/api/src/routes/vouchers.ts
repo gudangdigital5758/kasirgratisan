@@ -27,7 +27,11 @@ vouchersRoutes.post('/vouchers/preview', async (c: AppContext) => {
     return c.json({ valid: false, error: 'Database belum dikonfigurasi' }, 503);
   }
 
-  const { amount: listPriceBase } = await resolveListPrice(c.env, planId);
+  const priced = await resolveListPrice(c.env, planId);
+  if (!priced.active || priced.category !== 'SYNC') {
+    return c.json({ valid: false, error: 'Plan cloud tidak aktif' }, 400);
+  }
+  const { amount: listPriceBase } = priced;
   // Durasi 6/12 bulan memakai price factor (bayar 5/10 bulan) — harga dihitung server.
   const listPrice = Math.round(listPriceBase * cloudDurationFactor(normalizeDurationMonths(body.durationMonths)));
   const result = await validateVoucherForUser(c.env, {

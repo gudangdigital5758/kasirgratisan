@@ -243,20 +243,33 @@ export async function recordRedemption(
   });
 }
 
-export async function resolveListPrice(env: Env, planId: string): Promise<{ amount: number; planName: string }> {
+export async function resolveListPrice(env: Env, planId: string): Promise<{
+  amount: number;
+  planName: string;
+  active: boolean;
+  category: string | null;
+}> {
+  const databaseConfigured = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
   let amount = planId === CLOUD_PLAN_ID ? CLOUD_PLAN_PRICE_IDR : 0;
   let planName = planId === CLOUD_PLAN_ID ? 'Profitku Cloud' : planId;
+  let active = !databaseConfigured && planId === CLOUD_PLAN_ID;
+  let category: string | null = planId === CLOUD_PLAN_ID ? 'SYNC' : null;
   try {
-    type P = { id: string; name: string; price_idr: number };
-    const rows = await sbGet<P[]>(env, `plans?id=eq.${planId}&select=id,name,price_idr`);
+    type P = { id: string; name: string; price_idr: number; is_active: boolean; category: string };
+    const rows = await sbGet<P[]>(env, `plans?id=eq.${encodeURIComponent(planId)}&select=id,name,price_idr,is_active,category`);
     if (rows[0]) {
       amount = rows[0].price_idr;
       planName = rows[0].name;
+      active = rows[0].is_active;
+      category = rows[0].category;
+    } else if (databaseConfigured) {
+      active = false;
+      category = null;
     }
   } catch {
     /* seed */
   }
-  return { amount, planName };
+  return { amount, planName, active, category };
 }
 
 export type ActiveSub = {

@@ -17,9 +17,11 @@ const DEFAULT_HOURS = 6;
 
 export default function CloudAutoBackupSettings() {
   const { can } = useAuth();
-  const { isLoggedIn, isSyncSubscribed } = useCloudAuth();
+  const { isLoggedIn, profile } = useCloudAuth();
   const { t } = useTranslation('settings');
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
+  const activeStoreId = storeSettings?.cloudStoreId ?? null;
+  const activeStoreHasSync = !!profile?.stores?.find((store) => store.id === activeStoreId)?.entitlement.hasSync;
 
   if (!can('manage_backup')) {
     return <LockedPage title={t('cloudAutoBackup.locked.title')} permissionLabel={t('cloudAutoBackup.locked.permissionLabel')} />;
@@ -67,7 +69,7 @@ export default function CloudAutoBackupSettings() {
         </h1>
       </div>
 
-      {!isLoggedIn || !isSyncSubscribed ? (
+      {!isLoggedIn || !activeStoreHasSync ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 text-center text-sm text-muted-foreground">
             {t('cloudAutoBackup.requiresSubscription')}

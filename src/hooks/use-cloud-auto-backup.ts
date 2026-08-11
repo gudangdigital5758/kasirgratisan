@@ -36,14 +36,16 @@ function intervalMs(
  * tiap app dibuka (saat kondisi siap), dijaga ref agar tidak dobel.
  */
 export function useCloudAutoBackup() {
-  const { isLoggedIn, isSyncSubscribed, refreshProfile } = useCloudAuth();
+  const { isLoggedIn, profile, refreshProfile } = useCloudAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const ranRef = useRef(false);
+  const activeStoreId = storeSettings?.cloudStoreId ?? null;
+  const activeStoreHasSync = !!profile?.stores?.find((store) => store.id === activeStoreId)?.entitlement.hasSync;
 
   useEffect(() => {
     if (ranRef.current) return;
     if (!storeSettings) return;
-    if (!isLoggedIn || !isSyncSubscribed) return;
+    if (!isLoggedIn || !activeStoreHasSync) return;
 
     // Retry otomatis saat kembali online / app terlihat lagi (Phase A stabilisasi).
     initSyncListeners();
@@ -84,13 +86,13 @@ export function useCloudAutoBackup() {
         }
       }
     })();
-  }, [storeSettings, isLoggedIn, isSyncSubscribed, refreshProfile]);
+  }, [storeSettings, isLoggedIn, activeStoreHasSync, refreshProfile]);
 
   // Auto-sync antar-perangkat: jalankan berkala + saat tab terlihat kembali / online
   // (tanpa tombol "Sync Sekarang" manual). Fail-silent; hanya push data yang berubah.
   useEffect(() => {
     if (!storeSettings?.cloudStoreId) return;
-    if (!isLoggedIn || !isSyncSubscribed) return;
+    if (!isLoggedIn || !activeStoreHasSync) return;
 
     const run = () => {
       if (!navigator.onLine) return;
@@ -110,5 +112,5 @@ export function useCloudAutoBackup() {
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('online', onOnline);
     };
-  }, [storeSettings?.cloudStoreId, isLoggedIn, isSyncSubscribed]);
+  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);
 }

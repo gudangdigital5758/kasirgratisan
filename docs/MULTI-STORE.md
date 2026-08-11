@@ -1,6 +1,7 @@
 # Profitku — Desain: Tambah Toko (Offline & Online)
 
-> Draf desain untuk review. **Belum diimplementasikan.** Tujuan: user dapat memiliki
+> Baseline multi-store sudah diimplementasikan bertahap. Hardening dan rollout
+> mengikuti [CLOUD-IMPLEMENTATION-PLAN.md](CLOUD-IMPLEMENTATION-PLAN.md). Tujuan: user dapat memiliki
 > **lebih dari satu toko** dalam satu aplikasi — toko **offline** (data lokal saja)
 > maupun **online** (terhubung cloud: backup + sync per toko). Melengkapi
 > `SYNC-DESIGN.md`, `PRODUCT-TYPES.md`, dan `ROLES-PERMISSIONS.md`.
@@ -91,10 +92,9 @@ interface LocalStoreEntry {
 
 ## 7. Monetisasi & entitlement
 
-- `cloudMaxStores: 1` = **jumlah toko per langganan**. Dua toko online = dua
-  langganan `cloud_monthly` (masing-masing Rp 25rb/bulan, kuota 1024 MB).
-- **Tidak ada batas jumlah toko total** — offline bebas; online butuh langganan
-  masing-masing.
+- **Tidak ada batas jumlah toko cloud total**. Setiap toko online membutuhkan satu
+  langganan `cloud_monthly` (Rp 25rb/bulan, kuota 1024 MB).
+- Toko offline tetap gratis dan tidak memakai quota cloud.
 - UI CloudHub: daftar langganan per toko + status aktif/expired; pesan jujur
   "1 langganan = 1 toko".
 

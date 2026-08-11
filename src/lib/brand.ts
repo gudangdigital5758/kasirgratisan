@@ -41,7 +41,6 @@ export const BRAND = {
   cloudPlanId: 'cloud_monthly',
   cloudPriceIdr: 25_000,
   cloudStorageMb: 1024,
-  cloudMaxStores: 1,
 } as const;
 
 export type Brand = typeof BRAND;

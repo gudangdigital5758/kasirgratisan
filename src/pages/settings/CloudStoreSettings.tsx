@@ -41,13 +41,14 @@ import {
   type CloudStore,
 } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 import { removeStoreByCloudId, getActiveStoreKey } from '@/lib/store-registry';
 
 const LOCALES: Record<string, Locale> = { id: idLocale, en: enUS, ms };
 
 export default function CloudStoreSettings() {
   const { can } = useAuth();
-  const { isLoggedIn, isSyncSubscribed, profile, refreshProfile } = useCloudAuth();
+  const { isLoggedIn, refreshProfile } = useCloudAuth();
   const { t, i18n } = useTranslation('settings');
   const dateLocale = LOCALES[i18n.language] ?? idLocale;
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
@@ -89,16 +90,16 @@ export default function CloudStoreSettings() {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn && isSyncSubscribed) loadStores();
-  }, [isLoggedIn, isSyncSubscribed, loadStores]);
+    if (isLoggedIn) loadStores();
+  }, [isLoggedIn, loadStores]);
 
   // Auto-show create form jika belum ada toko (dan masih dalam batas paket)
   useEffect(() => {
-    if (!loading && stores.length === 0 && isSyncSubscribed && !atLimit) {
+    if (!loading && stores.length === 0 && isLoggedIn && !atLimit) {
       setShowCreate(true);
       setNewName(storeSettings?.storeName ?? '');
     }
-  }, [loading, stores.length, isSyncSubscribed, atLimit, storeSettings?.storeName]);
+  }, [loading, stores.length, isLoggedIn, atLimit, storeSettings?.storeName]);
 
   if (!can('manage_backup')) {
     return <LockedPage title={t('cloudStore.locked.title')} permissionLabel={t('cloudStore.locked.permissionLabel')} />;
@@ -253,7 +254,7 @@ export default function CloudStoreSettings() {
         </h1>
       </div>
 
-      {!isLoggedIn || !isSyncSubscribed ? (
+      {!isLoggedIn ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 text-center text-sm text-muted-foreground">
             {t('cloudStore.requiresSubscription')}
@@ -446,9 +447,13 @@ export default function CloudStoreSettings() {
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-[10px] text-muted-foreground">{t('cloudStore.storage')}</span>
                                       <span className="text-[10px]">
-                                        {store.entitlement.usedMb} / {store.entitlement.storageLimitMb} MB
+                                        {store.entitlement.usedMb} / {store.entitlement.storageLimitMb} MB · {t('cloudStore.storageRemaining', { mb: Math.max(0, store.entitlement.storageLimitMb - store.entitlement.usedMb) })}
                                       </span>
                                     </div>
+                                    <Progress
+                                      value={Math.min(100, (store.entitlement.usedMb / (store.entitlement.storageLimitMb || 1)) * 100)}
+                                      className="h-1.5"
+                                    />
                                     {store.entitlement.syncExpiry && (
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="text-[10px] text-muted-foreground">{t('cloudStore.expiry')}</span>

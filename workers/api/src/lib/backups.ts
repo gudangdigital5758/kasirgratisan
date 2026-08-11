@@ -84,9 +84,9 @@ export async function deleteBackupMeta(env: Env, id: string, userId: string): Pr
   await sbDelete(env, `backups?id=eq.${id}&user_id=eq.${userId}`);
 }
 
-/** Total bytes backup user (untuk cek kuota). */
-export async function sumBackupBytes(env: Env, userId: string): Promise<number> {
-  const list = await listBackupMeta(env, userId, 500);
+/** Total bytes backup user (untuk cek kuota). Bila storeId diberikan, dihitung per toko. */
+export async function sumBackupBytes(env: Env, userId: string, storeId?: string): Promise<number> {
+  const list = await listBackupMeta(env, userId, 500, storeId);
   return list.reduce((s, b) => s + (Number(b.file_size) || 0), 0);
 }
 

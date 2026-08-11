@@ -1,6 +1,6 @@
 # Profitku — Desain Sinkronisasi Lintas Perangkat (Phase A)
 
-> **Status: IMPLEMENTED (M0–M4 selesai & ter-deploy).** Phase A membuka
+> **Status: BASELINE IMPLEMENTED; hardening dan rollout bertahap.** Phase A membuka
 > `has_sync` (langganan **Rp 25.000/bulan per TOKO**) menjadi sinkronisasi data
 > nyata antar-perangkat: push/pull LWW + tombstone (Worker `/api/sync/*`),
 > pipeline client (`src/lib/sync.ts`), gate `SYNC_ENABLED`, observability
@@ -134,9 +134,9 @@ create table if not exists public.sync_meta (
   + tabel `devices` (uuid, store_id, name, last_seen_at).
 - UI: halaman "Perangkat tersinkron" di CloudHub (list device, **unlok device** untuk
   kendali akses).
-- **TIDAK ada batas jumlah device** — langganan per toko (`cloudMaxStores` = 1),
-  berapapun device boleh terhubung ke toko yang sama. `device_count` hanya info/opsional.
-- Guard tetap server-side: `has_sync` + `cloudMaxStores` dari entitlements.
+- **TIDAK ada batas jumlah device** — berapapun device boleh terhubung ke toko yang
+  sama. `device_count` hanya info/opsional.
+- Guard tetap server-side: `has_sync` entitlement untuk `store_id` yang diminta.
 
 ## 8. Antrian offline & fail-closed
 

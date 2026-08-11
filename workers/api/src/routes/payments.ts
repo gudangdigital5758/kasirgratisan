@@ -9,6 +9,7 @@ import { sbGet, sbPost, sbPatch } from '../lib/supabase';
 import { notifySubscriptionActivated } from '../lib/lifecycle';
 import { fulfillCompletedPayment } from '../lib/payments';
 import {
+  CLOUD_PLAN_ID,
   CLOUD_PLAN_PRICE_IDR,
   SEED_PLANS,
   cloudDurationFactor,
@@ -38,6 +39,7 @@ import {
 } from '../lib/affiliates';
 
 const paymentsRoutes = new Hono<AppEnv>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // --- Checkout (mock | midtrans Snap | voucher gratis) ---
 paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
@@ -55,6 +57,13 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
     durationMonths?: number;
   };
   if (!body.planId) return c.json({ error: 'planId wajib' }, 400);
+  if (body.planId !== CLOUD_PLAN_ID) {
+    return c.json({ error: 'Plan cloud tidak valid' }, 400);
+  }
+  const requestedStoreId = body.storeId?.trim() || '';
+  if (!requestedStoreId || !UUID_RE.test(requestedStoreId)) {
+    return c.json({ error: 'storeId toko cloud wajib dan harus berupa UUID' }, 400);
+  }
 
   // Validasi kode affiliasi (opsional, best-effort). Kode disimpan di payment.raw
   // agar komisi dicatat otomatis saat payment selesai (termasuk perpanjangan).
@@ -79,10 +88,14 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
 
   // 2) Fallback: kode dari client (localStorage, jendela attribution_days).
   const rawAffiliateCode = normalizeAffiliateCode(body.affiliateCode || '');
-  const rawAffiliateCapturedAt =
-    typeof body.affiliateCapturedAt === 'string' && body.affiliateCapturedAt.trim()
-      ? new Date(body.affiliateCapturedAt).toISOString()
-      : null;
+  let rawAffiliateCapturedAt: string | null = null;
+  if (typeof body.affiliateCapturedAt === 'string' && body.affiliateCapturedAt.trim()) {
+    const capturedAt = new Date(body.affiliateCapturedAt);
+    if (Number.isNaN(capturedAt.getTime())) {
+      return c.json({ error: 'affiliateCapturedAt tidak valid' }, 400);
+    }
+    rawAffiliateCapturedAt = capturedAt.toISOString();
+  }
   if (!affiliateMeta && rawAffiliateCode) {
     try {
       const settings = await getAffiliateSettings(c.env);
@@ -116,18 +129,22 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
 
   // Durasi langganan per toko (1/6/12 bulan) — harga dihitung server-side.
   const durationMonths = normalizeDurationMonths(body.durationMonths);
-  const storeId = await resolveOwnedStoreId(c, String(userId), body.storeId);
+  const storeId = await resolveOwnedStoreId(c, String(userId), requestedStoreId);
   if (storeId instanceof Response) return storeId;
 
-  try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
       const priced = await resolveListPrice(c.env, body.planId);
+      if (!priced.active || priced.category !== 'SYNC') {
+        return c.json({ error: 'Plan cloud tidak aktif' }, 400);
+      }
       amount = priced.amount;
       planName = priced.planName;
       amountBefore = amount;
+    } catch (err) {
+      console.error('[checkout] resolve plan', err);
+      return c.json({ error: 'Gagal memvalidasi plan cloud' }, 503);
     }
-  } catch {
-    /* seed price */
   }
 
   amount = Math.round(amount * cloudDurationFactor(durationMonths));
@@ -258,12 +275,59 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
     });
   }
 
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Database wajib untuk checkout cloud per toko' }, 503);
+  }
+
+  if (!['mock', 'midtrans', 'sumopod'].includes(provider)) {
+    return c.json({ error: 'Payment provider belum diaktifkan' }, 501);
+  }
+  if (provider === 'midtrans' && !midtransConfigured(c.env)) {
+    return c.json({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }, 503);
+  }
+  if (provider === 'sumopod' && !sumopodConfigured(c.env)) {
+    return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
+  }
+
+  const basePaymentRaw = {
+    mobile: body.mobile ?? null,
+    redirectURL: body.redirectURL ?? null,
+    storeId,
+    durationMonths,
+    finishUrl,
+    ...(voucherMeta || {}),
+    ...(affiliateMeta
+      ? {
+          affiliateCode: affiliateMeta.code,
+          affiliateName: affiliateMeta.name,
+          affiliateCapturedAt: affiliateMeta.capturedAt,
+        }
+      : {}),
+  };
+
+  // Persist the internal payment before creating an external gateway payment.
+  // This prevents a paid gateway transaction from becoming an unknown order.
+  try {
+    await sbPost(c.env, 'payments', {
+      id: paymentId,
+      user_id: userId,
+      store_id: storeId,
+      plan_id: body.planId,
+      amount,
+      status: 'PENDING',
+      provider,
+      payment_link: null,
+      provider_ref: paymentId,
+      raw: basePaymentRaw,
+    });
+  } catch (err) {
+    console.error('[checkout] persist payment before gateway', err);
+    return c.json({ error: 'Gagal menyiapkan transaksi pembayaran' }, 503);
+  }
+
   if (provider === 'mock') {
     paymentLink = `${cloudReturn}?mock_pay=${paymentId}&plan=${body.planId}`;
   } else if (provider === 'midtrans') {
-    if (!midtransConfigured(c.env)) {
-      return c.json({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }, 503);
-    }
     try {
       const snap = await createSnapTransaction(c.env, {
         orderId: paymentId,
@@ -279,15 +343,16 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
       snapToken = snap.token;
     } catch (err) {
       console.error('[checkout midtrans]', err);
+      await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+        status: 'FAILED',
+        raw: { ...basePaymentRaw, providerError: err instanceof Error ? err.message : 'gateway_error' },
+      }).catch(() => undefined);
       return c.json(
         { error: err instanceof Error ? err.message : 'Gagal membuat transaksi Midtrans' },
         502,
       );
     }
   } else if (provider === 'sumopod') {
-    if (!sumopodConfigured(c.env)) {
-      return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
-    }
     try {
       const sumopod = await createSumopodPayment(c.env, {
         orderId: paymentId,
@@ -298,48 +363,29 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
       sumopodMeta = { paymentId: sumopod.paymentId, orderId: sumopod.orderId };
     } catch (err) {
       console.error('[checkout sumopod]', err);
+      await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+        status: 'FAILED',
+        raw: { ...basePaymentRaw, providerError: err instanceof Error ? err.message : 'gateway_error' },
+      }).catch(() => undefined);
       return c.json(
         { error: err instanceof Error ? err.message : 'Gagal membuat transaksi SumoPod' },
         502,
       );
     }
-  } else if (provider === 'xendit') {
-    return c.json({ error: 'Xendit belum diaktifkan — set PAYMENT_PROVIDER=midtrans|mock' }, 501);
   }
 
   try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      await sbPost(c.env, 'payments', {
-        id: paymentId,
-        user_id: userId,
-        store_id: storeId,
-        plan_id: body.planId,
-        amount,
-        status: 'PENDING',
-        provider,
-        payment_link: paymentLink,
-        provider_ref: paymentId,
-        raw: {
-          mobile: body.mobile ?? null,
-          redirectURL: body.redirectURL ?? null,
-          storeId,
-          durationMonths,
-          snapToken,
-          sumopod: sumopodMeta.paymentId || sumopodMeta.orderId ? sumopodMeta : null,
-          finishUrl,
-          ...(voucherMeta || {}),
-          ...(affiliateMeta
-            ? {
-                affiliateCode: affiliateMeta.code,
-                affiliateName: affiliateMeta.name,
-                affiliateCapturedAt: affiliateMeta.capturedAt,
-              }
-            : {}),
-        },
-      });
-    }
+    await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+      payment_link: paymentLink,
+      raw: {
+        ...basePaymentRaw,
+        snapToken,
+        sumopod: sumopodMeta.paymentId || sumopodMeta.orderId ? sumopodMeta : null,
+      },
+    });
   } catch (err) {
-    console.warn('[checkout] persist payment', err);
+    console.error('[checkout] finalize payment setup', err);
+    return c.json({ error: 'Transaksi dibuat tetapi gagal menyimpan detail gateway' }, 503);
   }
 
   return c.json({
@@ -410,6 +456,9 @@ paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
       }
       const st = await getTransactionStatus(c.env, id);
       if (isPaidStatus(st.transactionStatus, st.fraudStatus)) {
+        if (!st.grossAmount || Math.round(Number(st.grossAmount)) !== Number(pay.amount)) {
+          return c.json({ error: 'payment amount mismatch' }, 400);
+        }
         await fulfillCompletedPayment(c.env, {
           paymentId: id,
           userId: String(userId),
@@ -560,47 +609,10 @@ paymentsRoutes.get('/payments/history', async (c: AppContext) => {
   });
 });
 
-// Google Play verify — stub (isi dengan Google Play Developer API)
+// Google Play ditunda. Jangan memberi entitlement sebelum verifikasi resmi
+// Google Play Developer API dan idempotency provider siap.
 paymentsRoutes.post('/payments/google-play/verify', async (c: AppContext) => {
-  const userId = requireUser(c);
-  if (userId instanceof Response) return userId;
-  const body = (await c.req.json().catch(() => ({}))) as {
-    planId?: string;
-    productId?: string;
-    purchaseToken?: string;
-    packageName?: string;
-  };
-  if (!body.planId || !body.purchaseToken) {
-    return c.json({ error: 'planId dan purchaseToken wajib' }, 400);
-  }
-
-  const end = new Date();
-  end.setDate(end.getDate() + 30);
-
-  try {
-    if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
-      await sbPost(c.env, 'subscriptions', {
-        user_id: userId,
-        plan_id: body.planId,
-        status: 'active',
-        current_period_start: new Date().toISOString(),
-        current_period_end: end.toISOString(),
-        provider: 'google_play',
-        provider_ref: body.purchaseToken.slice(0, 64),
-      });
-    }
-  } catch (err) {
-    console.warn('[google-play]', err);
-  }
-
-  return c.json({
-    message: 'Pembelian Play diverifikasi',
-    subscription: {
-      planId: body.planId,
-      status: 'ACTIVE',
-      expiryDate: end.toISOString(),
-    },
-  });
+  return c.json({ error: 'Google Play billing belum diaktifkan' }, 410);
 });
 
 export default paymentsRoutes;

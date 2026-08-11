@@ -61,12 +61,17 @@ export default function CloudBackupsListSettings() {
   const [busy, setBusy] = useState<string | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<CloudBackup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CloudBackup | null>(null);
+  const activeStoreId = storeSettings?.cloudStoreId ?? undefined;
+  const activeStoreEntitlement = activeStoreId
+    ? profile?.stores?.find((store) => store.id === activeStoreId)?.entitlement
+    : undefined;
+  const activeStoreHasSync = activeStoreId ? !!activeStoreEntitlement?.hasSync : isSyncSubscribed;
 
   const load = useCallback(async () => {
     if (!isLoggedIn) return;
     setLoading(true);
     try {
-      const { items } = await listBackups({ page: 1, limit: 50 });
+      const { items } = await listBackups({ page: 1, limit: 50, storeId: activeStoreId });
       setBackups(items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('cloudBackupsList.toast.loadFailed'));
@@ -74,7 +79,7 @@ export default function CloudBackupsListSettings() {
     } finally {
       setLoading(false);
     }
-  }, [isLoggedIn, t]);
+  }, [isLoggedIn, activeStoreId, t]);
 
   useEffect(() => {
     if (isLoggedIn) void load();
@@ -89,7 +94,13 @@ export default function CloudBackupsListSettings() {
     );
   }
 
-  const usage = profile?.storageUsage;
+  const usage = activeStoreEntitlement
+    ? {
+        usedMb: activeStoreEntitlement.usedMb,
+        limitMb: activeStoreEntitlement.storageLimitMb,
+        remainingMb: activeStoreEntitlement.remainingMb,
+      }
+    : profile?.storageUsage;
   const usedLabel =
     usage != null
       ? `${usage.usedMb.toFixed(2)} / ${usage.limitMb > 0 ? usage.limitMb.toFixed(0) : '—'} MB`
@@ -99,8 +110,7 @@ export default function CloudBackupsListSettings() {
     setBusy('upload');
     try {
       const json = await buildBackupJsonString();
-      const storeId = storeSettings?.cloudStoreId ?? undefined;
-      await uploadBackup(json, backupFileName(), storeId);
+      await uploadBackup(json, backupFileName(), activeStoreId);
       if (storeSettings?.id) {
         await db.storeSettings.update(storeSettings.id, { lastCloudBackupAt: new Date() });
       }
@@ -181,7 +191,7 @@ export default function CloudBackupsListSettings() {
                       ? t('cloudBackupsList.quotaUsed', { used: usedLabel })
                       : t('cloudBackupsList.quotaUnknown')}
                   </p>
-                  {!isSyncSubscribed && (
+                  {!activeStoreHasSync && (
                     <p className="text-[11px] text-warning mt-1">{t('cloudBackupsList.needSubscription')}</p>
                   )}
                 </div>
@@ -190,7 +200,7 @@ export default function CloudBackupsListSettings() {
                 <Button
                   size="sm"
                   className="flex-1 h-9 gap-1.5"
-                  disabled={!!busy || !isSyncSubscribed}
+                  disabled={!!busy || !activeStoreHasSync}
                   onClick={() => void handleUploadNow()}
                 >
                   {busy === 'upload' ? (

@@ -358,15 +358,32 @@ app.post('/webhook/payment', async (c) => {
     }
 
     try {
-      type Pay = { id: string; user_id: string; status: string };
+      type Pay = {
+        id: string;
+        user_id: string;
+        status: string;
+        provider: string | null;
+        amount: number;
+        raw?: Record<string, unknown> | null;
+      };
       const pays = await sbGet<Pay[]>(
         c.env,
-        `payments?id=eq.${orderId}&select=id,user_id,status&limit=1`,
+        `payments?id=eq.${orderId}&select=id,user_id,status,provider,amount,raw&limit=1`,
       );
       const pay = pays[0];
       if (!pay) {
         console.warn('[payment-webhook] payment not found', orderId);
         return c.json({ ok: true, skipped: 'unknown_order' });
+      }
+
+      if (pay.provider && pay.provider !== 'midtrans') {
+        return c.json({ ok: true, skipped: 'provider_mismatch' });
+      }
+
+      const receivedAmount = Number(grossAmount);
+      if (!Number.isFinite(receivedAmount) || Math.round(receivedAmount) !== Number(pay.amount)) {
+        console.warn('[payment-webhook] amount mismatch', orderId, grossAmount, pay.amount);
+        return c.json({ error: 'payment amount mismatch' }, 400);
       }
 
       if (isPaidStatus(transactionStatus, fraudStatus)) {
@@ -384,7 +401,7 @@ app.post('/webhook/payment', async (c) => {
         if (pay.status !== 'COMPLETED') {
           await sbPatch(c.env, `payments?id=eq.${orderId}`, {
             status: 'FAILED',
-            raw: { midtrans: body },
+            raw: { ...(pay.raw || {}), midtrans: body },
           });
         }
         return c.json({ ok: true, status: 'FAILED' });
@@ -468,7 +485,14 @@ app.post('/webhook/sumopod', async (c) => {
   }
 
   try {
-    type Pay = { id: string; user_id: string; status: string };
+     type Pay = {
+       id: string;
+       user_id: string;
+       status: string;
+       provider: string | null;
+       amount: number;
+       raw?: Record<string, unknown> | null;
+     };
     // Lookup berlapis: 1) id langsung (UUID internal), 2) order_id SumoPod
     // (berprefix SUMOPAY-...) yang disimpan di raw.sumopod saat checkout,
     // 3) payment_id SumoPod. PostgREST menolak id non-UUID → try/catch.
@@ -476,7 +500,7 @@ app.post('/webhook/sumopod', async (c) => {
     try {
       pays = await sbGet<Pay[]>(
         c.env,
-        `payments?id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+          `payments?id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status,provider,amount,raw&limit=1`,
       );
     } catch {
       pays = [];
@@ -485,7 +509,7 @@ app.post('/webhook/sumopod', async (c) => {
       try {
         pays = await sbGet<Pay[]>(
           c.env,
-          `payments?raw->sumopod->>order_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+           `payments?raw->sumopod->>order_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status,provider,amount,raw&limit=1`,
         );
       } catch {
         pays = [];
@@ -495,7 +519,7 @@ app.post('/webhook/sumopod', async (c) => {
       try {
         pays = await sbGet<Pay[]>(
           c.env,
-          `payments?raw->sumopod->>payment_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status&limit=1`,
+           `payments?raw->sumopod->>payment_id=eq.${encodeURIComponent(orderId)}&select=id,user_id,status,provider,amount,raw&limit=1`,
         );
       } catch {
         pays = [];
@@ -505,6 +529,16 @@ app.post('/webhook/sumopod', async (c) => {
     if (!pay) {
       console.warn('[sumopod-webhook] payment not found', orderId);
       return c.json({ ok: true, skipped: 'unknown_order' });
+    }
+
+    if (pay.provider && pay.provider !== 'sumopod') {
+      return c.json({ ok: true, skipped: 'provider_mismatch' });
+    }
+
+    const eventAmount = Number(data.amount ?? data.gross_amount ?? data.paid_amount);
+    if (isSumopodPaidEvent(eventType) && Number.isFinite(eventAmount) && Math.round(eventAmount) !== Number(pay.amount)) {
+      console.warn('[sumopod-webhook] amount mismatch', orderId, eventAmount, pay.amount);
+      return c.json({ error: 'payment amount mismatch' }, 400);
     }
 
     if (isSumopodPaidEvent(eventType)) {
@@ -522,7 +556,7 @@ app.post('/webhook/sumopod', async (c) => {
       if (pay.status !== 'COMPLETED') {
         await sbPatch(c.env, `payments?id=eq.${pay.id}`, {
           status: 'FAILED',
-          raw: { sumopod: { eventType, data } },
+          raw: { ...(pay.raw || {}), sumopod: { eventType, data } },
         });
       }
       return c.json({ ok: true, status: 'FAILED' });

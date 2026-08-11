@@ -50,6 +50,6 @@ export const SEED_PLANS: SeedPlan[] = [
     storageLimitMb: 1024,
     price: CLOUD_PLAN_PRICE_IDR,
     category: 'SYNC',
-    maxStores: 1,
+    maxStores: null,
   },
 ];

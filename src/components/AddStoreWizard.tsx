@@ -35,14 +35,16 @@ interface Props {
 export default function AddStoreWizard({ open, onOpenChange }: Props) {
   const { t } = useTranslation('settings');
   const navigate = useNavigate();
-  const { isLoggedIn, isSyncSubscribed, profile } = useCloudAuth();
+  const { isLoggedIn } = useCloudAuth();
 
   const [newName, setNewName] = useState('');
   const [category, setCategory] = useState<BusinessCategory | null>(null);
   const [mode, setMode] = useState<StoreMode>('local');
   const [saving, setSaving] = useState(false);
 
-  const cloudReady = isLoggedIn && isSyncSubscribed;
+  // Toko cloud dapat dibuat tanpa subscription; subscription dibeli per toko
+  // setelah toko terdaftar dan dipilih di Cloud Store Settings.
+  const cloudReady = isLoggedIn;
   const stores = useLiveQuery(() => storeRegistry.stores.orderBy('createdAt').toArray());
   // Model per-toko berbayar (2026-08-08): jumlah toko tak terbatas;
   // langganan cloud ditentukan per toko, bukan jumlah toko.

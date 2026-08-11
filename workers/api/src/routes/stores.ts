@@ -60,7 +60,11 @@ storesRoutes.get('/stores', async (c: AppContext) => {
                   isLifetime: e.is_lifetime,
                   storageLimitMb: e.storage_limit_mb || 0,
                   backupBytes,
-                  usedMb: Math.round(backupBytes / (1024 * 1024)),
+                  usedMb: Number((backupBytes / (1024 * 1024)).toFixed(2)),
+                  remainingMb: Math.max(
+                    0,
+                    Number(((e.storage_limit_mb || 0) - backupBytes / (1024 * 1024)).toFixed(2)),
+                  ),
                 }
               : null,
           };

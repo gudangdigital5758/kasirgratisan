@@ -17,14 +17,14 @@ values (
   25000,
   'month',
   1024,
-  1,
+  null,
   '{
     "cloud_backup": true,
     "auto_backup": true,
     "sync": true,
     "hide_watermark": true,
     "storage_mb": 1024,
-    "max_stores": 1
+    "per_store": true
   }'::jsonb,
   true,
   10

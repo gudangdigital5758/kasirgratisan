@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireUser } from './helpers';
 import { sbGet } from '../lib/supabase';
+import { sumBackupBytes } from '../lib/backups';
 
 const profileRoutes = new Hono<AppEnv>();
 
@@ -54,10 +55,14 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
         profile.user.storageLimitMb = ent.storage_limit_mb || 0;
         profile.user.syncExpiry = ent.sync_expiry;
         profile.user.maxStores = ent.max_stores;
+        // Pemakaian nyata (dari metadata backups) — bukan hardcode 0.
+        const usedBytes = await sumBackupBytes(c.env, String(userId)).catch(() => 0);
+        const limitMb = ent.storage_limit_mb || 0;
+        const usedMb = usedBytes / (1024 * 1024);
         profile.storageUsage = {
-          usedMb: 0,
-          limitMb: ent.storage_limit_mb || 0,
-          remainingMb: ent.storage_limit_mb || 0,
+          usedMb,
+          limitMb,
+          remainingMb: Math.max(0, limitMb - usedMb),
         };
       }
 
@@ -168,7 +173,11 @@ profileRoutes.get('/user/profile', async (c: AppContext) => {
               isLifetime: e.is_lifetime,
               storageLimitMb: e.storage_limit_mb || 0,
               backupBytes,
-              usedMb: Math.round(backupBytes / (1024 * 1024)),
+              usedMb: Number((backupBytes / (1024 * 1024)).toFixed(2)),
+              remainingMb: Math.max(
+                0,
+                Number(((e.storage_limit_mb || 0) - backupBytes / (1024 * 1024)).toFixed(2)),
+              ),
             },
           };
         });

@@ -3,13 +3,11 @@
  * Mendukung voucher (percent / free_days / lifetime) dari payment.raw.
  */
 import type { Env } from '../env';
-import { sbGet, sbPatch, sbPost } from './supabase';
+import { sbGet, sbPost } from './supabase';
 import { notifySubscriptionActivated } from './lifecycle';
 import { writeEvent } from './admin';
-import { CLOUD_PLAN_PRICE_IDR, normalizeDurationMonths } from '../data/seed-plans';
+import { CLOUD_PLAN_PRICE_IDR } from '../data/seed-plans';
 import {
-  computeNewPeriod,
-  getActiveSubscription,
   recordRedemption,
   type VoucherEffect,
   type VoucherType,
@@ -37,6 +35,7 @@ type Pay = {
   status: string;
   user_id: string;
   store_id: string | null;
+  subscription_id: string | null;
   amount: number;
   raw?: PayRaw | null;
 };
@@ -77,72 +76,34 @@ export async function fulfillCompletedPayment(
 ): Promise<{ alreadyDone: boolean; periodEnd?: string; isLifetime?: boolean }> {
   const pays = await sbGet<Pay[]>(
     env,
-    `payments?id=eq.${opts.paymentId}&select=id,plan_id,status,user_id,amount,raw`,
+    `payments?id=eq.${opts.paymentId}&select=id,plan_id,status,user_id,store_id,subscription_id,amount,raw`,
   );
   const pay = pays[0];
   if (!pay) throw new Error('payment_not_found');
   const userId = opts.userId || pay.user_id;
-
-  if (pay.status === 'COMPLETED') {
-    return { alreadyDone: true };
-  }
-
-  const now = new Date();
-  const startIso = now.toISOString();
-  const effect = effectFromPayment(pay);
-  const storeId = pay.store_id ?? null;
-  const durationMonths = normalizeDurationMonths(pay.raw?.durationMonths);
-  const existing = await getActiveSubscription(env, userId, storeId);
-  const period = computeNewPeriod({
-    existing,
-    effect: effect
-      ? { isLifetime: effect.isLifetime, grantDays: effect.grantDays, type: effect.type }
-      : { isLifetime: false, grantDays: null, type: 'percent' },
-    durationMonths,
-    now,
-  });
-
   const provider = opts.provider || (pay.amount === 0 ? 'voucher' : 'midtrans');
-
-  await sbPatch(env, `payments?id=eq.${opts.paymentId}`, {
-    status: 'COMPLETED',
-    provider,
-    provider_ref: opts.providerRef || opts.paymentId,
-    raw: {
-      ...(typeof pay.raw === 'object' && pay.raw ? pay.raw : {}),
-      midtrans: opts.midtransRaw || (pay.raw as PayRaw)?.midtrans || null,
-      sumopod: opts.sumopodRaw || (pay.raw as PayRaw)?.sumopod || null,
-      fulfilledAt: startIso,
-      periodEnd: period.endIso,
-      isLifetime: period.isLifetime,
-    },
-    updated_at: startIso,
+  const providerRef = opts.providerRef || opts.paymentId;
+  const fulfilled = await sbPost<{
+    alreadyDone: boolean;
+    subscriptionId?: string;
+    periodEnd?: string | null;
+    isLifetime?: boolean;
+  }>(env, 'rpc/fulfill_cloud_payment', {
+    p_payment_id: opts.paymentId,
+    p_user_id: userId,
+    p_provider: provider,
+    p_provider_ref: providerRef,
+    p_provider_raw: opts.midtransRaw || opts.sumopodRaw || null,
   });
-
-  if (existing) {
-    await sbPatch(env, `subscriptions?id=eq.${existing.id}`, {
-      status: 'active',
-      plan_id: pay.plan_id,
-      current_period_start: existing.current_period_start || startIso,
-      current_period_end: period.endIso,
-      is_lifetime: period.isLifetime,
-      provider,
-      provider_ref: opts.providerRef || opts.paymentId,
-      updated_at: startIso,
-    });
-  } else {
-    await sbPost(env, 'subscriptions', {
-      user_id: userId,
-      store_id: storeId,
-      plan_id: pay.plan_id,
-      status: 'active',
-      current_period_start: startIso,
-      current_period_end: period.endIso,
-      is_lifetime: period.isLifetime,
-      provider,
-      provider_ref: opts.providerRef || opts.paymentId,
-    });
+  const periodEnd = fulfilled.periodEnd ? String(fulfilled.periodEnd) : null;
+  const isLifetime = !!fulfilled.isLifetime;
+  if (fulfilled.alreadyDone) {
+    return { alreadyDone: true, periodEnd: periodEnd ?? undefined, isLifetime };
   }
+  if (!periodEnd) throw new Error('payment_fulfillment_period_missing');
+
+  const startIso = new Date().toISOString();
+  const effect = effectFromPayment(pay);
 
   // Komisi affiliate (berlaku untuk pembelian pertama & perpanjangan).
   // Idempotent per payment_id; best-effort — tidak menggagalkan fulfillment.
@@ -176,8 +137,8 @@ export async function fulfillCompletedPayment(
             type: pay.raw?.voucherType,
             value: pay.raw?.voucherValue,
             grantDays: effect?.grantDays,
-            isLifetime: period.isLifetime,
-            periodEnd: period.endIso,
+            isLifetime,
+            periodEnd,
             code: pay.raw?.voucherCode,
           },
         });
@@ -207,7 +168,7 @@ export async function fulfillCompletedPayment(
 
   await writeEvent(env, {
     type: 'payment.verified',
-    message: period.isLifetime
+    message: isLifetime
       ? `Lifetime cloud via ${provider} for plan ${pay.plan_id}`
       : `Payment completed for plan ${pay.plan_id}`,
     subjectUserId: userId,
@@ -217,8 +178,8 @@ export async function fulfillCompletedPayment(
       amount: pay.amount,
       provider,
       voucherCode: pay.raw?.voucherCode ?? null,
-      isLifetime: period.isLifetime,
-      periodEnd: period.endIso,
+      isLifetime,
+      periodEnd,
     },
   });
 
@@ -229,9 +190,9 @@ export async function fulfillCompletedPayment(
     planName,
     amount: pay.amount ?? CLOUD_PLAN_PRICE_IDR,
     periodStart: startIso,
-    periodEnd: period.endIso,
+    periodEnd,
     paymentId: opts.paymentId,
   });
 
-  return { alreadyDone: false, periodEnd: period.endIso, isLifetime: period.isLifetime };
+  return { alreadyDone: false, periodEnd, isLifetime };
 }
