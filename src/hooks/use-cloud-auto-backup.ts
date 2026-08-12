@@ -5,6 +5,7 @@ import { buildCloudBackupJsonString, backupFileName } from '@/lib/backup';
 import { uploadBackup, CloudApiError } from '@/lib/cloud-api';
 import { syncNow, initSyncListeners } from '@/lib/sync';
 import { onLocalChange } from '@/lib/change-counter';
+import { connectSyncRealtime, disconnectSyncRealtime } from '@/lib/sync-realtime';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { toast } from 'sonner';
 
@@ -120,10 +121,12 @@ export function useCloudAutoBackup() {
   }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);
 
   // Auto-sync antar-perangkat: pull berkala (hanya saat tab terlihat) + saat
-  // kembali online / tab terlihat. Fail-silent; hanya data berubah yang dikirim.
+  // kembali online / tab terlihat + sinyal realtime Supabase (B1).
   useEffect(() => {
     if (!storeSettings?.cloudStoreId) return;
     if (!isLoggedIn || !activeStoreHasSync) return;
+
+    connectSyncRealtime(storeSettings.cloudStoreId);
 
     const run = () => {
       if (!navigator.onLine) return;
@@ -144,5 +147,7 @@ export function useCloudAutoBackup() {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('online', onOnline);
+      disconnectSyncRealtime();
     };
-  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);}
+  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);
+}
