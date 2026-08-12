@@ -62,7 +62,7 @@ import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { storeRegistry, getActiveStoreKey, updateStore, bindActiveLocalStoreToCloud, type LocalStoreEntry } from '@/lib/store-registry';
-import { getSyncStatus, hasLocalSyncData, resolveInitialSync, type InitialSyncChoice } from '@/lib/sync';
+import { syncNow, getSyncStatus, hasLocalSyncData, resolveInitialSync, type InitialSyncChoice } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };

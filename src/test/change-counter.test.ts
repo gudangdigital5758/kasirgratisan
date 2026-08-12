@@ -30,7 +30,7 @@ describe('change-counter — listener auto-sync (onLocalChange)', () => {
 
     await db.products.add({
       name: 'Pemicu Sync', sku: 'TRIG-1', categoryId: 1, price: 1000, hpp: 500,
-      stock: 1, unit: 'pcs', isDeleted: 0, deletedAt: null, createdAt: new Date(),
+      stock: 1, unit: 'pcs', isDeleted: 0, deletedAt: null, createdAt: new Date(), updatedAt: new Date(),
     });
 
     expect(getChangeCounter()).toBeGreaterThan(before);
