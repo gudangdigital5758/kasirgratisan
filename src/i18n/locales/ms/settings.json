@@ -379,7 +379,7 @@
     "neverSynced": "Belum pernah dibuat sandaran",
     "realSync": {
       "title": "Sinkronisasi Antara Peranti",
-      "button": "Sync Sekarang",
+      "autoActive": "Penyelarasan automatik aktif",
       "lastSync": "Terakhir sync data: {{time}}",
       "never": "Belum pernah sync data antara peranti",
       "dirty": "{{count}} perubahan menunggu sinkronisasi",

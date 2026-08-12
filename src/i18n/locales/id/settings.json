@@ -379,7 +379,7 @@
     "neverSynced": "Belum pernah backup",
     "realSync": {
       "title": "Sinkronisasi Antar-Perangkat",
-      "button": "Sync Sekarang",
+      "autoActive": "Sinkronisasi otomatis aktif",
       "lastSync": "Terakhir sync data: {{time}}",
       "never": "Belum pernah sync data antar-perangkat",
       "dirty": "{{count}} perubahan menunggu sinkronisasi",

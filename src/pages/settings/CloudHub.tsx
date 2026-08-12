@@ -62,7 +62,7 @@ import { CLOUD_ROUTES } from '@/lib/cloud-routes';
 import { useTranslation, Trans } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { storeRegistry, getActiveStoreKey, updateStore, bindActiveLocalStoreToCloud, type LocalStoreEntry } from '@/lib/store-registry';
-import { syncNow, getSyncStatus, hasLocalSyncData, resolveInitialSync, type InitialSyncChoice } from '@/lib/sync';
+import { getSyncStatus, hasLocalSyncData, resolveInitialSync, type InitialSyncChoice } from '@/lib/sync';
 
 const CURRENCY_SYMBOL: Record<string, string> = { id: 'Rp', en: 'Rp', ms: 'Rp' };
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -110,28 +110,7 @@ export default function CloudHub() {
       setLastConflictCount(s.lastConflictCount);
       setDirtyCount(s.dirtyCount);
     }).catch(() => {});
-  }, []);
-
-  const handleRealSync = async () => {
-    setBusy('realsync');
-    try {
-      const res = await syncNow();
-      if (res.ok) {
-        toast.success(res.message);
-      } else {
-        toast.error(res.message);
-      }
-      const s = await getSyncStatus();
-      setLastSyncAt(s.lastSyncAt);
-      setLastSyncError(s.lastSyncError);
-      setLastConflictCount(s.lastConflictCount);
-      setDirtyCount(s.dirtyCount);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('cloudBackup.toast.syncFailed'));
-    } finally {
-      setBusy(null);
-    }
-  };
+  }, [syncMeta]); // refresh status setiap siklus sync selesai (syncMeta.put)
 
   const storeCount = hasLoadedStores ? stores.length : null;
   const activeStoreId = storeSettings?.cloudStoreId ?? null;
@@ -760,10 +739,10 @@ export default function CloudHub() {
                   <RefreshCw className="w-3.5 h-3.5" />
                   {t('cloudBackup.realSync.title')}
                 </p>
-                <Button className="w-full h-11 gap-2 font-semibold" disabled={busy === 'realsync'} onClick={handleRealSync}>
-                  {busy === 'realsync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  {t('cloudBackup.realSync.button')}
-                </Button>
+                <p className="text-[10px] text-muted-foreground text-center flex items-center justify-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                  {t('cloudBackup.realSync.autoActive')}
+                </p>
                 <p className="text-[10px] text-muted-foreground text-center">
                   {lastSyncAt
                     ? t('cloudBackup.realSync.lastSync', { time: lastSyncAt.toLocaleString(numberLocale) })

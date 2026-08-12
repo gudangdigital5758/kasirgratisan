@@ -4,10 +4,17 @@ import { db } from '@/lib/db';
 import { buildCloudBackupJsonString, backupFileName } from '@/lib/backup';
 import { uploadBackup, CloudApiError } from '@/lib/cloud-api';
 import { syncNow, initSyncListeners } from '@/lib/sync';
+import { onLocalChange } from '@/lib/change-counter';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { toast } from 'sonner';
 
 const HOUR_MS = 60 * 60 * 1000;
+
+/** Debounce perubahan data → sync (rentang transaksi multi-tabel digabung). */
+const SYNC_DEBOUNCE_MS = 4000;
+
+/** Pull berkala saat tab terlihat (PWA tanpa daemon — kompromi realtime). */
+const SYNC_PULL_MS = 60 * 1000;
 
 /** Interval auto-backup dalam ms; null bila nonaktif/invalid. */
 function intervalMs(
@@ -90,8 +97,30 @@ export function useCloudAutoBackup() {
     })();
   }, [storeSettings, isLoggedIn, activeStoreHasSync, refreshProfile]);
 
-  // Auto-sync antar-perangkat: jalankan berkala + saat tab terlihat kembali / online
-  // (tanpa tombol "Sync Sekarang" manual). Fail-silent; hanya push data yang berubah.
+  // Auto-sync realtime: perubahan data lokal → debounce → syncNow().
+  // Sinyal hanya pemicu; mutex di syncNow mencegah overlap; perubahan hasil
+  // pull sudah bersyncedAt → siklus lanjutan kosong dan berhenti sendiri.
+  useEffect(() => {
+    if (!storeSettings?.cloudStoreId) return;
+    if (!isLoggedIn || !activeStoreHasSync) return;
+
+    let timer: number | undefined;
+    const schedule = () => {
+      if (!navigator.onLine || timer !== undefined) return;
+      timer = window.setTimeout(() => {
+        timer = undefined;
+        void syncNow().catch((err) => console.warn('[sync] realtime gagal:', err));
+      }, SYNC_DEBOUNCE_MS);
+    };
+    const unsub = onLocalChange(schedule);
+    return () => {
+      unsub();
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);
+
+  // Auto-sync antar-perangkat: pull berkala (hanya saat tab terlihat) + saat
+  // kembali online / tab terlihat. Fail-silent; hanya data berubah yang dikirim.
   useEffect(() => {
     if (!storeSettings?.cloudStoreId) return;
     if (!isLoggedIn || !activeStoreHasSync) return;
@@ -102,7 +131,9 @@ export function useCloudAutoBackup() {
     };
     initSyncListeners();
 
-    const id = window.setInterval(run, 5 * 60 * 1000); // tiap 5 menit
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') run();
+    }, SYNC_PULL_MS);
     const onVis = () => {
       if (document.visibilityState === 'visible') run();
     };
@@ -114,5 +145,4 @@ export function useCloudAutoBackup() {
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('online', onOnline);
     };
-  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);
-}
+  }, [storeSettings?.cloudStoreId, isLoggedIn, activeStoreHasSync]);}

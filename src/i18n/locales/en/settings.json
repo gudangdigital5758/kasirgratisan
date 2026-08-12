@@ -379,7 +379,7 @@
     "neverSynced": "Never backed up",
     "realSync": {
       "title": "Cross-Device Sync",
-      "button": "Sync Now",
+      "autoActive": "Automatic sync is active",
       "lastSync": "Last data sync: {{time}}",
       "never": "Cross-device sync never run yet",
       "dirty": "{{count}} changes waiting to sync",
