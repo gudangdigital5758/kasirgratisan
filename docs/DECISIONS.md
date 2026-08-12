@@ -574,6 +574,51 @@ First valid referral wins — parent tidak bisa diganti.
 
 ---
 
+## 2026-08-12 — Daftar Toko: menu gabungan Toko + Cloud & Langganan + checkout batch
+
+**Status:** Accepted
+
+Menu "Toko" dan "Cloud & Langganan" di Settings digabung menjadi satu menu
+**"Daftar Toko"** (`/settings/stores`) — list kartu per toko dengan status
+offline/online, upgrade & perpanjang cloud, storage lokal global, dan pintu
+Cadangkan & Pulihkan (Lokal).
+
+**Decision:**
+
+1. **Satu menu Daftar Toko.** Halaman `StoresManager` diganti `DaftarToko`
+   (list semua toko registry + entitlement cloud dari server). Kartu status
+   "Profitku Cloud" dan "Toko Cloud & Langganan" di Settings dihapus; CloudHub
+   tetap ada untuk login/riwayat/file backup.
+2. **Kartu toko per status:** offline → tombol "Tingkatkan ke Cloud" /
+   "Aktifkan Lagi"; online → status langganan, sisa storage, tombol
+   "Perpanjang". Pilihan durasi 1/6/12 bulan (6 = bayar 5, 12 = bayar 10).
+3. **Checkout batch:** keranjang multi-toko (upgrade + perpanjang) →
+   halaman "Detail Pembayaran" (`/settings/cloud/checkout`) → voucher →
+   QRIS SumoPod. Endpoint baru `POST /api/payments/checkout-batch`
+   (harga server-side, max 10 toko, validasi kepemilikan + aksi) + RPC
+   `fulfill_cloud_payment_batch` (idempotent per payment, item tidak valid
+   dilewati, `batchFulfilled` di raw).
+4. **Upgrade = buat cloud store saat checkout** (client `createStore` +
+   `updateStore` registry), bukan saat klik Tingkatkan — keranjang yang
+   ditinggalkan tidak meninggalkan cloud store yatim.
+5. **Storage lokal: global saja** (`navigator.storage.estimate`) — per-toko
+   tidak akurat di Storage API. Cadangkan & Pulihkan (Lokal) tetap untuk toko
+   aktif, dengan label nama toko di UI (tanpa dropdown).
+6. **Tambah toko hanya dari tab Beranda** (StoreSwitcher) — Daftar Toko tidak
+   punya wizard; toko baru muncul sebagai Offline.
+
+**Implications:**
+- Worker: route `checkout-batch` + RPC batch; fulfillment tunggal
+  (`fulfill_cloud_payment`) otomatis terdeteksi batch via `raw.items`.
+- Notifikasi aktivasi: 1 notifikasi per payment (ringkasan), bukan per toko.
+- `payments.store_id` batch = toko pertama; detail item di `raw.items`
+  (terlihat di admin/riwayat).
+- Batas nominal SumoPod untuk 5 toko × 12 bulan = Rp 1.500.000 — perlu
+  verifikasi limit gateway saat uji produksi.
+
+
+---
+
 ## 2026-08-12 — Auto-backup cloud cadence tetap 12 jam (setting jadwal dihapus)
 
 **Status:** Accepted

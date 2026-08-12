@@ -217,6 +217,32 @@ export interface CheckoutResult {
   };
 }
 
+/** Item checkout batch (Daftar Toko): subscribe = toko belum aktif, renew = perpanjang. */
+export interface BatchCheckoutItem {
+  storeId: string;
+  action: 'subscribe' | 'renew';
+  durationMonths: 1 | 6 | 12;
+}
+
+/** Checkout batch: satu pembayaran untuk beberapa toko (upgrade + perpanjang). */
+export async function checkoutBatch(
+  items: BatchCheckoutItem[],
+  opts?: {
+    redirectURL?: string;
+    voucherCode?: string;
+    affiliateCode?: string;
+    affiliateCapturedAt?: string;
+  },
+): Promise<CheckoutResult> {
+  const res = await fetch(`${BASE_URL}/api/payments/checkout-batch`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items, ...opts }),
+  });
+  if (!res.ok) await parseError(res);
+  return res.json();
+}
+
 export interface VoucherPreviewResult {
   valid: boolean;
   error?: string;

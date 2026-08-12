@@ -26,8 +26,15 @@ type PayRaw = {
   durationMonths?: number | null;
   midtrans?: unknown;
   sumopod?: unknown;
+  /** Checkout batch (Daftar Toko): [{ storeId, action, durationMonths }, ...] */
+  items?: unknown;
   [key: string]: unknown;
 };
+
+/** Payment batch (raw.items) di-fulfill via RPC batch per toko. */
+function isBatchPayment(pay: Pay): boolean {
+  return Array.isArray(pay.raw?.items) && (pay.raw?.items as unknown[]).length > 0;
+}
 
 type Pay = {
   id: string;
@@ -88,13 +95,17 @@ export async function fulfillCompletedPayment(
     subscriptionId?: string;
     periodEnd?: string | null;
     isLifetime?: boolean;
-  }>(env, 'rpc/fulfill_cloud_payment', {
-    p_payment_id: opts.paymentId,
-    p_user_id: userId,
-    p_provider: provider,
-    p_provider_ref: providerRef,
-    p_provider_raw: opts.midtransRaw || opts.sumopodRaw || null,
-  });
+  }>(
+    env,
+    isBatchPayment(pay) ? 'rpc/fulfill_cloud_payment_batch' : 'rpc/fulfill_cloud_payment',
+    {
+      p_payment_id: opts.paymentId,
+      p_user_id: userId,
+      p_provider: provider,
+      p_provider_ref: providerRef,
+      p_provider_raw: opts.midtransRaw || opts.sumopodRaw || null,
+    },
+  );
   const periodEnd = fulfilled.periodEnd ? String(fulfilled.periodEnd) : null;
   const isLifetime = !!fulfilled.isLifetime;
   if (fulfilled.alreadyDone) {

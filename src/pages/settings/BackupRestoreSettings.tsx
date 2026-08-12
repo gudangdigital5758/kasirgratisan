@@ -12,6 +12,7 @@ import { restoreFromBackupData } from '@/lib/backup';
 import { captureLocalBackup, deleteLocalBackup, exportLocalSnapshotToDevice, listLocalBackups, restoreFromLocalBackup } from '@/lib/local-backup';
 import { useAuth } from '@/hooks/use-auth';
 import LockedPage from '@/components/LockedPage';
+import { storeRegistry, getActiveStoreKey } from '@/lib/store-registry';
 
 const NUMBER_LOCALES: Record<string, string> = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
 
@@ -29,6 +30,7 @@ export default function BackupRestoreSettings() {
   const { can } = useAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
   const localBackups = useLiveQuery(() => listLocalBackups(), []);
+  const activeStoreEntry = useLiveQuery(() => storeRegistry.stores.where('storeKey').equals(getActiveStoreKey()).first());
   const numberLocale = NUMBER_LOCALES[i18n.language] ?? 'id-ID';
 
   if (!can('manage_backup')) {
@@ -110,6 +112,12 @@ export default function BackupRestoreSettings() {
           {t('backupRestore.title')}
         </h1>
       </div>
+
+      {activeStoreEntry && (
+        <p className="text-[11px] text-muted-foreground text-center">
+          {t('backupRestore.activeStore', { name: activeStoreEntry.name })}
+        </p>
+      )}
 
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4 space-y-2">

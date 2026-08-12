@@ -49,7 +49,8 @@ const ReceiptSettings = lazy(() => import("./pages/settings/ReceiptSettings"));
 const IssueReport = lazy(() => import("./pages/settings/IssueReport"));
 const StockOpname = lazy(() => import("./pages/settings/StockOpname"));
 const RoleManager = lazy(() => import("./pages/settings/RoleManager"));
-const StoresManager = lazy(() => import("./pages/settings/StoresManager"));
+const DaftarToko = lazy(() => import("./pages/settings/DaftarToko"));
+const CheckoutPage = lazy(() => import("./pages/settings/CheckoutPage"));
 const BackupRestoreSettings = lazy(() => import("./pages/settings/BackupRestoreSettings"));
 const CloudHub = lazy(() => import("./pages/settings/CloudHub"));
 const JoinPage = lazy(() => import("./pages/JoinPage"));
@@ -320,7 +321,15 @@ const App = () => {
                     path="/settings/stores"
                     element={
                       <ErrorBoundary>
-                        <StoresManager />
+                        <DaftarToko />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path={CLOUD_ROUTES.checkout}
+                    element={
+                      <ErrorBoundary>
+                        <CheckoutPage />
                       </ErrorBoundary>
                     }
                   />

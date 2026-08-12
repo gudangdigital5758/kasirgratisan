@@ -404,6 +404,341 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
   });
 });
 
+/**
+ * Checkout batch (Daftar Toko): satu pembayaran untuk beberapa toko
+ * (upgrade + perpanjang). Harga tetap dihitung SERVER-side.
+ */
+paymentsRoutes.post('/payments/checkout-batch', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    items?: { storeId?: string; action?: string; durationMonths?: number }[];
+    redirectURL?: string;
+    voucherCode?: string;
+    affiliateCode?: string;
+    affiliateCapturedAt?: string;
+  };
+
+  const rawItems = Array.isArray(body.items) ? body.items.slice(0, 10) : [];
+  if (rawItems.length === 0) {
+    return c.json({ error: 'items wajib (pilih minimal 1 toko)' }, 400);
+  }
+  const items: { storeId: string; action: 'subscribe' | 'renew'; durationMonths: 1 | 6 | 12 }[] = [];
+  for (const it of rawItems) {
+    const storeId = it.storeId?.trim() || '';
+    if (!storeId || !UUID_RE.test(storeId)) {
+      return c.json({ error: 'storeId toko cloud wajib dan harus berupa UUID' }, 400);
+    }
+    const action = it.action === 'renew' ? 'renew' : 'subscribe';
+    const durationMonths = normalizeDurationMonths(it.durationMonths);
+    items.push({ storeId, action, durationMonths });
+  }
+
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Database wajib untuk checkout cloud per toko' }, 503);
+  }
+
+  // Affiliasi: kunci server-side dulu, fallback kode client (sama dengan checkout tunggal).
+  let affiliateMeta: { code: string; name: string | null; capturedAt: string | null } | null = null;
+  try {
+    const locked = await loadAffiliateByUserId(c.env, String(userId));
+    if (locked?.referred_by) {
+      const parent = await loadAffiliateById(c.env, locked.referred_by);
+      if (parent && parent.is_active) {
+        affiliateMeta = { code: parent.code, name: parent.name, capturedAt: null };
+      }
+    }
+  } catch (err) {
+    console.warn('[checkout-batch affiliate lock]', err);
+  }
+  const rawAffiliateCode = normalizeAffiliateCode(body.affiliateCode || '');
+  let rawAffiliateCapturedAt: string | null = null;
+  if (typeof body.affiliateCapturedAt === 'string' && body.affiliateCapturedAt.trim()) {
+    const capturedAt = new Date(body.affiliateCapturedAt);
+    if (Number.isNaN(capturedAt.getTime())) {
+      return c.json({ error: 'affiliateCapturedAt tidak valid' }, 400);
+    }
+    rawAffiliateCapturedAt = capturedAt.toISOString();
+  }
+  if (!affiliateMeta && rawAffiliateCode) {
+    try {
+      const settings = await getAffiliateSettings(c.env);
+      if (settings.enabled) {
+        const affiliate = await loadAffiliateByCode(c.env, rawAffiliateCode);
+        if (!affiliate) {
+          return c.json({ error: 'Kode affiliasi tidak valid' }, 400);
+        }
+        if (rawAffiliateCapturedAt) {
+          const captured = new Date(rawAffiliateCapturedAt).getTime();
+          if (!Number.isFinite(captured) || Date.now() - captured > settings.attribution_days * 86400000) {
+            affiliateMeta = null;
+          } else {
+            affiliateMeta = { code: affiliate.code, name: affiliate.name, capturedAt: rawAffiliateCapturedAt };
+          }
+        } else {
+          affiliateMeta = { code: affiliate.code, name: affiliate.name, capturedAt: null };
+        }
+      }
+    } catch (err) {
+      console.warn('[checkout-batch affiliate]', err);
+    }
+  }
+
+  // Kepemilikan semua toko.
+  const idList = items.map((i) => i.storeId).join(',');
+  const owned = await sbGet<{ id: string }[]>(
+    c.env,
+    `stores?id=in.(${idList})&user_id=eq.${userId}&select=id`,
+  );
+  const ownedIds = new Set(owned.map((s) => s.id));
+  if (ownedIds.size !== items.length) {
+    return c.json({ error: 'Salah satu toko tidak ditemukan atau bukan milik Anda' }, 400);
+  }
+
+  // Aksi valid: subscribe = belum ada langganan aktif; renew = sudah ada.
+  const subs = await sbGet<{ store_id: string }[]>(
+    c.env,
+    `subscriptions?user_id=eq.${userId}&store_id=in.(${idList})&status=in.(active,trialing)&select=store_id`,
+  );
+  const activeStoreIds = new Set(subs.map((s) => s.store_id));
+  for (const it of items) {
+    if (it.action === 'renew' && !activeStoreIds.has(it.storeId)) {
+      return c.json({ error: 'Toko tidak memiliki langganan aktif untuk diperpanjang' }, 400);
+    }
+    if (it.action === 'subscribe' && activeStoreIds.has(it.storeId)) {
+      return c.json({ error: 'Salah satu toko sudah memiliki langganan aktif' }, 400);
+    }
+  }
+
+  // Harga server-side: total = Σ harga bulanan × faktor durasi per toko.
+  const priced = await resolveListPrice(c.env, CLOUD_PLAN_ID);
+  if (!priced.active || priced.category !== 'SYNC') {
+    return c.json({ error: 'Plan cloud tidak aktif' }, 400);
+  }
+  let amount = 0;
+  for (const it of items) {
+    amount += Math.round(priced.amount * cloudDurationFactor(it.durationMonths));
+  }
+
+  let voucherMeta: {
+    voucherId: string;
+    voucherCode: string;
+    voucherType: string;
+    voucherValue: number;
+    amountBefore: number;
+    grantDays: number | null;
+    isLifetime: boolean;
+  } | null = null;
+  const rawCode = (body.voucherCode || '').trim();
+  if (rawCode) {
+    const preview = await validateVoucherForUser(c.env, {
+      code: rawCode,
+      userId: String(userId),
+      planId: CLOUD_PLAN_ID,
+      listPrice: amount,
+    });
+    if (!preview.valid) {
+      return c.json({ error: preview.error }, 400);
+    }
+    amount = preview.amountAfter;
+    voucherMeta = {
+      voucherId: preview.voucherId,
+      voucherCode: preview.code,
+      voucherType: preview.type,
+      voucherValue: preview.value,
+      amountBefore: preview.amountBefore,
+      grantDays: preview.grantDays,
+      isLifetime: preview.isLifetime,
+    };
+  }
+
+  const paymentId = crypto.randomUUID();
+  let provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+
+  let cloudReturn = 'https://profitku.my.id/settings/stores';
+  try {
+    const raw = (body.redirectURL || c.env.APP_ORIGIN || 'https://profitku.my.id').trim();
+    const u = new URL(raw.includes('://') ? raw : `https://${raw}`);
+    cloudReturn = `${u.origin}/settings/stores`;
+  } catch {
+    /* keep default */
+  }
+  const finishUrl = `${cloudReturn}?pending=${paymentId}`;
+
+  let paymentLink: string | null = `${cloudReturn}?pending=${paymentId}`;
+  let sumopodMeta: { paymentId: string | null; orderId: string | null } = {
+    paymentId: null,
+    orderId: null,
+  };
+  let completedImmediately = false;
+
+  const basePaymentRaw = {
+    items,
+    batch: true,
+    storeId: items[0].storeId,
+    durationMonths: items[0].durationMonths,
+    ...(voucherMeta || {}),
+    ...(affiliateMeta
+      ? {
+          affiliateCode: affiliateMeta.code,
+          affiliateName: affiliateMeta.name,
+          affiliateCapturedAt: affiliateMeta.capturedAt,
+        }
+      : {}),
+  };
+
+  // Amount 0 (voucher gratis / lifetime): fulfill langsung tanpa gateway.
+  if (amount <= 0) {
+    provider = voucherMeta ? 'voucher' : 'comp';
+    paymentLink = null;
+    try {
+      await sbPost(c.env, 'payments', {
+        id: paymentId,
+        user_id: userId,
+        store_id: items[0].storeId,
+        plan_id: CLOUD_PLAN_ID,
+        amount: 0,
+        status: 'PENDING',
+        provider,
+        payment_link: null,
+        provider_ref: paymentId,
+        raw: basePaymentRaw,
+      });
+      await fulfillCompletedPayment(c.env, {
+        paymentId,
+        userId: String(userId),
+        userEmail: c.get('userEmail'),
+        provider,
+        providerRef: voucherMeta?.voucherCode || paymentId,
+      });
+      completedImmediately = true;
+    } catch (err) {
+      console.error('[checkout-batch free]', err);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal mengaktifkan layanan gratis' },
+        500,
+      );
+    }
+    return c.json({
+      message: `Checkout ${priced.planName} (${items.length} toko)`,
+      paymentLink: null,
+      completed: completedImmediately,
+      transaction: {
+        id: paymentId,
+        status: 'COMPLETED',
+        planId: CLOUD_PLAN_ID,
+        amount: 0,
+        provider,
+        voucherCode: voucherMeta?.voucherCode ?? null,
+      },
+    });
+  }
+
+  if (!['mock', 'midtrans', 'sumopod'].includes(provider)) {
+    return c.json({ error: 'Payment provider belum diaktifkan' }, 501);
+  }
+  if (provider === 'midtrans' && !midtransConfigured(c.env)) {
+    return c.json({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }, 503);
+  }
+  if (provider === 'sumopod' && !sumopodConfigured(c.env)) {
+    return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
+  }
+
+  // Persist payment sebelum panggil gateway (anti transaksi yatim).
+  try {
+    await sbPost(c.env, 'payments', {
+      id: paymentId,
+      user_id: userId,
+      store_id: items[0].storeId,
+      plan_id: CLOUD_PLAN_ID,
+      amount,
+      status: 'PENDING',
+      provider,
+      payment_link: null,
+      provider_ref: paymentId,
+      raw: basePaymentRaw,
+    });
+  } catch (err) {
+    console.error('[checkout-batch] persist payment', err);
+    return c.json({ error: 'Gagal menyiapkan transaksi pembayaran' }, 503);
+  }
+
+  if (provider === 'mock') {
+    paymentLink = `${cloudReturn}?mock_pay=${paymentId}&plan=${CLOUD_PLAN_ID}`;
+  } else if (provider === 'midtrans') {
+    try {
+      const snap = await createSnapTransaction(c.env, {
+        orderId: paymentId,
+        amount,
+        planName: voucherMeta
+          ? `${priced.planName} (${normalizeVoucherCode(voucherMeta.voucherCode)})`
+          : priced.planName,
+        customerEmail: c.get('userEmail'),
+        customerName: c.get('userEmail')?.split('@')[0] || 'Profitku',
+        finishUrl,
+      });
+      paymentLink = snap.redirectUrl;
+    } catch (err) {
+      console.error('[checkout-batch midtrans]', err);
+      await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+        status: 'FAILED',
+        raw: { ...basePaymentRaw, providerError: err instanceof Error ? err.message : 'gateway_error' },
+      }).catch(() => undefined);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal membuat transaksi Midtrans' },
+        502,
+      );
+    }
+  } else if (provider === 'sumopod') {
+    try {
+      const sumopod = await createSumopodPayment(c.env, {
+        orderId: paymentId,
+        amount,
+        finishUrl,
+      });
+      paymentLink = sumopod.paymentLink;
+      sumopodMeta = { paymentId: sumopod.paymentId, orderId: sumopod.orderId };
+    } catch (err) {
+      console.error('[checkout-batch sumopod]', err);
+      await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+        status: 'FAILED',
+        raw: { ...basePaymentRaw, providerError: err instanceof Error ? err.message : 'gateway_error' },
+      }).catch(() => undefined);
+      return c.json(
+        { error: err instanceof Error ? err.message : 'Gagal membuat transaksi SumoPod' },
+        502,
+      );
+    }
+  }
+
+  try {
+    await sbPatch(c.env, `payments?id=eq.${paymentId}`, {
+      payment_link: paymentLink,
+      raw: {
+        ...basePaymentRaw,
+        sumopod: sumopodMeta.paymentId || sumopodMeta.orderId ? sumopodMeta : null,
+      },
+    });
+  } catch (err) {
+    console.error('[checkout-batch] finalize', err);
+    return c.json({ error: 'Transaksi dibuat tetapi gagal menyimpan detail gateway' }, 503);
+  }
+
+  return c.json({
+    message: `Checkout ${priced.planName} (${items.length} toko)`,
+    paymentLink,
+    completed: completedImmediately,
+    transaction: {
+      id: paymentId,
+      status: 'PENDING',
+      planId: CLOUD_PLAN_ID,
+      amount,
+      provider,
+      voucherCode: voucherMeta?.voucherCode ?? null,
+    },
+  });
+});
 paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;

@@ -4,6 +4,7 @@
  */
 export const CLOUD_ROUTES = {
   hub: '/settings/cloud',
+  checkout: '/settings/cloud/checkout',
   files: '/settings/cloud/files',
   history: '/settings/cloud/history',
   stores: '/settings/cloud/stores',

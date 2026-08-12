@@ -411,32 +411,7 @@ export default function Pengaturan() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
-  // Status kartu Cloud Sync di Settings.
-  const cloudStoreLinked = !!storeSettings?.cloudStoreId;
   const cloudStorageLimitMb = profile?.storageUsage.limitMb || BRAND.cloudStorageMb;
-  const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
-    ? {
-        theme: 'bg-destructive/10 ring-destructive/20',
-        iconWrap: 'bg-destructive/15 text-destructive',
-        badge: 'bg-destructive text-white',
-        badgeText: t('cloudSync.status.inactive'),
-        desc: t('cloudSync.desc.inactive'),
-      }
-    : !cloudStoreLinked
-    ? {
-        theme: 'bg-warning/10 ring-warning/20',
-        iconWrap: 'bg-warning/15 text-warning',
-        badge: 'bg-warning text-white',
-        badgeText: t('cloudSync.status.selectStore'),
-        desc: t('cloudSync.desc.selectStore'),
-      }
-    : {
-        theme: 'bg-success/10 ring-success/20',
-        iconWrap: 'bg-success/15 text-success',
-        badge: 'bg-success text-white',
-        badgeText: t('cloudSync.status.active'),
-        desc: t('cloudSync.desc.active'),
-      };
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
@@ -468,12 +443,24 @@ export default function Pengaturan() {
 
       {/* Play Store alert ditunda — BRAND.playStoreEnabled === false (fokus PWA). */}
 
-      {/* 1. Toko */}
+      {/* 1. Toko & Cloud — Daftar Toko (menu gabungan) */}
       <div className="space-y-2 mt-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.store')}</h2>
-        <SettingsLinkCard to="/settings/stores" icon={Store} iconClass="bg-primary/10 text-primary" title={t('stores.cardTitle')} description={t('stores.cardDesc')} className="" />
         {can('manage_backup') && (
-          <SettingsLinkCard to="/settings/cloud/stores" icon={Cloud} iconClass="bg-sky-500/10 text-sky-600 dark:text-sky-400" title={t('cloudStore.cardTitle')} description={t('cloudStore.cardDesc')} className="" />
+          <Link to="/settings/stores" className="block">
+            <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{t('storeList.menuTitle')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('storeList.menuDesc')}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </CardContent>
+            </Card>
+          </Link>
         )}
         {can('manage_store_settings') && (
           <Card className="border-0 shadow-sm mb-2">
@@ -492,42 +479,6 @@ export default function Pengaturan() {
           </Card>
         )}
       </div>
-
-      {/* 2. Cloud & Langganan */}
-      {can('manage_backup') && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.cloud')}</h2>
-          <Link to="/settings/cloud" className="block">
-            <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden ring-1 ${cloudStatus.theme}`}>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${cloudStatus.iconWrap}`}>
-                  <Cloud className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-bold">{t('cloud.hub.title')}</p>
-                    <span className={`text-[9px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 ${cloudStatus.badge}`}>
-                      {cloudStatus.badgeText}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                    {cloudStatus.desc}
-                  </p>
-                  {cloudLoggedIn && cloudSubscribed && (
-                    <p className="text-[10px] text-muted-foreground/80 mt-1">
-                      {storeSettings?.lastCloudBackupAt
-                        ? t('cloudSync.lastSync', { time: new Date(storeSettings.lastCloudBackupAt).toLocaleString('id-ID') })
-                        : t('cloudSync.neverSynced')}
-                    </p>
-                  )}
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
-          </Link>
-          <SettingsLinkCard to="/settings/cloud/files" icon={Cloud} iconClass="bg-primary/10 text-primary" title={t('cloudBackup.cardTitle')} description={t('cloudBackup.cardDesc')} className="" />
-        </div>
-      )}
 
       {/* 2b. Affiliate — portal canonical di affiliate.profitku.my.id */}
       <div className="space-y-2">
