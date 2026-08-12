@@ -53,7 +53,6 @@ const StoresManager = lazy(() => import("./pages/settings/StoresManager"));
 const BackupRestoreSettings = lazy(() => import("./pages/settings/BackupRestoreSettings"));
 const CloudHub = lazy(() => import("./pages/settings/CloudHub"));
 const JoinPage = lazy(() => import("./pages/JoinPage"));
-const CloudAutoBackupSettings = lazy(() => import("./pages/settings/CloudAutoBackupSettings"));
 const CloudHistorySettings = lazy(() => import("./pages/settings/CloudHistorySettings"));
 const CloudBackupsListSettings = lazy(() => import("./pages/settings/CloudBackupsListSettings"));
 const CloudStoreSettings = lazy(() => import("./pages/settings/CloudStoreSettings"));
@@ -346,14 +345,6 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <CloudHub />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route
-                    path={CLOUD_ROUTES.auto}
-                    element={
-                      <ErrorBoundary>
-                        <CloudAutoBackupSettings />
                       </ErrorBoundary>
                     }
                   />

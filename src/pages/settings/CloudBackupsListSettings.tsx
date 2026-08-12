@@ -71,7 +71,7 @@ export default function CloudBackupsListSettings() {
     if (!isLoggedIn) return;
     setLoading(true);
     try {
-      const { items } = await listBackups({ page: 1, limit: 50, storeId: activeStoreId });
+      const { items } = await listBackups({ page: 1, limit: 60, storeId: activeStoreId });
       // Tanpa local binding, hanya legacy account-level backup yang aman
       // ditampilkan; backup toko lain tidak boleh dipulihkan ke DB aktif.
       setBackups(activeStoreId ? items : items.filter((item) => !item.storeId));

@@ -850,7 +850,7 @@ export default function CloudOnlineStoreSettings() {
       {!isLoggedIn || !isSyncSubscribed ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 text-center text-sm text-muted-foreground">
-            {t('cloudAutoBackup.requiresSubscription')}
+            {t('cloudOnlineStore.requiresSubscription')}
           </CardContent>
         </Card>
       ) : !activeStoreId ? (

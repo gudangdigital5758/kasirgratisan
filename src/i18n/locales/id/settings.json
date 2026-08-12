@@ -39,13 +39,11 @@
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH TOKO",
-      "needsSetup": "PERLU DIATUR",
       "active": "AKTIF"
     },
     "desc": {
       "inactive": "Data aman di cloud & hubungkan tokomu ke market.profitku.my.id!",
       "selectStore": "Langganan aktif, tapi perangkat belum terhubung ke toko. Pilih toko agar data bisa disinkronkan.",
-      "needsSetup": "Toko sudah terhubung, tapi sinkronisasi otomatis belum dinyalakan. Atur jadwalnya agar data tersinkron rutin.",
       "active": "Sinkronisasi aktif. Data aman di cloud & tersinkron antar perangkatmu."
     },
     "lastSync": "Terakhir sync: {{time}}",
@@ -345,7 +343,7 @@
       },
       "auto": {
         "title": "Auto-backup",
-        "desc": "Jadwalkan backup otomatis (jam / harian / mingguan) saat langganan aktif."
+        "desc": "Backup otomatis ke cloud setiap 12 jam saat langganan aktif."
       },
       "quota": {
         "title": "Kuota & toko",
@@ -431,9 +429,6 @@
         "title": "Kelola Toko",
         "subtitle": "Pilih atau buat toko untuk sync"
       },
-      "autoSync": {
-        "title": "Sinkronisasi Otomatis"
-      },
       "files": {
         "title": "File Backup Cloud",
         "subtitle": "Daftar, restore, atau hapus backup di cloud"
@@ -442,13 +437,6 @@
         "title": "Riwayat Transaksi",
         "subtitle": "Lihat pembelian & cek status pembayaran"
       }
-    },
-    "interval": {
-      "off": "Nonaktif",
-      "hourly": "Setiap beberapa jam",
-      "daily": "Harian",
-      "weekly": "Mingguan",
-      "everyNHours": "Setiap {{hours}} jam"
     },
     "toast": {
       "loginFailed": "Login Google gagal",
@@ -478,33 +466,6 @@
       "openPaymentPage": "Buka halaman pembayaran",
       "close": "Tutup"
     }
-  },
-  "cloudAutoBackup": {
-    "locked": {
-      "title": "Sinkronisasi Otomatis",
-      "permissionLabel": "Kelola Backup"
-    },
-    "title": "Sinkronisasi Otomatis",
-    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk mengatur sinkronisasi otomatis.",
-    "scheduleLabel": "Jadwal Sinkronisasi Otomatis",
-    "interval": {
-      "off": "Nonaktif",
-      "hourly": "Setiap beberapa jam",
-      "daily": "Harian",
-      "weekly": "Mingguan"
-    },
-    "everyHours": {
-      "prefix": "Setiap",
-      "suffix": "jam"
-    },
-    "scheduleNote": "Sinkronisasi berjalan otomatis saat aplikasi dibuka bila sudah lewat dari interval. (PWA tidak menjalankan sinkronisasi di latar belakang saat aplikasi tertutup.)",
-    "toast": {
-      "off": "Sinkronisasi otomatis dimatikan",
-      "hourly": "Sinkronisasi otomatis setiap {{hours}} jam",
-      "daily": "Sinkronisasi otomatis harian",
-      "weekly": "Sinkronisasi otomatis mingguan"
-    },
-    "hourMinError": "Jam minimal 1"
   },
   "cloudHistory": {
     "locked": {
@@ -1700,6 +1661,7 @@
   },
   "cloudOnlineStore": {
     "title": "Toko Online & Market",
+    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk membuka toko online.",
     "linkedStoreRequired": "Device ini belum terhubung ke toko cloud. Hubungkan dulu di halaman utama Profitku Cloud.",
     "identifier": {
       "label": "URL Toko (Identifier)",

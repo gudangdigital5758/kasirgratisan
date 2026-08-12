@@ -39,7 +39,6 @@
     "loggedOut": "Log masuk untuk backup cloud · Rp 25.000/bln",
     "inactive": "Belum aktif · aktifkan di tetapan",
     "selectStore": "Langganan aktif · pilih kedai cloud",
-    "needsSetup": "Hidupkan auto-backup di Cloud",
     "active": "Cloud aktif",
     "lastSync": "Sync terakhir: {{time}}",
     "neverSynced": "Belum pernah sync ke cloud"

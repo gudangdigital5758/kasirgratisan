@@ -35,8 +35,12 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
     if (!own[0]) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
   }
 
+  // Limit klien dibaca (clamp 1–100); default 60 = ±30 hari backup @ 2/hari.
+  const limitRaw = Number(c.req.query('limit') ?? '');
+  const limit = Number.isFinite(limitRaw) && limitRaw >= 1 ? Math.min(Math.floor(limitRaw), 100) : 60;
+
   try {
-    const rows = await listBackupMeta(c.env, String(userId), 50, storeId || undefined);
+    const rows = await listBackupMeta(c.env, String(userId), limit, storeId || undefined);
     const backups = rows.map((b) => ({
       id: b.id,
       storeId: b.store_id,
@@ -49,7 +53,7 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
       backups,
       pagination: {
         page: 1,
-        limit: 50,
+        limit,
         totalItems: backups.length,
         totalPages: 1,
         hasMore: false,
@@ -59,7 +63,7 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
     console.warn('[backups list]', err);
     return c.json({
       backups: [],
-      pagination: { page: 1, limit: 50, totalItems: 0, totalPages: 1, hasMore: false },
+      pagination: { page: 1, limit, totalItems: 0, totalPages: 1, hasMore: false },
     });
   }
 });

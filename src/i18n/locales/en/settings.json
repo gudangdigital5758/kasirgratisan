@@ -39,13 +39,11 @@
     "status": {
       "inactive": "INACTIVE",
       "selectStore": "SELECT STORE",
-      "needsSetup": "NEEDS SETUP",
       "active": "ACTIVE"
     },
     "desc": {
       "inactive": "Your data is safe in the cloud — connect your store to market.profitku.my.id!",
       "selectStore": "Subscription is active, but the device hasn't been linked to a store. Select a store to sync data.",
-      "needsSetup": "Store is linked, but automatic sync isn't enabled yet. Set up a schedule so data syncs regularly.",
       "active": "Sync is active. Your data is safe in the cloud and synced across your devices."
     },
     "lastSync": "Last sync: {{time}}",
@@ -345,7 +343,7 @@
       },
       "auto": {
         "title": "Auto-backup",
-        "desc": "Schedule automatic backups (hourly / daily / weekly) while subscribed."
+        "desc": "Automatic cloud backup every 12 hours while subscribed."
       },
       "quota": {
         "title": "Quota & store",
@@ -431,9 +429,6 @@
         "title": "Manage Stores",
         "subtitle": "Select or create a store to sync"
       },
-      "autoSync": {
-        "title": "Automatic Sync"
-      },
       "files": {
         "title": "Cloud Backup Files",
         "subtitle": "List, restore, or delete cloud backups"
@@ -442,13 +437,6 @@
         "title": "Transaction History",
         "subtitle": "View purchases & check payment status"
       }
-    },
-    "interval": {
-      "off": "Off",
-      "hourly": "Every few hours",
-      "daily": "Daily",
-      "weekly": "Weekly",
-      "everyNHours": "Every {{hours}} hours"
     },
     "toast": {
       "loginFailed": "Google login failed",
@@ -478,33 +466,6 @@
       "openPaymentPage": "Open payment page",
       "close": "Close"
     }
-  },
-  "cloudAutoBackup": {
-    "locked": {
-      "title": "Automatic Sync",
-      "permissionLabel": "Manage Backup"
-    },
-    "title": "Automatic Sync",
-    "requiresSubscription": "Enable Profitku Cloud subscription first to set up automatic sync.",
-    "scheduleLabel": "Automatic Sync Schedule",
-    "interval": {
-      "off": "Off",
-      "hourly": "Every few hours",
-      "daily": "Daily",
-      "weekly": "Weekly"
-    },
-    "everyHours": {
-      "prefix": "Every",
-      "suffix": "hours"
-    },
-    "scheduleNote": "Sync runs automatically when the app opens if the interval has passed. (PWA does not run sync in the background when the app is closed.)",
-    "toast": {
-      "off": "Automatic sync turned off",
-      "hourly": "Automatic sync every {{hours}} hours",
-      "daily": "Automatic sync daily",
-      "weekly": "Automatic sync weekly"
-    },
-    "hourMinError": "Minimum 1 hour"
   },
   "cloudHistory": {
     "locked": {
@@ -1699,6 +1660,7 @@
   },
   "cloudOnlineStore": {
     "title": "Online Store & Market",
+    "requiresSubscription": "Enable Profitku Cloud subscription first to open your online store.",
     "linkedStoreRequired": "This device is not linked to a cloud store. Please link it first on the Profitku Cloud settings page.",
     "identifier": {
       "label": "Store URL (Identifier)",

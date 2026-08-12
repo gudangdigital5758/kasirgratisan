@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 export default function AppLayout() {
   useThemeColor(); // Apply saved theme color on mount
-  useCloudAutoBackup(); // Auto cloud backup on app open (if enabled & subscribed)
+  useCloudAutoBackup(); // Auto cloud backup on app open (12h cadence, if subscribed)
   useLocalAutoBackup(); // Auto local snapshot on app open (default hourly, offline)
   const { multiUserEnabled, currentUser, loading } = useAuth();
 

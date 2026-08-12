@@ -124,7 +124,6 @@ export default function Dashboard() {
   // saat auto ON (default), data sudah diamankan snapshot otomatis (M0/M2).
   const showBackup = !backupDismissed && storeSettings && !localAutoOn && shouldShowBackupReminder(storeSettings.lastBackupAt) && can('manage_backup');
 
-  const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
   const cloudStoreLinked = !!storeSettings?.cloudStoreId;
   const cloudChip = !(cloudLoggedIn && cloudSubscribed)
     ? {
@@ -138,17 +137,11 @@ export default function Dashboard() {
           iconTone: 'bg-warning/15 text-warning',
           desc: t('cloudChip.selectStore'),
         }
-      : !cloudAutoOn
-        ? {
-            tone: 'bg-warning/10 ring-warning/20',
-            iconTone: 'bg-warning/15 text-warning',
-            desc: t('cloudChip.needsSetup'),
-          }
-        : {
-            tone: 'bg-success/10 ring-success/20',
-            iconTone: 'bg-success/15 text-success',
-            desc: t('cloudChip.active'),
-          };
+      : {
+          tone: 'bg-success/10 ring-success/20',
+          iconTone: 'bg-success/15 text-success',
+          desc: t('cloudChip.active'),
+        };
 
   const quickActions: { to: string; icon: typeof ShoppingCart; label: string; color: string; perm?: PermissionKey }[] = [
     { to: '/cashier', icon: ShoppingCart, label: t('quickActions.cashier'), color: 'bg-primary/10 text-primary', perm: 'create_transaction' },

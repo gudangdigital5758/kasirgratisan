@@ -39,13 +39,11 @@
     "status": {
       "inactive": "BELUM AKTIF",
       "selectStore": "PILIH KEDAI",
-      "needsSetup": "PERLU DIATUR",
       "active": "AKTIF"
     },
     "desc": {
       "inactive": "Data selamat di awan — sambungkan kedai anda ke market.profitku.my.id!",
       "selectStore": "Langganan aktif, tetapi peranti belum disambungkan ke kedai. Pilih kedai untuk menyelaraskan data.",
-      "needsSetup": "Kedai telah disambungkan, tetapi penyelarasan automatik belum diaktifkan. Tetapkan jadual untuk menyelaraskan data secara berkala.",
       "active": "Penyelarasan aktif. Data selamat di awan & diselaraskan antara peranti anda."
     },
     "lastSync": "Kali terakhir sync: {{time}}",
@@ -345,7 +343,7 @@
       },
       "auto": {
         "title": "Auto-backup",
-        "desc": "Jadualkan backup automatik (jam / harian / mingguan) semasa langganan aktif."
+        "desc": "Sandaran automatik ke awan setiap 12 jam semasa langganan aktif."
       },
       "quota": {
         "title": "Kuota & kedai",
@@ -431,9 +429,6 @@
         "title": "Urus Kedai",
         "subtitle": "Pilih atau buat kedai untuk sync"
       },
-      "autoSync": {
-        "title": "Penyelarasan Otomatis"
-      },
       "files": {
         "title": "Fail Sandaran Awan",
         "subtitle": "Senarai, pulih, atau padam sandaran awan"
@@ -442,13 +437,6 @@
         "title": "Sejarah Transaksi",
         "subtitle": "Lihat pembelian & cek status pembayaran"
       }
-    },
-    "interval": {
-      "off": "Nonaktif",
-      "hourly": "Setiap beberapa jam",
-      "daily": "Harian",
-      "weekly": "Mingguan",
-      "everyNHours": "Setiap {{hours}} jam"
     },
     "toast": {
       "loginFailed": "Login Google gagal",
@@ -478,33 +466,6 @@
       "openPaymentPage": "Buka halaman pembayaran",
       "close": "Tutup"
     }
-  },
-  "cloudAutoBackup": {
-    "locked": {
-      "title": "Penyelarasan Otomatis",
-      "permissionLabel": "Urus Backup"
-    },
-    "title": "Penyelarasan Otomatis",
-    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk mengatur penyelarasan automatik.",
-    "scheduleLabel": "Jadual Penyelarasan Automatik",
-    "interval": {
-      "off": "Nonaktif",
-      "hourly": "Setiap beberapa jam",
-      "daily": "Harian",
-      "weekly": "Mingguan"
-    },
-    "everyHours": {
-      "prefix": "Setiap",
-      "suffix": "jam"
-    },
-    "scheduleNote": "Penyelarasan berjalan automatik apabila aplikasi dibuka jika sudah melepasi interval. (PWA tidak menjalankan penyelarasan di latar belakang apabila aplikasi ditutup.)",
-    "toast": {
-      "off": "Penyelarasan automatik dimatikan",
-      "hourly": "Penyelarasan automatik setiap {{hours}} jam",
-      "daily": "Penyelarasan automatik harian",
-      "weekly": "Penyelarasan automatik mingguan"
-    },
-    "hourMinError": "Minimum 1 jam"
   },
   "cloudHistory": {
     "locked": {
@@ -1283,6 +1244,7 @@
   },
   "cloudOnlineStore": {
     "title": "Kedai Online & Market",
+    "requiresSubscription": "Aktifkan langganan Profitku Cloud dulu untuk membuka kedai dalam talian.",
     "linkedStoreRequired": "Peranti ini belum disambungkan ke kedai cloud. Sila sambungkannya terlebih dahulu di halaman tetapan Profitku Cloud.",
     "identifier": {
       "label": "URL Kedai (Identifier)",

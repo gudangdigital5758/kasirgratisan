@@ -428,12 +428,6 @@ export default function CloudHub() {
 
   const subscription = profile?.syncSubscription ?? profile?.subscription ?? null;
 
-  const interval = storeSettings?.cloudAutoBackupInterval ?? 'off';
-  const intervalSubtitle =
-    interval === 'hourly'
-      ? t('cloudBackup.interval.everyNHours', { hours: storeSettings?.cloudAutoBackupHours ?? 6 })
-      : t(`cloudBackup.interval.${interval}`, { defaultValue: t('cloudBackup.interval.off') });
-
   return (
     <div className="px-4 pt-6 pb-20 space-y-4">
       <div className="flex items-center gap-2">
@@ -894,13 +888,6 @@ export default function CloudHub() {
                   icon={<Globe className="w-4 h-4" />}
                   title={t('cloudOnlineStore.title')}
                   subtitle={t('cloud.hub.menu.onlineStore.subtitle')}
-                />
-
-                <MenuCard
-                  to={CLOUD_ROUTES.auto}
-                  icon={<Clock className="w-4 h-4" />}
-                  title={t('cloudBackup.menu.autoSync.title')}
-                  subtitle={intervalSubtitle}
                 />
 
                 <MenuCard

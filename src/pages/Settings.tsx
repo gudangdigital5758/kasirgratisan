@@ -412,7 +412,6 @@ export default function Pengaturan() {
   };
 
   // Status kartu Cloud Sync di Settings.
-  const cloudAutoOn = (storeSettings?.cloudAutoBackupInterval ?? 'off') !== 'off';
   const cloudStoreLinked = !!storeSettings?.cloudStoreId;
   const cloudStorageLimitMb = profile?.storageUsage.limitMb || BRAND.cloudStorageMb;
   const cloudStatus = !(cloudLoggedIn && cloudSubscribed)
@@ -430,14 +429,6 @@ export default function Pengaturan() {
         badge: 'bg-warning text-white',
         badgeText: t('cloudSync.status.selectStore'),
         desc: t('cloudSync.desc.selectStore'),
-      }
-    : !cloudAutoOn
-    ? {
-        theme: 'bg-warning/10 ring-warning/20',
-        iconWrap: 'bg-warning/15 text-warning',
-        badge: 'bg-warning text-white',
-        badgeText: t('cloudSync.status.needsSetup'),
-        desc: t('cloudSync.desc.needsSetup'),
       }
     : {
         theme: 'bg-success/10 ring-success/20',

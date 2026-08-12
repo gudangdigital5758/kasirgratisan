@@ -571,3 +571,32 @@ First valid referral wins — parent tidak bisa diganti.
   hanya untuk akun lama tanpa referral. Bank/payout tetap opsional.
 - Self-referral ditutup di engine komisi: pembayar yang memakai kode REF-nya
   sendiri tidak mendapat komisi (rantai dimulai dari parent-nya).
+
+---
+
+## 2026-08-12 — Auto-backup cloud cadence tetap 12 jam (setting jadwal dihapus)
+
+**Status:** Accepted
+
+Pengaturan "Jadwal Sinkronisasi Otomatis" dihapus dari UI — user awam tidak
+perlu mengatur apa pun. Backup cloud berjalan otomatis dengan interval tetap
+12 jam.
+
+**Decision:**
+
+1. Halaman `/settings/cloud/auto` (`CloudAutoBackupSettings`) + MenuCard di
+   CloudHub + route dihapus; redirect legacy `/settings/cloud-backup/auto`
+   diarahkan ke hub.
+2. Hook auto-backup memakai konstanta `AUTO_BACKUP_INTERVAL_MS = 12 jam`:
+   saat app dibuka, jika sudah ≥ 12 jam sejak `lastCloudBackupAt`, snapshot
+   diunggah. Backup pertama toko baru tetap dijalankan.
+3. Field Dexie `cloudAutoBackupInterval` / `cloudAutoBackupHours` dibiarkan
+   (data user lama tidak diganggu; tidak lagi dibaca).
+4. Sinkronisasi antar perangkat tidak berubah (realtime debounce 4 s + pull
+   60 s + saat app dibuka) — keputusan 2026-08-08 poin 5 tetap berlaku.
+
+**Implications:**
+- Retensi 30 hari + kuota 1024 MB/toko tetap; 12 jam → maks ±60 file,
+  ±6% kuota (@1 MB), aman di list limit 50 (25 hari terlihat).
+- Perilaku user lama yang pernah set "Nonaktif" berubah menjadi backup
+  otomatis 12 jam — aman, dicatat sebagai perubahan perilaku.

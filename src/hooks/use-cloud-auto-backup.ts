@@ -17,27 +17,13 @@ const SYNC_DEBOUNCE_MS = 4000;
 /** Pull berkala saat tab terlihat (PWA tanpa daemon — kompromi realtime). */
 const SYNC_PULL_MS = 60 * 1000;
 
-/** Interval auto-backup dalam ms; null bila nonaktif/invalid. */
-function intervalMs(
-  interval: 'off' | 'hourly' | 'daily' | 'weekly' | undefined,
-  hours: number | undefined,
-): number | null {
-  switch (interval) {
-    case 'hourly':
-      return hours && hours >= 1 ? hours * HOUR_MS : null;
-    case 'daily':
-      return 24 * HOUR_MS;
-    case 'weekly':
-      return 7 * 24 * HOUR_MS;
-    default:
-      return null;
-  }
-}
+/** Interval auto-backup tetap: 12 jam (keputusan 2026-08-12 — tanpa setting manual). */
+const AUTO_BACKUP_INTERVAL_MS = 12 * HOUR_MS;
 
 /**
  * Menjalankan auto-backup ke cloud saat app dibuka, bila:
  *  - user sudah login Google & punya langganan aktif,
- *  - interval auto-backup di-set (daily/weekly),
+ *  - interval auto-backup tetap (12 jam),
  *  - sudah lewat dari interval sejak backup cloud terakhir.
  *
  * PWA/WebView tidak punya background daemon, jadi pengecekan terjadi sekali
@@ -64,11 +50,11 @@ export function useCloudAutoBackup() {
       void syncNow().catch((err) => console.warn('[sync] auto gagal:', err));
     }
 
-    const ms = intervalMs(storeSettings.cloudAutoBackupInterval, storeSettings.cloudAutoBackupHours);
+    const ms = AUTO_BACKUP_INTERVAL_MS;
     const last = storeSettings.lastCloudBackupAt ? new Date(storeSettings.lastCloudBackupAt).getTime() : 0;
-    // A newly activated store always receives one initial backup, even when the
-    // recurring schedule is currently switched off.
-    const due = last === 0 || (ms !== null && Date.now() - last >= ms);
+    // A newly activated store always receives one initial backup
+    // (lastCloudBackupAt kosong → langsung due, tanpa menunggu 12 jam).
+    const due = last === 0 || Date.now() - last >= ms;
     if (!due) return;
 
     // A backup can be restored without binding the device to a cloud store.
