@@ -585,6 +585,11 @@
     "durationTitle": "Pilih Durasi Layanan",
     "durationFor": "{{name}} — {{action}}"
   },
+  "cloudDashboard": {
+    "title": "Profitku Cloud",
+    "description": "Kelola langganan, backup, toko online, & tim di cloud.profitku.my.id",
+    "open": "Buka Dashboard Cloud"
+  },
   "checkout": {
     "title": "Detail Pembayaran",
     "itemTitle": "Ringkasan Layanan",

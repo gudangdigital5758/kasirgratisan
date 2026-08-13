@@ -83,17 +83,21 @@ app.use('*', async (c, next) => {
   const origin = c.env.APP_ORIGIN || 'https://profitku.my.id';
   const adminOrigin = c.env.ADMIN_ORIGIN || 'https://dashboard.profitku.my.id';
   const affiliateOrigin = c.env.AFFILIATE_ORIGIN || 'https://affiliate.profitku.my.id';
+  const cloudOrigin = c.env.CLOUD_ORIGIN || 'https://cloud.profitku.my.id';
   return cors({
     origin: [
       origin,
       adminOrigin,
       affiliateOrigin,
+      cloudOrigin,
       'http://localhost:8080',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://127.0.0.1:5174',
       'http://localhost:5179',
       'http://127.0.0.1:5179',
+      'http://localhost:5181',
+      'http://127.0.0.1:5181',
       'capacitor://localhost',
       'http://localhost',
     ],

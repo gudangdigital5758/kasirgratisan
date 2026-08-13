@@ -585,6 +585,11 @@
     "durationTitle": "Choose Service Duration",
     "durationFor": "{{name}} — {{action}}"
   },
+  "cloudDashboard": {
+    "title": "Profitku Cloud",
+    "description": "Manage subscriptions, backups, online store & team at cloud.profitku.my.id",
+    "open": "Open Cloud Dashboard"
+  },
   "checkout": {
     "title": "Payment Details",
     "itemTitle": "Service Summary",

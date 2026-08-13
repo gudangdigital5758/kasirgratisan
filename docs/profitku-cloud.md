@@ -16,6 +16,7 @@
 |------|---------|
 | `profitku.my.id` | Cloudflare Pages (app Vite PWA) |
 | `api.profitku.my.id` | Cloudflare Worker (`workers/api`) — POS: auth/backup/sync/subscription |
+| `cloud.profitku.my.id` | **Dashboard owner toko** (apps/cloud di repo profitku-cloud) — langganan, backup/restore, toko online; umbrella ke leaf app |
 | `dashboard.profitku.my.id` | Admin ops SPA (`admin/`) — staff only (pindah ke repo `profitku-cloud`) |
 | `market.profitku.my.id` | (fase berikut) katalog toko publik |
 | `report.profitku.my.id` | (fase berikut, CLOUD-CONSOLE) laporan merchant |

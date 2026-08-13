@@ -443,24 +443,32 @@ export default function Pengaturan() {
 
       {/* Play Store alert ditunda — BRAND.playStoreEnabled === false (fokus PWA). */}
 
-      {/* 1. Toko & Cloud — Daftar Toko (menu gabungan) */}
+      {/* 1. Toko & Cloud — kartu pintu ke dashboard cloud.profitku.my.id */}
       <div className="space-y-2 mt-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.store')}</h2>
         {can('manage_backup') && (
-          <Link to="/settings/stores" className="block">
+          <a
+            href={`${BRAND.cloudOrigin}${storeSettings?.cloudStoreId ? `/?store=${storeSettings.cloudStoreId}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
             <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Store className="w-5 h-5" />
+                  <Cloud className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">{t('storeList.menuTitle')}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('storeList.menuDesc')}</p>
+                  <p className="text-sm font-semibold">{t('cloudDashboard.title')}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('cloudDashboard.description')}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Button size="sm" className="h-8 text-xs shrink-0">
+                  <Globe className="w-3.5 h-3.5 mr-1" />
+                  {t('cloudDashboard.open')}
+                </Button>
               </CardContent>
             </Card>
-          </Link>
+          </a>
         )}
         {can('manage_store_settings') && (
           <Card className="border-0 shadow-sm mb-2">

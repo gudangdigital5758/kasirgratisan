@@ -13,6 +13,8 @@ export const BRAND = {
   apiOrigin: 'https://api.profitku.my.id',
   /** Admin ops SPA (dashboard.profitku.my.id) — STAFF ONLY. Jangan dipakai untuk klaim merchant. */
   dashboardOrigin: 'https://dashboard.profitku.my.id',
+  /** Dashboard owner toko (cloud.profitku.my.id) — kelola langganan, backup, toko online, tim. */
+  cloudOrigin: 'https://cloud.profitku.my.id',
   /** Portal affiliator (affiliate.profitku.my.id) — landing + dashboard komisi/downline. */
   affiliateOrigin: 'https://affiliate.profitku.my.id',
   /** Laporan merchant web (fase berikut, CLOUD-CONSOLE) — pengganti klaim lama dashboard.* */

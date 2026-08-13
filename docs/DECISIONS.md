@@ -645,3 +645,50 @@ perlu mengatur apa pun. Backup cloud berjalan otomatis dengan interval tetap
   ±6% kuota (@1 MB), aman di list limit 50 (25 hari terlihat).
 - Perilaku user lama yang pernah set "Nonaktif" berubah menjadi backup
   otomatis 12 jam — aman, dicatat sebagai perubahan perilaku.
+
+---
+
+## 2026-08-13 — Dashboard owner terpusat: cloud.profitku.my.id (menggantikan menu cloud di Settings POS)
+
+**Status:** Accepted (plan: `docs/CLOUD-DASHBOARD-PLAN.md`)
+
+Settings POS masih terasa tercampur aduk antara fitur offline dan cloud untuk user
+awam. Diputuskan: **semua pengelolaan cloud pindah ke dashboard terpusat** di
+`cloud.profitku.my.id` — satu pintu untuk owner toko. Cloud belum punya user riil
+(hanya akun test internal) → sisi cloud diperlakukan greenfield, bebas rombak
+tanpa migrasi legacy.
+
+**Decision:**
+
+1. **Domain:** `cloud.profitku.my.id` = Cloud Console owner (umbrella) — app baru
+   `apps/cloud` di repo `profitku-cloud` (konsisten keputusan 2026-08-06 Opsi C).
+   Dashboard menautkan leaf app: `market`, `sales`, `affiliate`, `ai`.
+2. **Amend keputusan 2026-08-12 (Daftar Toko):** menu gabungan di Settings POS
+   disederhanakan menjadi **satu kartu "Profitku Cloud"** → deep-link
+   `cloud.profitku.my.id/?store=<cloudStoreId>`. Route lama `/settings/stores`,
+   `/settings/cloud/*` tetap ada (legacy, bookmark user lama tidak rusak); menu
+   cloud tidak lagi diekspansi di Settings.
+3. **UI:** desktop = sidebar kiri dengan scrollbar sendiri + konten kanan scroll
+   sendiri (CSS murni, `height:100vh` + `overflow-y:auto`); mobile = header +
+   hamburger **kanan atas** + drawer slide-over. Tanpa library tambahan.
+4. **Fase A (live):** Ringkasan, Toko & Langganan (checkout batch + voucher),
+   Backup & Restore (unduh + panduan restore di POS), Toko Online (pindah penuh
+   dari `CloudOnlineStoreSettings` — 5 blok dirombak jadi satu form + checklist
+   live; self-XSS S3 sekalian diperbaiki dengan print stylesheet).
+5. **Batas arsitektur tetap:** POS offline-first tidak tersentuh (kasir, stok,
+   backup lokal, user PIN). IndexedDB per-origin → restore selalu via unduh +
+   impor di aplikasi kasir. Laporan (fase B) bersumber `sync_records`, UI jujur
+   "data per [last sync]".
+6. **i18n:** app cloud mengikuti konvensi repo profitku-cloud (Bahasa Indonesia),
+   bukan i18next POS — dicatat sebagai penyimpangan sengaja dari plan awal.
+   `ponytail:` tambahkan i18n id/en/ms saat ada user non-Indonesia.
+
+**Implications:**
+- Worker POS: CORS menambah origin `CLOUD_ORIGIN` (`cloud.profitku.my.id` +
+  localhost:5181 dev) — env baru `CLOUD_ORIGIN` (fallback di kode).
+- `BRAND.cloudOrigin` ditambahkan di `brand.ts`.
+- Checkout/payment tetap lewat `api.profitku.my.id` (endpoint POS) — tidak ada
+  duplikasi logika billing.
+- Fase berikut: B laporan+grafik (RPC dari `sync_records`), C tim & roles cloud
+  (`cloud_team_members`), D diskon bertingkat + affiliate toko — masing-masing
+  menunggu persetujuan user sebelum dikerjakan.

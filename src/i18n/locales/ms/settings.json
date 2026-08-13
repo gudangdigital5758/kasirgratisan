@@ -585,6 +585,11 @@
     "durationTitle": "Pilih Tempoh Perkhidmatan",
     "durationFor": "{{name}} — {{action}}"
   },
+  "cloudDashboard": {
+    "title": "Profitku Cloud",
+    "description": "Urus langganan, sandaran, kedai dalam talian & pasukan di cloud.profitku.my.id",
+    "open": "Buka Papan Pemuka Cloud"
+  },
   "checkout": {
     "title": "Butiran Pembayaran",
     "itemTitle": "Ringkasan Perkhidmatan",
