@@ -85,22 +85,28 @@ app.use('*', async (c, next) => {
   const affiliateOrigin = c.env.AFFILIATE_ORIGIN || 'https://affiliate.profitku.my.id';
   const cloudOrigin = c.env.CLOUD_ORIGIN || 'https://cloud.profitku.my.id';
   return cors({
-    origin: [
-      origin,
-      adminOrigin,
-      affiliateOrigin,
-      cloudOrigin,
-      'http://localhost:8080',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5174',
-      'http://localhost:5179',
-      'http://127.0.0.1:5179',
-      'http://localhost:5181',
-      'http://127.0.0.1:5181',
-      'capacitor://localhost',
-      'http://localhost',
-    ],
+    origin: (o) => {
+      if (!o) return origin;
+      const allow = [
+        origin,
+        adminOrigin,
+        affiliateOrigin,
+        cloudOrigin,
+        'http://localhost:8080',
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5174',
+        'http://localhost:5179',
+        'http://127.0.0.1:5179',
+        'http://localhost:5181',
+        'http://127.0.0.1:5181',
+        'capacitor://localhost',
+        'http://localhost',
+      ];
+      // Pages preview subdomain dashboard (sebelum custom domain terpasang).
+      if (/^https:\/\/[\w-]*\.?profitku-cloud-dashboard\.pages\.dev$/.test(o)) return o;
+      return allow.includes(o) ? o : origin;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
