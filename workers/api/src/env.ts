@@ -6,6 +6,8 @@ export interface Env {
   AFFILIATE_ORIGIN?: string;
   /** Origin dashboard owner (cloud.profitku.my.id) — CORS */
   CLOUD_ORIGIN?: string;
+  /** Origin API publik (fallback logoUrl) */
+  API_ORIGIN?: string;
   /**
    * Comma-separated staff emails (Google/Supabase) yang boleh akses /admin/api/*
    * Contoh: you@gmail.com,ops@profitku.my.id

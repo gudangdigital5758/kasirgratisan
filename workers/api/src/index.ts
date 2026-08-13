@@ -55,6 +55,7 @@ import profileRoutes from './routes/profile';
 import vouchersRoutes from './routes/vouchers';
 import paymentsRoutes from './routes/payments';
 import storesRoutes from './routes/stores';
+import destinationsRoutes from './routes/destinations';
 import syncRoutes from './routes/sync';
 import backupsRoutes from './routes/backups';
 import cronRoutes from './routes/cron';
@@ -215,6 +216,7 @@ app.route('/api', profileRoutes); // /user/profile
 app.route('/api', vouchersRoutes); // /vouchers/preview
 app.route('/api', paymentsRoutes); // /payments/checkout|verify|history|google-play
 app.route('/api', storesRoutes); // /stores, /stores/:id
+app.route('/api', destinationsRoutes); // /destinations/provinces|cities|districts
 app.route('/api', syncRoutes); // /sync/push, /sync/pull, /stores/:storeId/sync
 app.route('/api', backupsRoutes); // /backups, /backups/:id/...
 app.route('/api', cronRoutes); // /cron/dunning, /cron/cleanup-backups

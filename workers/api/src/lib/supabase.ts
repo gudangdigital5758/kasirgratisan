@@ -68,7 +68,7 @@ export async function sbPatch<T>(env: Env, path: string, body: unknown): Promise
   });
   if (!res.ok) {
     const bodyText = await res.text();
-    throw new SupabaseError(`Supabase PATCH gagal (${res.status})`, res.status, bodyText);
+    throw new SupabaseError(`Supabase PATCH gagal (${res.status}): ${bodyText.slice(0, 300)}`, res.status, bodyText);
   }
   return res.json() as Promise<T>;
 }

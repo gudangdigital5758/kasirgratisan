@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireSyncStore, requireUser } from './helpers';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
-import { deleteBackupObject } from '../lib/backups';
+import { deleteBackupObject, getBackupObject, putBackupObject } from '../lib/backups';
 
 const storesRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -121,14 +121,16 @@ storesRoutes.post('/stores', async (c: AppContext) => {
   }
 });
 
-/** Rename toko (CLOUD-012). */
+/** Update detail toko (rename + profil toko online). */
 storesRoutes.put('/stores/:id', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
   const storeId = c.req.param('id') ?? '';
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
-  const body = (await c.req.json().catch(() => ({}))) as { name?: string };
-  if (!body.name?.trim()) return c.json({ error: 'Nama toko wajib' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  if (typeof body.name !== 'string' || !body.name.trim()) {
+    return c.json({ error: 'Nama toko wajib' }, 400);
+  }
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
@@ -142,14 +144,54 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
       updated_at: string;
       is_public: boolean;
       identifier: string | null;
+      logo_path: string | null;
+      address1: string | null;
+      address2: string | null;
+      province_id: number | null;
+      province_name: string | null;
+      city_id: number | null;
+      city_name: string | null;
+      district_id: number | null;
+      district_name: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      phone: string | null;
+      timezone: string | null;
+      operational_hours: unknown;
     };
+    const patch: Record<string, unknown> = { name: String(body.name).trim() };
+    // Key body = camelCase (client), key patch = snake_case (kolom DB).
+    const copyStr = (k: string, dbKey: string) => {
+      if (typeof body[k] === 'string' && body[k] !== '') patch[dbKey] = body[k];
+      else if (body[k] === null) patch[dbKey] = null;
+    };
+    const copyNum = (k: string, dbKey: string) => {
+      const n = Number(body[k]);
+      if (Number.isFinite(n)) patch[dbKey] = n;
+      else if (body[k] === null) patch[dbKey] = null;
+    };
+    copyStr('address1', 'address1');
+    copyStr('address2', 'address2');
+    copyStr('provinceName', 'province_name');
+    copyStr('cityName', 'city_name');
+    copyStr('districtName', 'district_name');
+    copyStr('phone', 'phone');
+    copyStr('timezone', 'timezone');
+    copyNum('provinceId', 'province_id');
+    copyNum('cityId', 'city_id');
+    copyNum('districtId', 'district_id');
+    copyNum('latitude', 'latitude');
+    copyNum('longitude', 'longitude');
+    if (body.operationalHours !== undefined) patch['operational_hours'] = body.operationalHours;
+
     const rows = await sbPatch<S[]>(
       c.env,
       `stores?id=eq.${storeId}&user_id=eq.${userId}`,
-      { name: body.name.trim() },
+      patch,
     );
     const s = rows[0];
     if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    const apiOrigin = c.env.API_ORIGIN || 'https://api.profitku.my.id';
     return c.json({
       store: {
         id: s.id,
@@ -159,12 +201,26 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
         updatedAt: s.updated_at,
         isPublic: s.is_public,
         identifier: s.identifier,
+        logoUrl: s.logo_path ? `${apiOrigin}/api/stores/${s.id}/logo` : null,
+        address1: s.address1,
+        address2: s.address2,
+        provinceId: s.province_id,
+        provinceName: s.province_name,
+        cityId: s.city_id,
+        cityName: s.city_name,
+        districtId: s.district_id,
+        districtName: s.district_name,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        phone: s.phone,
+        timezone: s.timezone,
+        operationalHours: s.operational_hours,
       },
     });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
-    console.error('[stores rename]', err);
-    return c.json({ error: 'Gagal mengubah nama toko' }, 500);
+    console.error('[stores update]', err);
+    return c.json({ error: 'Gagal mengubah toko' }, 500);
   }
 });
 
@@ -229,10 +285,252 @@ storesRoutes.post('/stores/:id/bind-device', async (c: AppContext) => {
   }
 });
 
+// === Toko Online (market): identifier, visibility, logo ===
+
+const IDENTIFIER_RE = /^[a-z0-9-]{2,60}$/;
+
+type StoreRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  is_public: boolean;
+  identifier: string | null;
+  logo_path: string | null;
+  address1: string | null;
+  address2: string | null;
+  province_id: number | null;
+  province_name: string | null;
+  city_id: number | null;
+  city_name: string | null;
+  district_id: number | null;
+  district_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  timezone: string | null;
+  operational_hours: unknown;
+};
+
+function storeJson(c: AppContext, s: StoreRow) {
+  const apiOrigin = c.env.API_ORIGIN || 'https://api.profitku.my.id';
+  return {
+    id: s.id,
+    userId: s.user_id,
+    name: s.name,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    isPublic: s.is_public,
+    identifier: s.identifier,
+    logoUrl: s.logo_path ? `${apiOrigin}/api/stores/${s.id}/logo` : null,
+    address1: s.address1,
+    address2: s.address2,
+    provinceId: s.province_id,
+    provinceName: s.province_name,
+    cityId: s.city_id,
+    cityName: s.city_name,
+    districtId: s.district_id,
+    districtName: s.district_name,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    phone: s.phone,
+    timezone: s.timezone,
+    operationalHours: s.operational_hours,
+  };
+}
+
+/** Cek ketersediaan URL toko (slug) — global unique. */
+storesRoutes.get('/stores/identifier/check', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const q = String(c.req.query('q') ?? '').trim().toLowerCase();
+  if (!IDENTIFIER_RE.test(q)) return c.json({ available: false, error: 'Format URL tidak valid' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const rows = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?identifier=eq.${encodeURIComponent(q)}&select=id&limit=1`,
+    );
+    return c.json({ available: rows.length === 0 });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores identifier check]', err);
+    return c.json({ error: 'Gagal mengecek URL toko' }, 500);
+  }
+});
+
+/** Set / hapus identifier (slug) toko — ownership + unique. */
+storesRoutes.patch('/stores/:id/identifier', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as { identifier?: string | null };
+  const identifier = body.identifier === null || body.identifier === undefined
+    ? null
+    : String(body.identifier).trim().toLowerCase();
+  if (identifier !== null && !IDENTIFIER_RE.test(identifier)) {
+    return c.json({ error: 'Format URL tidak valid (huruf kecil, angka, strip, 2-60 karakter)' }, 400);
+  }
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    if (identifier !== null) {
+      const taken = await sbGet<{ id: string }[]>(
+        c.env,
+        `stores?identifier=eq.${encodeURIComponent(identifier)}&id=neq.${storeId}&select=id&limit=1`,
+      );
+      if (taken.length > 0) return c.json({ error: 'URL toko sudah digunakan toko lain' }, 409);
+    }
+    const rows = await sbPatch<StoreRow[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}`,
+      { identifier },
+    );
+    const s = rows[0];
+    if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    return c.json({ store: storeJson(c, s) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores identifier patch]', err);
+    return c.json({ error: 'Gagal menyimpan URL toko' }, 500);
+  }
+});
+
+/** Toggle visibilitas publik di market. */
+storesRoutes.patch('/stores/:id/visibility', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as { isPublic?: boolean };
+  if (typeof body.isPublic !== 'boolean') return c.json({ error: 'isPublic wajib boolean' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const rows = await sbPatch<StoreRow[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}`,
+      { is_public: body.isPublic },
+    );
+    const s = rows[0];
+    if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    return c.json({ store: storeJson(c, s) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores visibility]', err);
+    return c.json({ error: 'Gagal mengubah visibilitas toko' }, 500);
+  }
+});
+
+/** Upload logo toko (R2, ≤2MB, jpeg/png/webp). */
+storesRoutes.post('/stores/:id/logo', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const form = await c.req.formData().catch(() => null);
+  const file = form?.get('logo');
+  if (!file || typeof file === 'string' || typeof (file as { arrayBuffer?: unknown }).arrayBuffer !== 'function') {
+    return c.json({ error: 'File logo wajib (field "logo")' }, 400);
+  }
+  const logoFile = file as unknown as { size: number; type: string; arrayBuffer: () => Promise<ArrayBuffer> };
+  if (logoFile.size > 2 * 1024 * 1024) return c.json({ error: 'Ukuran logo maksimal 2 MB' }, 400);
+  const extMap: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+  const ext = extMap[logoFile.type];
+  if (!ext) return c.json({ error: 'Jenis file logo harus JPG/PNG/WebP' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const key = `logos/${storeId}.${ext}`;
+    await putBackupObject(c.env, key, await logoFile.arrayBuffer(), logoFile.type);
+    const rows = await sbPatch<StoreRow[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}`,
+      { logo_path: key },
+    );
+    const s = rows[0];
+    if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    return c.json({ store: storeJson(c, s) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores logo upload]', err);
+    return c.json({ error: 'Gagal mengunggah logo' }, 500);
+  }
+});
+
+/** Hapus logo toko. */
+storesRoutes.delete('/stores/:id/logo', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  try {
+    const before = await sbGet<{ logo_path: string | null }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}&select=logo_path&limit=1`,
+    );
+    const rows = await sbPatch<StoreRow[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}`,
+      { logo_path: null },
+    );
+    const s = rows[0];
+    if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    const oldPath = before[0]?.logo_path;
+    if (oldPath?.startsWith('logos/')) await deleteBackupObject(c.env, oldPath);
+    return c.json({ store: storeJson(c, s) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[stores logo delete]', err);
+    return c.json({ error: 'Gagal menghapus logo' }, 500);
+  }
+});
+
+/** Logo toko — PUBLIC (market storefront, tanpa auth). */
+storesRoutes.get('/stores/:id/logo', async (c: AppContext) => {
+  const storeId = c.req.param('id') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  try {
+    const rows = await sbGet<{ logo_path: string | null }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&select=logo_path&limit=1`,
+    );
+    const logoPath = rows[0]?.logo_path;
+    if (!logoPath?.startsWith('logos/')) return c.body(null, 404);
+    const obj = await getBackupObject(c.env, logoPath);
+    if (!obj) return c.body(null, 404);
+    return new Response(obj.body, {
+      headers: {
+        'Content-Type': obj.httpMetadata?.contentType ?? 'image/png',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
+  } catch (err) {
+    console.error('[stores logo get]', err);
+    return c.body(null, 404);
+  }
+});
+
 /**
  * DELETE /api/stores/:id — hapus toko cloud milik user secara permanen.
  * Menghapus:
  *  - objek backup di R2 + metadata di tabel backups
+ *  - logo toko di R2
  *  - baris stores (cascade: sync_records, sync_devices, sync_pull_watermarks,
  *    subscriptions.store_id). payments.store_id di-set null (riwayat keuangan &
  *    komisi affiliate tetap tersimpan).
@@ -254,6 +552,19 @@ storesRoutes.delete('/stores/:id', async (c: AppContext) => {
       `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
     );
     if (!owned[0]) return c.json({ ok: true }); // sudah tidak ada / bukan miliknya
+
+    // 0) Hapus logo toko (R2) jika ada.
+    const logo = await sbGet<{ logo_path: string | null }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&select=logo_path&limit=1`,
+    ).catch(() => [] as { logo_path: string | null }[]);
+    if (logo[0]?.logo_path?.startsWith('logos/')) {
+      try {
+        await deleteBackupObject(c.env, logo[0].logo_path);
+      } catch (e) {
+        console.warn('[stores delete] logo', logo[0].logo_path, e);
+      }
+    }
 
     // 1) Hapus backup cloud toko (R2 + metadata) — data toko tutup tidak perlu disimpan.
     const backups = await sbGet<
