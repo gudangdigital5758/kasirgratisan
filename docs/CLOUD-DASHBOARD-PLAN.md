@@ -34,12 +34,12 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 → commit+push → deploy → lapor → TUNGGU persetujuan user → fase berikutnya
 ```
 
-## Fase A — Portal Cloud (✅ selesai build, menunggu review/test/deploy)
+## Fase A — Portal Cloud (✅ kode+test+deploy; sisa langkah manual di bawah)
 
-- [x] A0.1 Pages project `profitku-cloud-dashboard` + domain (manual Cloudflare, lihat A8)
-- [x] A0.2 Google OAuth origin `https://cloud.profitku.my.id` (manual Google Console)
-- [x] A0.3 Supabase redirect `cloud.profitku.my.id/**` (manual)
-- [x] A0.4 CORS Worker POS: `CLOUD_ORIGIN` + localhost:5181 (kode)
+- [x] A0.1 Pages project `profitku-cloud-dashboard` dibuat + deploy pertama (custom domain `cloud.profitku.my.id` = **manual** di dashboard Cloudflare)
+- [ ] A0.2 Google OAuth origin `https://cloud.profitku.my.id` — **manual** Google Console (authorized JS origins)
+- [ ] A0.3 Supabase redirect `cloud.profitku.my.id/**` — **manual** (Auth → URL Configuration)
+- [x] A0.4 CORS Worker POS: `CLOUD_ORIGIN` + localhost:5181 (deployed)
 - [x] A0.5 `DECISIONS.md` amend 2026-08-12 + keputusan 2026-08-13 (kode)
 - [x] A1 Scaffold `apps/cloud` + `AppShell` (sidebar/drawer) + menu 10 item
 - [x] A2 Ringkasan: profile, KPI storage/langganan, kartu toko, buat toko, deep-link `?store=`
@@ -47,8 +47,8 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 - [x] A4 Backup & Restore: pilih toko, list backup, unduh file, hapus, panduan restore 4 langkah
 - [x] A5 Toko Online: pindah penuh (URL+check avail, detail+GPS, jam operasional, logo, checklist live visibilitas, satu tombol Simpan; print via stylesheet — fix S3)
 - [x] A6 POS: kartu "Profitku Cloud" di Settings + i18n id/en/ms + `BRAND.cloudOrigin`
-- [ ] A7 Review + test loop (lint/tsc/build, smoke manual, mobile+desktop, regression POS)
-- [ ] A8 Commit + push (profitku-cloud + kasirgratisan) + deploy Pages/Worker + smoke prod
+- [x] A7 Review + test loop — lint 0 error, worker tsc clean, `npm run build` POS + cloud hijau, vitest 121/121 (3 error pool-timeout infra, bukan kegagalan test), smoke preview 200
+- [x] A8 Commit + push (profitku-cloud `8b09fe5`, kasirgratisan `10d2cda`) + deploy Worker POS (`profitku-api`) + Pages (`profitku-cloud-dashboard`, root 200)
 - [ ] A8.4 Lapor + tunggu persetujuan → Fase B
 
 **Deviasi sengaja (dictatat):**
