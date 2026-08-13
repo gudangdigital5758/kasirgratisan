@@ -64,7 +64,7 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 - [x] B4 Keputusan merge: **laporan kanonik = `/reports` di cloud.profitku.my.id**; `report.profitku.my.id` TIDAK di-retire (tetap jalan, data source sama) — hindari bookmark rusak; retire = keputusan terpisah
 - [x] B5 Test loop — build app cloud hijau, typecheck middleware bersih, route `/api/v1/reports/detail` live (401 tanpa token), migrasi terverifikasi ada di DB (PostgREST resolve, bukan 404)
 - [x] B6 Commit (`e409665`) + push + deploy middleware + Pages
-- [ ] B7 Verifikasi data riil di dashboard (login Google → pilih toko → cek angka vs laporan POS) — butuh 3 langkah manual Fase A dulu
+- [x] B7 Verifikasi data riil — **live test penuh (26 PASS · 0 FAIL)**: backup upload/list/download/delete, sync push 11 record sintetis, laporan summary (2 tx · Rp 55.000 omzet · Rp 24.500 profit — angka cocok persis), detail (kasir/stok 3 produk/hutang), checkout renew → payment link. Akun `profitkutest@gmail.com` berlangganan; store demo dipertahankan (`d0cf24f2…`). Skrip: `profitku-cloud/scripts/live-test.mjs`
 - [ ] B8 Lapor + tunggu persetujuan → Fase C
 
 **Catatan keterbatasan (tercatat):**
