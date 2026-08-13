@@ -724,3 +724,32 @@ KPI, grafik harian, top produk, per kasir, stok, hutang — sumber `sync_records
 - 18 migrasi shared disalin ke `profitku-cloud/supabase/migrations` agar
   `supabase db push` sejalan dengan history remote (pola copy sudah dipakai
   repo ini untuk migrasi 20260723–20260805).
+
+---
+
+## 2026-08-13 — Fase C: Tim & Roles Cloud (`cloud_team_members`)
+
+**Status:** Accepted (C1–C3 selesai; C4 = keputusan terpisah; progres:
+`docs/CLOUD-DASHBOARD-PLAN.md`)
+
+**Decision:**
+
+1. **Model:** `cloud_team_members` (store_id, user_id nullable, role
+   `admin|kasir|salesman|kepala_gudang|karyawan`, invite_email + invite_state
+   `pending|active|revoked`). **Owner = `stores.user_id`** (implied, bukan baris).
+   Undangan: email yang sudah punya profile → `active` langsung; belum → `pending`.
+2. **Akses:** kelola (invite/ubah role/hapus) hanya owner; baca untuk anggota
+   aktif; RLS defense-in-depth di tabel + ownership check di worker.
+3. **Endpoint di Worker POS** (`api.profitku.my.id`), bukan middleware — toko &
+   auth tinggal di sana. Dashboard memakai endpoint yang sama.
+4. **C4 POS enforcement DITUNDA** — role cloud belum mengubah `can()` di kasir.
+   Butuh keputusan model auth: (a) PIN di-set owner via dashboard → sync ke POS,
+   atau (b) login email OTP. Tanpa ini, anggota cloud tidak bisa login ke POS
+   (multi-user lokal tetap PIN per-device). `ponytail:` implementasi menyusul.
+5. **Notif undangan (email/WA) belum dikirim** di v1 — status pending tampil di
+   dashboard. `ponytail:` Resend/Fonnte saat undangan dibuat/diterima.
+
+**Implications:**
+- 1 langganan = 1 toko tetap; tim bersifat per toko (isolasi total antar toko).
+- Dashboard `/team` adalah sumber kebenaran kelola karyawan cloud; POS tetap
+  memakai user PIN lokal sampai C4 diputuskan.

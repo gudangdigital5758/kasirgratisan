@@ -72,15 +72,17 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 - Per kasir diambil dari **shift yang ditutup** (`cashierShifts.userName`), bukan dari `transactions.createdBy` (users lokal id tidak di-sync).
 - `supabase db push` sempat menggantung di mesin ini setelah apply; migrasi diverifikasi via PostgREST. 18 migrasi shared disalin dari repo kasirgratisan agar history CLI sejalan.
 
-## Fase C — Tim & Roles Cloud
+## Fase C — Tim & Roles Cloud (✅ C1–C3; C4 integrasi POS = keputusan terpisah)
 
-- [ ] C1 Migrasi `cloud_team_members` (user_id, store_id, role: admin/kasir/salesman/kepala_gudang, invite state) + RLS
-- [ ] C2 RPC/endpoint undang/list/ganti-role/hapus
-- [ ] C3 UI Tim & Peran di dashboard
-- [ ] C4 POS: sync role cloud → `can()` (hanya toko cloud; PIN lokal tetap untuk toko offline)
-- [ ] C5 Test multi-device + permission matrix
-- [ ] C6 Migrasi + commit + push + deploy
+- [x] C1 Migrasi `cloud_team_members` (store_id, user_id, role: admin/kasir/salesman/kepala_gudang/karyawan, invite_email + invite_state pending/active/revoked) + RLS (baca owner/member, tulis owner) — `20260813160000`
+- [x] C2 Endpoint worker POS: `GET /stores/:id/team` (owner/member) · `POST .../team/invite` (email terdaftar → active, belum → pending) · `PATCH .../team/:memberId` (role) · `DELETE .../team/:memberId` — ownership diverifikasi server
+- [x] C3 Halaman `/team` di dashboard: daftar anggota + pemilik, undang via email, ubah role (select), hapus (confirm) — menu "Tim & Peran" aktif
+- [ ] C4 POS enforcement — **ditunda, butuh keputusan model auth**: role cloud belum otomatis mengubah `can()` di aplikasi kasir. Opsi: (a) PIN di-set owner via dashboard lalu sync ke POS, (b) login email OTP. `ponytail:` implementasi setelah keputusan ini
+- [ ] C5 Live test endpoint tim (butuh token baru) + matrix permission
+- [ ] C6 Migrasi + commit + push + deploy — ✅ migrasi/commit/deploy sudah (kasirgratisan `73403e8`, profitku-cloud `6293449`)
 - [ ] C7 Lapor + tunggu persetujuan → Fase D
+
+**Catatan:** undangan belum mengirim email notifikasi (v1 tersimpan sebagai pending) — `ponytail:` notif Resend/Fonnte saat user menerima undangan.
 
 ## Fase D — Diskon Bertingkat + Affiliate Toko + Integrasi Leaf
 
