@@ -78,8 +78,8 @@ Aplikasi kasir POS **offline-first** untuk UMKM Indonesia. Inti kasir, stok, dan
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) (recommended) or [Node.js](https://nodejs.org/) v18+ (via [nvm](https://github.com/nvm-sh/nvm))
-- npm, yarn, or bun
+- [Node.js](https://nodejs.org/) v18+ (via [nvm](https://github.com/nvm-sh/nvm))
+- npm (repo ini npm-only; jangan pakai bun/yarn/pnpm untuk install)
 
 ### Installation
 

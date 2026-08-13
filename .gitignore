@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Package manager lockfiles yang tidak dipakai (repo ini npm-only)
+bun.lock
+pnpm-lock.yaml
+yarn.lock
+
 # Environment variables
 .env
 .env.*
