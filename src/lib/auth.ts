@@ -1,4 +1,5 @@
 import { db, type User, type PermissionKey, ALL_PERMISSIONS } from './db';
+import { verifyCloudMember, permissionsForCloudRole } from './cloud-team';
 
 // === PIN hashing (SHA-256, hex) ===
 // Note: client-only PWA — this is *obfuscation*, not military-grade security.
@@ -98,6 +99,8 @@ export interface LoginResult {
   ok: boolean;
   user?: User;
   error?: string;
+  /** Role cloud (login cloud) — dipakai untuk cache session offline. */
+  cloudRole?: string;
 }
 
 export async function login(username: string, pin: string): Promise<LoginResult> {
@@ -118,6 +121,33 @@ export async function login(username: string, pin: string): Promise<LoginResult>
   await db.users.update(user.id!, { lastLoginAt: new Date() });
 
   return { ok: true, user: { ...user, lastLoginAt: new Date() } };
+}
+
+/**
+ * Login anggota tim cloud (email + PIN yang di-set owner di dashboard).
+ * PIN diverifikasi SERVER (rate-limited); user pseudo dibuat lokal dengan
+ * permission hasil pemetaan role cloud. Cache offline di handle use-auth.
+ */
+export async function loginCloud(emailRaw: string, pin: string, storeId: string): Promise<LoginResult> {
+  const email = emailRaw.trim().toLowerCase();
+  if (!email || !pin) return { ok: false, error: 'Email dan PIN wajib diisi' };
+  if (!isValidPin(pin)) return { ok: false, error: 'PIN harus 4-6 digit angka' };
+  try {
+    const member = await verifyCloudMember(storeId, email, pin);
+    const user: User = {
+      username: email,
+      pinHash: '',
+      name: member.name || email,
+      role: 'staff',
+      permissions: permissionsForCloudRole(member.role),
+      isActive: 1,
+      createdAt: new Date(),
+      lastLoginAt: new Date(),
+    };
+    return { ok: true, user, cloudRole: member.role };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Gagal login cloud' };
+  }
 }
 
 // === Session persistence (localStorage) ===

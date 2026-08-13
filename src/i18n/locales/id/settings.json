@@ -1412,7 +1412,13 @@
     "loggingIn": "Masuk…",
     "loginFailed": "Login gagal",
     "forgotPin": "Lupa PIN? Hubungi pemilik toko untuk reset.",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "cloudDivider": "atau login dengan akun cloud",
+    "cloudEmailLabel": "Email",
+    "cloudEmailPlaceholder": "email@karyawan.com",
+    "cloudPinLabel": "PIN Cloud",
+    "cloudLoginButton": "Masuk Cloud",
+    "cloudHint": "PIN diatur pemilik toko di cloud.profitku.my.id → Tim & Peran. Verifikasi butuh internet sekali; setelah itu login tersimpan 7 hari."
   },
   "receipt": {
     "title": "Struk Transaksi",

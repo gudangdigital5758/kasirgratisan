@@ -1412,7 +1412,13 @@
     "loggingIn": "Signing in…",
     "loginFailed": "Login failed",
     "forgotPin": "Forgot PIN? Contact the store owner to reset.",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "cloudDivider": "or sign in with cloud account",
+    "cloudEmailLabel": "Email",
+    "cloudEmailPlaceholder": "email@staff.com",
+    "cloudPinLabel": "Cloud PIN",
+    "cloudLoginButton": "Cloud Sign In",
+    "cloudHint": "PIN is set by the store owner at cloud.profitku.my.id → Team & Roles. Verification needs internet once; after that login is cached for 7 days."
   },
   "receipt": {
     "title": "Transaction Receipt",

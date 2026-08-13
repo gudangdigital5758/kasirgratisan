@@ -7,8 +7,15 @@ import {
   saveSession as persistSession,
   clearSession as clearStoredSession,
   login as authLogin,
+  loginCloud as authLoginCloud,
   type LoginResult,
 } from '@/lib/auth';
+import {
+  loadCloudMemberSession,
+  saveCloudMemberSession,
+  clearCloudMemberSession,
+  permissionsForCloudRole,
+} from '@/lib/cloud-team';
 
 interface AuthContextValue {
   // Whether multi-user mode is active. When false, app behaves like before
@@ -23,6 +30,8 @@ interface AuthContextValue {
   // Owner-only flag (manage users, toggle multi-user, etc.)
   isOwner: boolean;
   login: (username: string, pin: string) => Promise<LoginResult>;
+  /** Login anggota tim cloud (email + PIN dari dashboard). */
+  loginCloud: (email: string, pin: string) => Promise<LoginResult>;
   logout: () => void;
   // Refresh currentUser from DB (e.g. after permission changes).
   refresh: () => Promise<void>;
@@ -41,7 +50,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const user = await restoreSession();
+      let user = await restoreSession();
+      if (!user) {
+        // Coba session login cloud (cache offline 7 hari).
+        const settings = await db.storeSettings.toCollection().first();
+        const cloudStoreId = settings?.cloudStoreId;
+        const sess = cloudStoreId ? loadCloudMemberSession(cloudStoreId) : null;
+        if (sess) {
+          user = {
+            username: sess.email,
+            pinHash: '',
+            name: sess.name || sess.email,
+            role: 'staff',
+            permissions: permissionsForCloudRole(sess.role),
+            isActive: 1,
+            createdAt: new Date(),
+            lastLoginAt: new Date(),
+          };
+        }
+      }
       if (!cancelled) {
         setCurrentUser(user);
         setSessionRestored(true);
@@ -91,8 +118,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   }, []);
 
+  const loginCloud = useCallback(async (email: string, pin: string): Promise<LoginResult> => {
+    const settings = await db.storeSettings.toCollection().first();
+    const storeId = settings?.cloudStoreId;
+    if (!storeId) {
+      return { ok: false, error: 'Device ini belum terhubung ke toko cloud' };
+    }
+    const result = await authLoginCloud(email, pin, storeId);
+    if (result.ok && result.user) {
+      saveCloudMemberSession(storeId, {
+        email: result.user.username,
+        name: result.user.name,
+        role: result.cloudRole ?? 'karyawan',
+      });
+      setCurrentUser(result.user);
+    }
+    return result;
+  }, []);
+
   const logout = useCallback(() => {
     clearStoredSession();
+    clearCloudMemberSession();
     setCurrentUser(null);
   }, []);
 
@@ -128,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     can,
     isOwner,
     login,
+    loginCloud,
     logout,
     refresh,
   };

@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 export default function LoginScreen() {
   const { t } = useTranslation('settings');
-  const { login } = useAuth();
+  const { login, loginCloud } = useAuth();
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());
 
   const [username, setUsername] = useState('');
@@ -20,6 +20,11 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
   const pinRef = useRef<HTMLInputElement>(null);
+
+  // Login cloud (C4)
+  const [cloudEmail, setCloudEmail] = useState('');
+  const [cloudPin, setCloudPin] = useState('');
+  const [cloudBusy, setCloudBusy] = useState(false);
 
   useEffect(() => {
     usernameRef.current?.focus();
@@ -38,6 +43,21 @@ export default function LoginScreen() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCloudSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cloudBusy) return;
+    setCloudBusy(true);
+    try {
+      const result = await loginCloud(cloudEmail, cloudPin);
+      if (!result.ok) {
+        toast.error(result.error || t('loginScreen.loginFailed'));
+        setCloudPin('');
+      }
+    } finally {
+      setCloudBusy(false);
     }
   };
 
@@ -122,6 +142,75 @@ export default function LoginScreen() {
             <LogIn className="w-4 h-4 mr-2" />
             {submitting ? t('loginScreen.loggingIn') : t('loginScreen.loginButton')}
           </Button>
+        </form>
+
+        {/* Pemisah */}
+        <div className="relative my-5">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-background px-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+              {t('loginScreen.cloudDivider')}
+            </span>
+          </div>
+        </div>
+
+        {/* Login cloud (C4: email + PIN dari dashboard cloud) */}
+        <form onSubmit={handleCloudSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="cloud-email" className="flex items-center gap-1.5 text-sm">
+              <UserIcon className="w-3.5 h-3.5" />
+              {t('loginScreen.cloudEmailLabel')}
+            </Label>
+            <Input
+              id="cloud-email"
+              type="email"
+              value={cloudEmail}
+              onChange={(e) => setCloudEmail(e.target.value)}
+              placeholder={t('loginScreen.cloudEmailPlaceholder')}
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-12"
+              disabled={cloudBusy}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cloud-pin" className="flex items-center gap-1.5 text-sm">
+              <Lock className="w-3.5 h-3.5" />
+              {t('loginScreen.cloudPinLabel')}
+            </Label>
+            <Input
+              id="cloud-pin"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={cloudPin}
+              onChange={(e) => setCloudPin(e.target.value.replace(/\D/g, ''))}
+              placeholder={t('loginScreen.pinPlaceholder')}
+              autoComplete="current-password"
+              className="h-12 tracking-widest font-mono text-center text-lg"
+              disabled={cloudBusy}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            variant="outline"
+            className="w-full h-12 text-base font-semibold mt-2"
+            disabled={cloudBusy || !cloudEmail.trim() || cloudPin.length < 4}
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            {cloudBusy ? t('loginScreen.loggingIn') : t('loginScreen.cloudLoginButton')}
+          </Button>
+          <p className="text-[11px] text-muted-foreground text-center">
+            {t('loginScreen.cloudHint')}
+          </p>
         </form>
 
         <p className="text-[11px] text-muted-foreground text-center mt-6">
