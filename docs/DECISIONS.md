@@ -692,3 +692,35 @@ tanpa migrasi legacy.
 - Fase berikut: B laporan+grafik (RPC dari `sync_records`), C tim & roles cloud
   (`cloud_team_members`), D diskon bertingkat + affiliate toko — masing-masing
   menunggu persetujuan user sebelum dikerjakan.
+
+---
+
+## 2026-08-13 — Fase B: Laporan & Grafik di dashboard (keputusan merge + batasan data)
+
+**Status:** Accepted (progres: `docs/CLOUD-DASHBOARD-PLAN.md`)
+
+Halaman `/reports` di `cloud.profitku.my.id` menjadi **laporan kanonik merchant** —
+KPI, grafik harian, top produk, per kasir, stok, hutang — sumber `sync_records`.
+
+**Decision:**
+
+1. **Merge:** `report.profitku.my.id` **tidak di-retire** — tetap jalan (data
+   source sama, RPC yang sama). Retire = redirect di kemudian hari, keputusan
+   terpisah. Alasan: hindari bookmark rusak, dan laporan dashboard butuh
+   verifikasi data riil dulu.
+2. **RPC baru** `fn_report_detail` (migrasi `20260813120000`): per kasir via
+   `cashierShifts` (nama kasir tersedia di sana), stok = snapshot LWW per produk,
+   hutang = snapshot terakhir per debt, last sync dari `sync_meta`.
+3. **Batasan data (diterima):** laporan **per kategori tidak tersedia** — product
+   sync tidak membawa `categorySyncId` dan `id` lokal tidak ikut di-sync.
+   `ponytail:` tambah `categorySyncId` di allowlist worker + backfill Dexie bila
+   per-kategori diperlukan.
+4. Endpoint baru di worker middleware: `GET /api/v1/reports/detail` (JWT +
+   ownership check, service-role RPC) — pola sama dengan `reports/summary`.
+
+**Implications:**
+- Grafik memakai CSS murni (tanpa library chart) — `ponytail:` upgrade ke
+  Recharts bila perlu interaktivitas lebih.
+- 18 migrasi shared disalin ke `profitku-cloud/supabase/migrations` agar
+  `supabase db push` sejalan dengan history remote (pola copy sudah dipakai
+  repo ini untuk migrasi 20260723–20260805).

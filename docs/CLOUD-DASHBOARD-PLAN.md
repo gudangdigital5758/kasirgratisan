@@ -56,14 +56,21 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 - Peta Leaflet tidak ikut; GPS locate tetap ada (bundle lebih ringan; `ponytail:` tambah peta saat diperlukan).
 - i18n app cloud = Bahasa Indonesia (konvensi repo profitku-cloud).
 
-## Fase B — Laporan & Grafik (dari `sync_records`)
+## Fase B — Laporan & Grafik (✅ kode+test+deploy; verifikasi data riil menyusul)
 
-- [ ] B1 Migrasi RPC agregasi (penjualan harian/per produk/per kategori/per kasir, hutang, stok, shift) — profitku-cloud/supabase
-- [ ] B2 Halaman Laporan: grafik + tabel, filter rentang + per toko
-- [ ] B3 Banner jujur "Data per [last sync]"
-- [ ] B4 Keputusan merge `report.profitku.my.id` → redirect ke cloud.profitku.my.id/laporan
-- [ ] B5 Test loop + migrasi + commit + push + deploy
-- [ ] B6 Lapor + tunggu persetujuan → Fase C
+- [x] B1 Migrasi RPC agregasi — `fn_report_summary` (sudah ada 2026-08-06) + `fn_report_detail` baru (20260813120000): per kasir (via shift), stok terkini (snapshot LWW), hutang, info sync terakhir
+- [x] B2 Halaman `/reports`: KPI transaksi/omzet/laba/hutang, grafik batang harian (CSS murni, tanpa library), top produk, per kasir, stok, hutang; filter rentang (hari ini/7/30/bulan) + per toko
+- [x] B3 Banner jujur "Data per [last sync]" (dari `sync_meta.last_push_at` + device count)
+- [x] B4 Keputusan merge: **laporan kanonik = `/reports` di cloud.profitku.my.id**; `report.profitku.my.id` TIDAK di-retire (tetap jalan, data source sama) — hindari bookmark rusak; retire = keputusan terpisah
+- [x] B5 Test loop — build app cloud hijau, typecheck middleware bersih, route `/api/v1/reports/detail` live (401 tanpa token), migrasi terverifikasi ada di DB (PostgREST resolve, bukan 404)
+- [x] B6 Commit (`e409665`) + push + deploy middleware + Pages
+- [ ] B7 Verifikasi data riil di dashboard (login Google → pilih toko → cek angka vs laporan POS) — butuh 3 langkah manual Fase A dulu
+- [ ] B8 Lapor + tunggu persetujuan → Fase C
+
+**Catatan keterbatasan (tercatat):**
+- Per **kategori** tidak bisa dari sync data saat ini — `products.categoryId` lokal tanpa `categorySyncId`, dan `id` lokal tidak ikut di-sync. `ponytail:` tambah `categorySyncId` di products (allowlist worker + backfill Dexie) saat perlu laporan per kategori.
+- Per kasir diambil dari **shift yang ditutup** (`cashierShifts.userName`), bukan dari `transactions.createdBy` (users lokal id tidak di-sync).
+- `supabase db push` sempat menggantung di mesin ini setelah apply; migrasi diverifikasi via PostgREST. 18 migrasi shared disalin dari repo kasirgratisan agar history CLI sejalan.
 
 ## Fase C — Tim & Roles Cloud
 
