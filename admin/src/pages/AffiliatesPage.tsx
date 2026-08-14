@@ -67,7 +67,7 @@ export default function AffiliatesPage() {
   }, []);
 
   useEffect(() => {
-    document.title = 'Affiliates · Profitku Admin';
+    document.title = 'Mitra · Profitku Admin';
     load();
     loadSettings();
   }, [load, loadSettings]);
@@ -182,10 +182,10 @@ export default function AffiliatesPage() {
   return (
     <div className="stack">
       <div>
-        <h2 style={{ margin: 0 }}>Affiliate</h2>
+        <h2 style={{ margin: 0 }}>Program Mitra</h2>
         <p className="muted">
           Referral link Profitku 5 tier. User yang membuka <code>?ref=KODE</code> otomatis dikunci ke
-          affiliator; saat berlangganan/perpanjang cloud, komisi per tier (20/5/3/2/1%) dicatat
+          mitra; saat berlangganan/perpanjang cloud, komisi per tier (20/5/3/2/1%) dicatat
           otomatis dari pembayaran sukses s.d. 5 level di atasnya.
         </p>
       </div>

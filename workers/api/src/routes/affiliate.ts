@@ -335,11 +335,17 @@ affiliateRoutes.get('/commissions', async (c) => {
       summary[tier] = s;
     }
 
+    const settings = await getAffiliateSettings(c.env);
+    const pendingIdr = Math.max(0, earnedIdr - paidIdr);
+
     return c.json({
       ok: true,
       commissions: rows.map(mapCommission),
       summary,
       totals: { earnedIdr, paidIdr },
+      payoutThresholdIdr: settings.min_amount_idr,
+      pendingIdr,
+      eligibleForPayout: settings.min_amount_idr <= 0 || pendingIdr >= settings.min_amount_idr,
     });
   } catch (err) {
     console.warn('[affiliate commissions]', err);

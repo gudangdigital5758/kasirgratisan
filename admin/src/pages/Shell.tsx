@@ -8,7 +8,7 @@ const links = [
   { to: '/members', label: 'Members' },
   { to: '/payments', label: 'Payments' },
   { to: '/vouchers', label: 'Vouchers' },
-  { to: '/affiliates', label: 'Affiliators' },
+  { to: '/affiliates', label: 'Mitra' },
   { to: '/affiliate-commissions', label: 'Commissions' },
   { to: '/admin-users', label: 'Staff' },
   { to: '/events', label: 'Events / Live log' },

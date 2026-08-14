@@ -472,12 +472,25 @@ affiliates.post('/:id/mark-paid', async (c) => {
   const id = c.req.param('id');
 
   try {
-    const rows = await sbGet<{ id: string }[]>(
-      c.env,
-      `affiliate_commissions?affiliate_id=eq.${id}&status=eq.earned&select=id`,
-    );
+    const [rows, settings] = await Promise.all([
+      sbGet<{ id: string; commission_idr: number }[]>(
+        c.env,
+        `affiliate_commissions?affiliate_id=eq.${id}&status=eq.earned&select=id,commission_idr`,
+      ),
+      getAffiliateSettings(c.env),
+    ]);
     if (rows.length === 0) {
       return c.json({ ok: true, updated: 0 });
+    }
+    // Threshold payout: komisi belum mencapai minimal → tolak mark-paid.
+    const earnedTotal = rows.reduce((s, r) => s + (r.commission_idr || 0), 0);
+    if (settings.min_amount_idr > 0 && earnedTotal < settings.min_amount_idr) {
+      return c.json(
+        {
+          error: `Komisi earned Rp ${earnedTotal.toLocaleString('id-ID')} belum mencapai minimal payout Rp ${settings.min_amount_idr.toLocaleString('id-ID')}`,
+        },
+        400,
+      );
     }
     const ids = rows.map((r) => r.id);
     await sbPatch(c.env, `affiliate_commissions?affiliate_id=eq.${id}&status=eq.earned`, {

@@ -789,3 +789,37 @@ seluruh permukaan cloud yang sebelumnya hanya cek auth+ownership:
   store dengan 402 — banner UI menjelaskan. `team/login` tanpa langganan ditolak.
 - `ponytail:` middleware reports/market belum diverifikasi di repo ini; payout threshold
   & label "Mitra" menunggu keputusan terpisah.
+
+---
+
+## 2026-08-14 — Trial FREE7, threshold payout komisi, label Program Mitra
+
+**Status:** Accepted
+
+Lanjutan roadmap affiliate (opsi 5 yang disepakati), bertahap:
+
+1. **Trial voucher FREE7** — migrasi `20260814010000_voucher_free7.sql`:
+   `FREE7` = `free_days` 7 hari, plan `cloud_monthly`, `max_per_user=1`
+   (sekali per akun, ditegakkan `validateVoucherForUser` via
+   `voucher_redemptions`). Checkout free_days sudah jalan (amount 0 →
+   skip gateway → sub 7 hari). Tidak ada perubahan kode voucher.
+2. **Threshold payout komisi** — `min_amount_idr` (sudah ada di settings
+   affiliate, admin bisa ubah) di-set default **Rp 50.000** (migrasi
+   `20260814020000_affiliate_payout_threshold.sql` + fallback Worker).
+   - `POST /admin/api/affiliates/:id/mark-paid` ditolak (400) bila total
+     komisi earned < threshold.
+   - `GET /api/affiliate/commissions` mengembalikan `payoutThresholdIdr`,
+     `pendingIdr`, `eligibleForPayout`; dashboard Mitra menampilkan
+     progress bar payout di halaman Komisi.
+3. **Label "Program Mitra"** — display-only rebrand (identifier teknis
+   `affiliate*` tidak berubah): i18n POS (id/en/ms), JoinPage, portal
+   `apps/affiliate` (judul/landing/sidebar), nav cloud dashboard, admin
+   (nav + halaman). EN memakai "Partner Program".
+
+**Implications:**
+- FREE7 tidak menandai "first subscription only" — batasnya sekali per
+  akun sesuai keputusan. Bila ingin trial hanya untuk akun baru, tambah
+  flag `first_time_only` di voucher + cek history subscription.
+- Threshold berlaku global (platform_settings), bukan per-tier.
+- `ponytail:` payout otomatis bulanan & PPh 23 tetap menunggu volume.
+

@@ -31,7 +31,7 @@ export const DEFAULT_AFFILIATE_SETTINGS: AffiliateSettings = {
   commission_percent: 10,
   tiers: [20, 5, 3, 2, 1],
   attribution_days: 3650,
-  min_amount_idr: 0,
+  min_amount_idr: 50_000,
 };
 
 export type AffiliateRow = {
