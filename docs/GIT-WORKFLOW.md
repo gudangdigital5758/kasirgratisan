@@ -43,6 +43,13 @@ Catatan: aturan ini tidak menghalangi owner push langsung; hanya mengunci agent/
 - Kalau volume agent tinggi nanti: opsi (a) self-hosted runner di VPS → 0 menit,
   (b) deploy langsung dari VPS via `wrangler` → Actions hanya check. Tidak perlu diputuskan hari ini.
 
+## Alur rilis (versi build)
+
+- **`version.json` dikelola `scripts/bump-version.js`** (timezone Asia/Jakarta). CI **tidak** menaikkan versi — di pipeline, POS di-build dengan `npx vite build` langsung sehingga `version.json` di CI = versi commit, dan versi di sidebar admin selalu sama dengan git.
+- Ritual rilis: jalankan `npm run build` **lokal** (menaikkan `appVersion` + `versionCode`) → commit `version.json` bersama kode → push ke `main` → CI deploy dengan versi itu.
+- Jangan edit `version.json` manual (versionCode harus monoton naik).
+- `npm run release` (lokal) = bump + build + deploy semua app — untuk rilis tanpa menunggu CI.
+
 ## Referensi
 
 - Workflow: `.github/workflows/ci.yml` (kedua repo).

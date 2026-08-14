@@ -6,12 +6,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION_FILE = join(__dirname, '..', 'version.json');
 
 function getTodayTag() {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-
-  return `${yyyy}.${mm}.${dd}`;
+  // Selalu Asia/Jakarta (WIB) agar tanggal konsisten di lokal & CI runner (UTC).
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${get('year')}.${get('month')}.${get('day')}`;
 }
 
 function bumpVersion() {

@@ -32,7 +32,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
+      # vite build langsung (tanpa bump-version) — version.json di CI = versi commit,
+      # supaya versi di dashboard admin selalu sinkron dengan git.
+      - run: npx vite build
         env:
           VITE_AUTH_API_URL: https://api.profitku.my.id
 
@@ -75,7 +77,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Build POS
-        run: npm run build
+        run: npx vite build
       - name: Deploy POS (Pages profitku)
         working-directory: workers/api
         run: npx --no-install wrangler pages deploy ../../dist --project-name=profitku --branch main
