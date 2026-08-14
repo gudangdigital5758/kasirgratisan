@@ -24,6 +24,7 @@ type MemberRow = {
   invite_email: string | null;
   invite_state: string;
   username: string | null;
+  name: string | null;
   pin_hash: string | null;
   created_at: string;
   updated_at: string;
@@ -410,6 +411,7 @@ teamRoutes.get('/team/me', async (c: AppContext) => {
 });
 
 // === Member-centric (multi-toko): kelola anggota lintas toko owner ===
+// Identitas anggota = email (jika ada) ATAU username. Email & nama opsional.
 
 async function memberEmail(c: AppContext, m: MemberRow): Promise<string | null> {
   if (m.invite_email) return m.invite_email.toLowerCase();
@@ -420,7 +422,21 @@ async function memberEmail(c: AppContext, m: MemberRow): Promise<string | null> 
   return null;
 }
 
-async function findMemberRowsByEmail(c: AppContext, email: string, storeIds: string[]): Promise<MemberRow[]> {
+async function memberName(c: AppContext, m: MemberRow): Promise<string | null> {
+  if (m.name) return m.name;
+  if (m.user_id) {
+    const prof = await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${m.user_id}&select=name&limit=1`);
+    return prof[0]?.name ?? null;
+  }
+  return null;
+}
+
+async function findMemberRowsByIdentity(
+  c: AppContext,
+  email: string | null,
+  username: string | null,
+  storeIds: string[],
+): Promise<MemberRow[]> {
   if (storeIds.length === 0) return [];
   const rows = await sbGet<MemberRow[]>(
     c.env,
@@ -428,13 +444,16 @@ async function findMemberRowsByEmail(c: AppContext, email: string, storeIds: str
   );
   const out: MemberRow[] = [];
   for (const m of rows ?? []) {
-    const em = await memberEmail(c, m);
-    if (em === email) out.push(m);
+    if (username && m.username === username) { out.push(m); continue; }
+    if (email) {
+      const em = await memberEmail(c, m);
+      if (em === email) out.push(m);
+    }
   }
   return out;
 }
 
-/** Daftar anggota semua toko owner, dikelompokkan per email. */
+/** Daftar anggota semua toko owner, dikelompokkan per email/username. */
 teamRoutes.get('/team/members', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
@@ -450,17 +469,23 @@ teamRoutes.get('/team/members', async (c: AppContext) => {
       `cloud_team_members?or=(${storeIds.map((s) => `store_id.eq.${s}`).join(',')})&select=*&limit=200`,
     );
     const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
-    const byEmail = new Map<string, { email: string; name: string | null; username: string | null; stores: { storeId: string; storeName: string; storeCode: string | null; role: string; memberId: string }[] }>();
+    type Entry = {
+      key: string;
+      email: string | null;
+      username: string | null;
+      name: string | null;
+      stores: { storeId: string; storeName: string; storeCode: string | null; role: string; memberId: string }[];
+    };
+    const byKey = new Map<string, Entry>();
     for (const m of rows ?? []) {
       const em = await memberEmail(c, m);
-      if (!em) continue;
+      const key = em ?? m.username;
+      if (!key) continue;
       const store = storeById.get(m.store_id);
-      const entry = byEmail.get(em) ?? { email: em, name: null, username: null, stores: [] };
-      if (!entry.name && m.user_id) {
-        const prof = await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${m.user_id}&select=name&limit=1`);
-        entry.name = prof[0]?.name ?? null;
-      }
+      const entry = byKey.get(key) ?? { key, email: em, username: null, name: null, stores: [] };
       entry.username = entry.username ?? m.username;
+      entry.email = entry.email ?? em;
+      entry.name = entry.name ?? (await memberName(c, m));
       entry.stores.push({
         storeId: m.store_id,
         storeName: store?.name ?? 'Toko',
@@ -468,9 +493,9 @@ teamRoutes.get('/team/members', async (c: AppContext) => {
         role: m.role,
         memberId: m.id,
       });
-      byEmail.set(em, entry);
+      byKey.set(key, entry);
     }
-    return c.json({ members: [...byEmail.values()] });
+    return c.json({ members: [...byKey.values()] });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[team members]', err);
@@ -478,7 +503,7 @@ teamRoutes.get('/team/members', async (c: AppContext) => {
   }
 });
 
-/** Tambah/ubah anggota multi-toko (owner). assignments = [{storeId, role}]. */
+/** Tambah/ubah anggota multi-toko (owner). Email & nama opsional; username wajib. */
 teamRoutes.post('/team/members', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
@@ -486,15 +511,17 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
     email?: string;
     username?: string;
     pin?: string;
+    name?: string;
     assignments?: { storeId: string; role: string }[];
   };
-  const email = String(body.email ?? '').trim().toLowerCase();
+  const email = String(body.email ?? '').trim().toLowerCase() || null;
+  const name = String(body.name ?? '').trim().slice(0, 80) || null;
   const assignments = (body.assignments ?? []).filter((a) => a && a.storeId && ROLE_RE.test(a.role ?? ''));
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: 'Email tidak valid' }, 400);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: 'Email tidak valid' }, 400);
   if (assignments.length === 0) return c.json({ error: 'Pilih minimal satu toko' }, 400);
   const username = body.username ? String(body.username).trim().toLowerCase() : null;
   const pin = body.pin ? String(body.pin).trim() : null;
-  if (username && !USERNAME_RE.test(username)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
+  if (!username || !USERNAME_RE.test(username)) return c.json({ error: 'Username wajib, 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
   if (pin && !PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
   try {
     const storeIds = [...new Set(assignments.map((a) => a.storeId))];
@@ -505,33 +532,39 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
     const ownedSet = new Set((owned ?? []).map((s) => s.id));
     if (storeIds.some((s) => !ownedSet.has(s))) return c.json({ error: 'Salah satu toko bukan milik Anda' }, 403);
 
-    const existing = await findMemberRowsByEmail(c, email, storeIds);
+    const existing = await findMemberRowsByIdentity(c, email, username, storeIds);
     const existingByStore = new Map(existing.map((m) => [m.store_id, m]));
-    const rowForStore = new Map<string, MemberRow>();
 
     for (const a of assignments) {
-      let row = existingByStore.get(a.storeId) ?? null;
+      const row = existingByStore.get(a.storeId) ?? null;
       if (row) {
         const patch: Record<string, unknown> = { role: a.role };
         if (username) patch['username'] = username;
         if (pin) patch['pin_hash'] = await sha256Hex(`${pin}:${row.id}`);
+        if (name) patch['name'] = name;
         await sbPatch(c.env, `cloud_team_members?id=eq.${row.id}`, patch);
       } else {
+        const dup = await sbGet<{ id: string }[]>(
+          c.env,
+          `cloud_team_members?store_id=eq.${a.storeId}&username=eq.${encodeURIComponent(username)}&select=id&limit=1`,
+        );
+        if (dup && dup.length > 0) {
+          return c.json({ error: `Username sudah dipakai anggota lain di salah satu toko` }, 409);
+        }
         const inserted = await sbPost<MemberRow[]>(c.env, 'cloud_team_members', {
           store_id: a.storeId,
           user_id: null,
           role: a.role,
           invite_email: email,
           invite_state: 'active',
-          username: username ?? null,
-          pin_hash: pin ? await sha256Hex(`${pin}:x`) : null,
+          username,
+          name,
+          pin_hash: null,
         });
-        row = inserted[0];
         if (pin) {
-          await sbPatch(c.env, `cloud_team_members?id=eq.${row.id}`, { pin_hash: await sha256Hex(`${pin}:${row.id}`) });
+          await sbPatch(c.env, `cloud_team_members?id=eq.${inserted[0].id}`, { pin_hash: await sha256Hex(`${pin}:${inserted[0].id}`) });
         }
       }
-      rowForStore.set(a.storeId, row);
     }
     return c.json({ ok: true });
   } catch (err) {
@@ -541,36 +574,37 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
   }
 });
 
-/** Set username + PIN untuk SEMUA toko anggota (owner). */
+/** Set username/PIN/nama untuk SEMUA toko anggota (owner). Identifikasi via email atau username. */
 teamRoutes.post('/team/credentials', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
-  const body = (await c.req.json().catch(() => ({}))) as { email?: string; username?: string; pin?: string };
-  const email = String(body.email ?? '').trim().toLowerCase();
+  const body = (await c.req.json().catch(() => ({}))) as { email?: string; username?: string; newUsername?: string; pin?: string; name?: string };
+  const email = String(body.email ?? '').trim().toLowerCase() || null;
   const username = String(body.username ?? '').trim().toLowerCase();
-  const pin = String(body.pin ?? '').trim();
-  if (!USERNAME_RE.test(username)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
-  if (!PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
+  const newUsername = body.newUsername ? String(body.newUsername).trim().toLowerCase() : null;
+  const pin = body.pin ? String(body.pin).trim() : null;
+  const name = body.name !== undefined ? String(body.name).trim().slice(0, 80) || null : undefined;
+  if (!email && !username) return c.json({ error: 'Identitas anggota (email atau username) wajib' }, 400);
+  if (newUsername && !USERNAME_RE.test(newUsername)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
+  if (pin && !PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
   try {
-    const stores = await sbGet<{ id: string }[]>(
-      c.env,
-      `stores?user_id=eq.${userId}&select=id`,
-    );
+    const stores = await sbGet<{ id: string }[]>(c.env, `stores?user_id=eq.${userId}&select=id`);
     const storeIds = (stores ?? []).map((s) => s.id);
-    const rows = await findMemberRowsByEmail(c, email, storeIds);
+    const rows = await findMemberRowsByIdentity(c, email, email ? null : username, storeIds);
     if (rows.length === 0) return c.json({ error: 'Anggota tidak ditemukan' }, 404);
+    const targetUsername = newUsername ?? username;
     for (const m of rows) {
       const dup = await sbGet<{ id: string }[]>(
         c.env,
-        `cloud_team_members?store_id=eq.${m.store_id}&username=eq.${encodeURIComponent(username)}&id=neq.${m.id}&select=id&limit=1`,
+        `cloud_team_members?store_id=eq.${m.store_id}&username=eq.${encodeURIComponent(targetUsername)}&id=neq.${m.id}&select=id&limit=1`,
       );
       if (dup && dup.length > 0) {
         return c.json({ error: `Username sudah dipakai anggota lain di salah satu toko` }, 409);
       }
-      await sbPatch(c.env, `cloud_team_members?id=eq.${m.id}`, {
-        username,
-        pin_hash: await sha256Hex(`${pin}:${m.id}`),
-      });
+      const patch: Record<string, unknown> = { username: targetUsername };
+      if (pin) patch['pin_hash'] = await sha256Hex(`${pin}:${m.id}`);
+      if (name !== undefined) patch['name'] = name;
+      await sbPatch(c.env, `cloud_team_members?id=eq.${m.id}`, patch);
     }
     return c.json({ ok: true, stores: rows.length });
   } catch (err) {
@@ -580,17 +614,15 @@ teamRoutes.post('/team/credentials', async (c: AppContext) => {
   }
 });
 
-/** Hapus anggota dari SEMUA tokonya (owner). */
-teamRoutes.delete('/team/members/:email', async (c: AppContext) => {
+/** Hapus anggota dari SEMUA tokonya (owner). Key = email atau username. */
+teamRoutes.delete('/team/members/:key', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
-  const email = String(c.req.param('email') ?? '').trim().toLowerCase();
+  const key = String(c.req.param('key') ?? '').trim().toLowerCase();
+  const isEmail = key.includes('@');
   try {
-    const stores = await sbGet<{ id: string }[]>(
-      c.env,
-      `stores?user_id=eq.${userId}&select=id`,
-    );
-    const rows = await findMemberRowsByEmail(c, email, (stores ?? []).map((s) => s.id));
+    const stores = await sbGet<{ id: string }[]>(c.env, `stores?user_id=eq.${userId}&select=id`);
+    const rows = await findMemberRowsByIdentity(c, isEmail ? key : null, isEmail ? null : key, (stores ?? []).map((s) => s.id));
     for (const m of rows) {
       await sbDelete(c.env, `cloud_team_members?id=eq.${m.id}`);
     }
@@ -639,7 +671,7 @@ teamRoutes.post('/team/verify', async (c: AppContext) => {
         storeCode: code,
         storeName: store.name,
         username,
-        name: prof?.name ?? null,
+        name: member.name ?? prof?.name ?? null,
         role: member.role,
         picture: prof?.picture ?? null,
       },
