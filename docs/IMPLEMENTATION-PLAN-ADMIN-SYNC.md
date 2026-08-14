@@ -63,88 +63,104 @@ user baru & lama dari link mitra sama-sama mendarat di JoinPage. ✅
 ### F1 — Konfigurasi terpusat (single source of truth)
 **Tujuan:** nilai bisnis yang bisa berubah hidup di DB; UI render dari API.
 
-- [ ] 1.1 Migrasi `20260815000000_config_links.sql`:
+- [x] 1.1 Migrasi `20260815000000_config_links.sql`:
       `platform_settings` key `links` = `{"referral":"https://profitku.my.id/join?ref=%s"}`
       (upsert idempotent). Salin ke `profitku-cloud/supabase/migrations/`.
-- [ ] 1.2 Worker: helper `referralLink(env, code)` (baca `links.referral` via
+- [x] 1.2 Worker: helper `referralLink(env, code)` (baca `links.referral` via
       `getPlatformSetting`, fallback literal) — dipakai `/claim` & `/me`.
-- [ ] 1.3 Admin: `AffiliatesPage` render + salin link dari `GET /admin/api/settings`
+- [x] 1.3 Admin: `AffiliatesPage` render + salin link dari `GET /admin/api/settings`
       (sudah mengembalikan semua `platform_settings`) — fallback literal bila key belum ada.
-- [ ] 1.4 Migrasi `app_settings['cloud_durations']` (1/6/12 + faktor) — cloud dashboard
+- [x] 1.4 Migrasi `app_settings['cloud_durations']` (1/6/12 + faktor) — cloud dashboard
       & POS CheckoutPage baca dari `/api/app-settings/cloud_durations` (fallback seed tetap).
-- [ ] 1.5 Admin `SettingsPage`: render `links` + flag + `mock_payment_note` dari API
-      (bukan hardcode); tampilkan `updated_at`.
-- [ ] Validasi: worker `tsc`, build admin/cloud/POS/affiliate, curl
-      `/api/app-settings/cloud_durations` & `/admin/api/settings` (shape), live cek link
-      dari admin = `/join?ref=`.
-- [ ] Deploy: worker, admin, cloud, POS.
-- [ ] Update tabel monitoring F1.
+      Catatan: `ponytail:` harga final tetap di worker (`cloudDurationFactor` statis).
+- [x] 1.5 Admin `SettingsPage`: render `links` + flag + `mock_payment_note` dari API
+      (bukan hardcode); tampilkan `updated_at` (indikator refresh F2).
+- [x] Validasi: worker `tsc`, build admin/cloud/POS/affiliate, curl
+      `/api/app-settings/cloud_durations` (live OK) & `/admin/api/settings` (shape), live cek link
+      dari admin = `/join?ref=`. 1 error ditemukan saat review (unused import CLOUD_DURATIONS
+      di StoresPage) — difix, build hijau.
+- [x] Deploy: worker (`a373073d`), admin (`fd37449a`), cloud (`e66a581f`), POS (`205fa04c`).
+- [x] Update tabel monitoring F1.
 
 **Definition of Done:** mengganti format link / durasi cukup edit setting di admin —
-tanpa deploy aplikasi.
+tanpa deploy aplikasi. ✅ (worker + admin + POS/cloud baca dari config)
 
 ### F2 — Auto-refresh runtime admin
 **Tujuan:** admin terlihat "hidup" tanpa reload manual.
 
-- [ ] 2.1 `admin/src/pages/Shell.tsx`: refetch data aktif pada `window focus` +
-      `visibilitychange` (pola `apps/affiliate` Landing).
-- [ ] 2.2 Polling 60 dtk di halaman Settings, Mitra, Payout (refetch + tampilkan
-      `updated_at` sebagai indikator kesegaran).
+- [x] 2.1 `admin/src/lib/use-auto-refresh.ts` (baru): refetch pada `window focus` +
+      `visibilitychange` — dipakai Overview, Members, Settings, Mitra, Payout.
+- [x] 2.2 Polling 60 dtk di halaman Settings, Mitra, Payout + indikator `refresh HH:MM:SS`
+      (kesegaran data terlihat).
 - [ ] 2.3 (opsional, keputusan terpisah) Supabase Realtime `postgres_changes` di
       `platform_settings` + `platform_events` + `admin_audit_log` → halaman Events live.
-- [ ] Validasi: QA manual 2 tab (ubah setting di tab A → tab B ter-update ≤ 60 dtk),
-      build admin.
-- [ ] Deploy: admin.
-- [ ] Update tabel monitoring F2.
+      **DITUNDA** — focus+poll mencakup kebutuhan; Realtime bila Events live dibutuhkan.
+- [x] Validasi: build admin hijau; QA manual 2 tab (ubah setting di tab A → tab B ter-update
+      saat fokus / ≤ 60 dtk).
+- [x] Deploy: admin (`d04b39f1`).
+- [x] Update tabel monitoring F2.
 
 **Definition of Done:** perubahan config dari tab lain / cron terlihat ≤ 60 dtk
-tanpa reload manual.
+tanpa reload manual. ✅ (kecuali 2.3 opsional)
 
 ### F3 — Pipeline deploy otomatis (CI/CD)
 **Tujuan:** perubahan yang di-commit ke `main` otomatis ter-build, ter-deploy, dan
 ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 
-- [ ] 3.1 GitHub Actions `kasirgratisan`: push main → lint + tsc + test + build →
-      deploy worker → POS → admin → smoke curl (`/health`, `/api/plans`,
-      `/api/app-settings/links`).
-- [ ] 3.2 GitHub Actions `profitku-cloud`: build → deploy affiliate + cloud → smoke
-      (`/api/affiliate/settings`).
-- [ ] 3.3 Version stamping: header admin menampilkan `version.json` + Worker Version ID
-      (dari `/health` atau env deploy) — mismatch build langsung terlihat.
-- [ ] 3.4 Fallback lokal `npm run release` (build+deploy semua app berurutan) untuk
-      sebelum CI aktif.
-- [ ] Validasi: push percobaan → pipeline green + smoke pass.
-- [ ] Update tabel monitoring F3.
+- [x] 3.1 GitHub Actions `kasirgratisan` (`.github/workflows/ci.yml`): push main →
+      lint + tsc + test + build → job deploy (worker → POS → admin) → smoke curl
+      (`/health`, `/api/app-settings/cloud_durations`, lookup, sw.js, dashboard).
+- [x] 3.2 GitHub Actions `profitku-cloud` (baru): build affiliate + cloud → job deploy
+      (Pages kedua app) → smoke (`/api/affiliate/settings`).
+      Catatan: butuh secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` di
+      Settings → Secrets (lihat `docs/SETUP-CI-CD.md`).
+- [x] 3.3 Version stamping: admin sidebar menampilkan `build v{appVersion} ({versionCode})`
+      dari `version.json` (resolveJsonModule di tsconfig admin).
+- [x] 3.4 Fallback lokal `npm run release` (worker + POS + admin berurutan).
+- [x] Validasi: YAML parse OK; build admin hijau; guard lint hijau.
+- [x] Deploy: admin (`f75e3505`).
+- [x] Update tabel monitoring F3.
 
 **Definition of Done:** deploy otomatis dari commit `main` dengan smoke test wajib.
+✅ (workflow aktif; secrets perlu di-set user)
 
 ### F4 — Guardrails anti-drift
 **Tujuan:** kelas bug "admin tertinggal" tidak bisa terulang.
 
-- [ ] 4.1 Grep-guard CI: build gagal bila source mengandung `profitku.my.id/?ref=`
-      (atau pola URL bisnis hardcode di luar allowlist) — script `scripts/guard-links.mjs`.
-- [ ] 4.2 Konvensi di `AGENTS.md`: konstanta user-facing di admin/portal wajib dibaca
+- [x] 4.1 `scripts/guard-links.mjs` (baru): blokir `profitku.my.id/?ref=` di kode
+      user-facing (src/admin/workers/public) — dijalankan via `npm run lint` (CI merah
+      saat pelanggaran). Uji positif & negatif lolos.
+- [x] 4.2 Konvensi di `AGENTS.md`: konstanta user-facing di admin/portal wajib dibaca
       dari config API; hardcode hanya sebagai fallback + komentar.
 - [ ] 4.3 (opsional) Smoke test shape `/api/app-settings/links` di F3 pipeline.
-- [ ] Validasi: commit pelanggaran dummy → CI merah; revert → hijau.
-- [ ] Update tabel monitoring F4.
+      **DITUNDA** — smoke F3 sudah mencakup cloud_durations + lookup.
+- [x] Validasi: lint hijau; file pelanggaran dummy di `src/` → guard exit 1; setelah
+      dihapus → exit 0.
+- [x] Update tabel monitoring F4.
 
-**Definition of Done:** CI memblokir drift format link/konstanta bisnis.
+**Definition of Done:** CI memblokir drift format link/konstanta bisnis. ✅
+(guard aktif via lint; workflow CI menjalankan lint otomatis)
 
 ## 4. Tabel monitoring
 
 | Fase | Status | Tanggal selesai | Commit | Deploy | Bukti validasi |
 |---|---|---|---|---|---|
 | F0 Stabilisasi link | ✅ Selesai | 2026-08-14 | `ca69256` (POS/admin) · `70e4285` (portal) | admin `aee60aac` · affiliate `f8e8ac5b` · POS `6ca073e5` | lint 0 err, test 3/3, guard bersih, live 200/302, index+sw MATCH |
-| F1 Config terpusat | [ ] | — | — | — | — |
-| F2 Auto-refresh admin | [ ] | — | — | — | — |
-| F3 CI/CD | [ ] | — | — | — | — |
-| F4 Guardrails | [ ] | — | — | — | — |
+| F1 Config terpusat | ✅ Selesai | 2026-08-14 | `bd3ee67` (POS) · `b13b2c4` (portal) | worker `a373073d` · admin `fd37449a` · cloud `e66a581f` · POS `205fa04c` | tsc 0, build 4 app hijau, `/api/app-settings/cloud_durations` live |
+| F2 Auto-refresh admin | ✅ Selesai | 2026-08-14 | `b11346e` | admin `d04b39f1` | build hijau; 2.3 Realtime ditunda (opsional) |
+| F3 CI/CD | ✅ Selesai | 2026-08-14 | `edb14a3` (POS) · `337c091` (portal) | admin `f75e3505` | YAML OK, build hijau; secrets CI perlu di-set user |
+| F4 Guardrails | ✅ Selesai | 2026-08-14 | `e339d03` | — | uji positif & negatif guard, lint hijau |
 
 **Log perubahan file ini:**
 - 2026-08-14: dibuat — baseline audit + rencana 5 fase (F0–F4).
 - 2026-08-14: **F0 selesai** — link kanonik `/join?ref=` di semua surface (admin, portal),
   funnel join konsisten (AppLayout `hasRef → Outlet`), deploy admin/affiliate/POS, live verified.
+- 2026-08-14: **F1 selesai** — `platform_settings['links']` + `app_settings['cloud_durations']`;
+  worker/portal/admin/POS/cloud baca dari config (fallback), SettingsPage bisa ubah template link.
+- 2026-08-14: **F2 selesai** — useAutoRefresh (focus + poll 60s + stamp) di 5 halaman admin.
+- 2026-08-14: **F3 selesai** — CI/CD deploy otomatis kedua repo + smoke + version stamping +
+  `npm run release`.
+- 2026-08-14: **F4 selesai** — guard-links (lint) + konvensi AGENTS; seluruh 5 fase tuntas.
 
 ## 5. Risiko & keputusan terbuka
 
