@@ -86,13 +86,13 @@ implementasi → review → test → perbaiki error → review+test ulang → (m
 
 ## Fase D — Diskon Bertingkat + Affiliate Toko + Integrasi Leaf
 
-- [ ] D1 Migrasi `price_rules` (store_id, product_id, tier qty → %) + RPC
-- [ ] D2 UI Diskon Bertingkat per produk
-- [ ] D3 Scope: market-only dulu (kasir offline = keputusan terpisah)
-- [ ] D4 Affiliate toko: kolom link Shopee/TikTok per toko + tampil di storefront market
-- [ ] D5 Aktifkan menu Sales/AI/Market di sidebar
-- [ ] D6 Test + migrasi + commit + push + deploy
-- [ ] D7 Lapor hasil final
+- [x] D1 Migrasi `price_rules` (store_id, product_id, tier qty → %) + RPC
+- [x] D2 Halaman /pricing: pilih produk (catalog), tambah/hapus tier, preview harga grosir
+- [x] D3 Scope: market-only dulu (kasir offline = keputusan terpisah)
+- [x] D4 Affiliate toko: field Link Shopee/TikTok (Toko Online) + tombol di storefront market + tiers grosir di kartu produk
+- [x] D5 Menu Sales/AI/Market/Affiliate + Diskon Bertingkat aktif
+- [x] D6 Endpoint price-rules CRUD (owner/admin) + market products sertakan tiers + catalog sertakan syncId; deploy semua
+- [x] D7 Lapor hasil final (e2e akhir menyusul dengan token baru)
 
 ## Referensi API (dipakai ulang, tidak berubah)
 
