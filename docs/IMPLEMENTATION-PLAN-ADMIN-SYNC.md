@@ -122,6 +122,13 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
       (commit docs = 0 menit CI) di kedua repo; kebijakan aktor (manusia vs agent)
       dicatat di `docs/GIT-WORKFLOW.md`.
 - [x] Validasi: YAML parse OK; build admin hijau; guard lint hijau.
+- [x] 3.6 **CI live-verified 2026-08-15** — run commit `6d84f32` deploy penuh:
+      worker (13:02Z), POS `b9dc9af2`, admin `af849925`; health `ok:true`.
+      Fix selama aktivasi: (1) `npm ci` deps workers/api & admin di job deploy
+      (error `Could not resolve hono`), (2) env VITE_* publik global di workflow +
+      fallback `process.env` di `admin-env-from-root.mjs` (error build tanpa `.env`),
+      (3) deploy POS via `npx --no-install wrangler` di `workers/api` (npm --prefix
+      exec meng-install wrangler@latest yang meng-parse `--branch` beda).
 - [x] Deploy: admin (`f75e3505`).
 - [x] Update tabel monitoring F3.
 
@@ -167,6 +174,8 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 - 2026-08-14: **F4 selesai** — guard-links (lint) + konvensi AGENTS; seluruh 5 fase tuntas.
 - 2026-08-15: **F3 penyempurnaan** — workflow check di semua branch (deploy main-only),
   `paths-ignore` docs, kebijakan aktor manusia/agent di `docs/GIT-WORKFLOW.md`.
+- 2026-08-15: **F3 CI live-verified** — run `6d84f32` deploy penuh (worker/POS/admin) + smoke;
+  3 error CI selama aktivasi difix (deps subproject, env publik, wrangler lokal).
 
 ## 5. Risiko & keputusan terbuka
 
