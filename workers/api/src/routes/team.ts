@@ -33,7 +33,7 @@ type MemberRow = {
 type ProfileRow = { id: string; email: string | null; name: string | null; picture: string | null };
 
 /** Verifikasi owner ATAU admin toko (kelola tim + set login). */
-async function requireManager(c: AppContext, storeId: string, userId: string): Promise<Response | null> {
+export async function requireManager(c: AppContext, storeId: string, userId: string): Promise<Response | null> {
   const owned = await sbGet<{ id: string }[]>(
     c.env,
     `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id&limit=1`,

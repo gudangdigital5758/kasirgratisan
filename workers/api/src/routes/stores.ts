@@ -164,6 +164,8 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
       latitude: number | null;
       longitude: number | null;
       phone: string | null;
+      shopee_url: string | null;
+      tiktok_url: string | null;
       timezone: string | null;
       operational_hours: unknown;
     };
@@ -332,6 +334,8 @@ type StoreRow = {
   latitude: number | null;
   longitude: number | null;
   phone: string | null;
+  shopee_url: string | null;
+  tiktok_url: string | null;
   timezone: string | null;
   operational_hours: unknown;
 };
@@ -359,6 +363,8 @@ function storeJson(c: AppContext, s: StoreRow) {
     latitude: s.latitude,
     longitude: s.longitude,
     phone: s.phone,
+    shopeeUrl: s.shopee_url,
+    tiktokUrl: s.tiktok_url,
     timezone: s.timezone,
     operationalHours: s.operational_hours,
   };
