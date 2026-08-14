@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi, type AdminPayoutRow } from '../lib/api';
+import { useAutoRefresh, refreshStamp } from '../lib/use-auto-refresh';
 
 const rp = (n: number) => `Rp ${(Number(n) || 0).toLocaleString('id-ID')}`;
 
@@ -15,12 +16,14 @@ export default function PayoutsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
   const load = useCallback(async (p: string) => {
     setErr(null);
     try {
       const r = await adminApi.payouts(p);
       setRows(r.payouts);
+      setLastSync(refreshStamp());
     } catch (e) {
       setRows([]);
       setErr(e instanceof Error ? e.message : 'Gagal memuat payout');
@@ -32,6 +35,9 @@ export default function PayoutsPage() {
     void load(period);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, load]);
+
+  // Auto-refresh: fokus tab + setiap 60 detik (cron payout baru langsung terlihat).
+  useAutoRefresh(() => void load(period), 60_000);
 
   const run = async () => {
     if (!window.confirm(`Jalankan payout untuk periode ${period}? (idempotent — aman diulang)`)) return;
@@ -100,7 +106,7 @@ export default function PayoutsPage() {
       <p className="muted" style={{ margin: 0 }}>
         Payout bulanan: komisi earned ≥ threshold dikumpulkan per periode, potong PPh 23
         (2% NPWP / 4% tanpa NPWP). Transfer manual oleh finance → konfirmasi → komisi PAID.
-        Export CSV untuk bahan e-Bupot.
+        Export CSV untuk bahan e-Bupot.{lastSync ? ` · refresh ${lastSync}` : ''}
       </p>
 
       {err && <p className="err">{err}</p>}

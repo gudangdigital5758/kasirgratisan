@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../lib/api';
+import { useAutoRefresh, refreshStamp } from '../lib/use-auto-refresh';
 
 interface ActionButtonConfig {
   enabled: boolean;
@@ -29,6 +30,7 @@ export default function SettingsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [linksReferral, setLinksReferral] = useState('');
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
   // Action buttons config
   const [actionButtons, setActionButtons] = useState<ActionButtonsValue>({
@@ -57,6 +59,7 @@ export default function SettingsPage() {
           | { referral?: string }
           | undefined;
         setLinksReferral(typeof links?.referral === 'string' ? links.referral : '');
+        setLastSync(refreshStamp());
       })
       .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal'));
   };
@@ -100,6 +103,9 @@ export default function SettingsPage() {
     void loadActionButtons();
   }, []);
 
+  // Auto-refresh: fokus tab + setiap 60 detik (config dari tab lain langsung terlihat).
+  useAutoRefresh(load, 60_000);
+
   const maintenance = Boolean(settings.maintenance_mode);
   const dunning = settings.dunning_enabled !== false;
 
@@ -136,7 +142,7 @@ export default function SettingsPage() {
     <div className="stack">
       <div>
         <h2 style={{ margin: 0 }}>Platform settings</h2>
-        <p className="muted">Feature flags operasional — bukan secrets provider</p>
+        <p className="muted">Feature flags operasional — bukan secrets provider{lastSync ? ` · refresh ${lastSync}` : ''}</p>
       </div>
 
       {err && <p className="err">{err}</p>}

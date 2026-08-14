@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi, type MemberRow } from '../lib/api';
+import { useAutoRefresh } from '../lib/use-auto-refresh';
 
 export default function MembersPage() {
   const [q, setQ] = useState('');
@@ -21,6 +22,9 @@ export default function MembersPage() {
     document.title = 'Members · Profitku Admin';
     load();
   }, []);
+
+  // Auto-refresh saat tab kembali fokus (query aktif dipertahankan).
+  useAutoRefresh(() => load(q));
 
   return (
     <div className="stack">

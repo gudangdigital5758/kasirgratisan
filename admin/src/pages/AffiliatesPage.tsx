@@ -4,6 +4,7 @@ import {
   type AffiliateRow,
   type AffiliateSettings,
 } from '../lib/api';
+import { useAutoRefresh, refreshStamp } from '../lib/use-auto-refresh';
 
 const defaultSettings: AffiliateSettings = {
   enabled: true,
@@ -44,12 +45,16 @@ export default function AffiliatesPage() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [q, setQ] = useState('');
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setErr(null);
     adminApi
       .affiliates()
-      .then((r) => setRows(r.affiliates))
+      .then((r) => {
+        setRows(r.affiliates);
+        setLastSync(refreshStamp());
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal memuat affiliates'));
   }, []);
 
@@ -84,6 +89,9 @@ export default function AffiliatesPage() {
     load();
     loadSettings();
   }, [load, loadSettings]);
+
+  // Auto-refresh: fokus tab + setiap 60 detik (komisi/counter mitra selalu segar).
+  useAutoRefresh(load, 60_000);
 
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,7 +374,7 @@ export default function AffiliatesPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <span className="muted">{filtered.length} affiliator</span>
+        <span className="muted">{filtered.length} affiliator{lastSync ? ` · refresh ${lastSync}` : ''}</span>
       </div>
 
       {filtered.length === 0 ? (

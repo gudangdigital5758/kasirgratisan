@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../lib/api';
+import { useAutoRefresh } from '../lib/use-auto-refresh';
 
 function rp(n: number) {
   return `Rp ${n.toLocaleString('id-ID')}`;
@@ -10,13 +11,20 @@ export default function OverviewPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof adminApi.overview>> | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.title = 'Overview · Profitku Admin';
+  const load = useCallback(() => {
     adminApi
       .overview()
       .then(setData)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal'));
   }, []);
+
+  useEffect(() => {
+    document.title = 'Overview · Profitku Admin';
+    load();
+  }, [load]);
+
+  // Auto-refresh saat tab kembali fokus (snapshot cloud selalu segar).
+  useAutoRefresh(load);
 
   if (err) return <p className="err">{err}</p>;
   if (!data) return <p className="muted">Memuat overview…</p>;
