@@ -6,7 +6,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireUser } from './helpers';
+import { requireActiveSubscription, requireActiveSubscriptions, requireUser } from './helpers';
 import { rateLimit } from '../lib/rate-limit';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
 
@@ -165,11 +165,12 @@ teamRoutes.patch('/stores/:id/team/:memberId', async (c: AppContext) => {
   if (!UUID_RE.test(storeId) || !UUID_RE.test(memberId)) return c.json({ error: 'id tidak valid' }, 400);
   const ownerGuard = await requireManager(c, storeId, userId);
   if (ownerGuard) return ownerGuard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
 
   const body = (await c.req.json().catch(() => ({}))) as { role?: string };
   const role = String(body.role ?? '').trim();
   if (!ROLE_RE.test(role)) return c.json({ error: 'Role tidak valid' }, 400);
-
   try {
     const rows = await sbPatch<MemberRow[]>(
       c.env,
@@ -195,6 +196,8 @@ teamRoutes.delete('/stores/:id/team/:memberId', async (c: AppContext) => {
   if (!UUID_RE.test(storeId) || !UUID_RE.test(memberId)) return c.json({ error: 'id tidak valid' }, 400);
   const ownerGuard = await requireManager(c, storeId, userId);
   if (ownerGuard) return ownerGuard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
 
   try {
     await sbDelete(c.env, `cloud_team_members?id=eq.${memberId}&store_id=eq.${storeId}`);
@@ -224,6 +227,8 @@ teamRoutes.post('/stores/:id/team/:memberId/credentials', async (c: AppContext) 
   if (!UUID_RE.test(storeId) || !UUID_RE.test(memberId)) return c.json({ error: 'id tidak valid' }, 400);
   const managerGuard = await requireManager(c, storeId, userId);
   if (managerGuard) return managerGuard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   const body = (await c.req.json().catch(() => ({}))) as { storeCode?: string; username?: string; pin?: string };
   const username = String(body.username ?? '').trim().toLowerCase();
   const pin = String(body.pin ?? '').trim();
@@ -336,6 +341,8 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
     if (matches.length === 0) return c.json({ error: 'Username atau PIN salah' }, 401);
 
     const storeIds = [...new Set(matches.map((m) => m.store_id))];
+    const subGuard = await requireActiveSubscriptions(c, storeIds);
+    if (subGuard) return subGuard;
     const stores = await sbGet<{ id: string; name: string; store_code: string | null }[]>(
       c.env,
       `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=id,name,store_code` ,
@@ -531,6 +538,8 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
     );
     const ownedSet = new Set((owned ?? []).map((s) => s.id));
     if (storeIds.some((s) => !ownedSet.has(s))) return c.json({ error: 'Salah satu toko bukan milik Anda' }, 403);
+    const subGuard = await requireActiveSubscriptions(c, storeIds);
+    if (subGuard) return subGuard;
 
     const existing = await findMemberRowsByIdentity(c, email, username, storeIds);
     const existingByStore = new Map(existing.map((m) => [m.store_id, m]));
@@ -592,6 +601,8 @@ teamRoutes.post('/team/credentials', async (c: AppContext) => {
     const storeIds = (stores ?? []).map((s) => s.id);
     const rows = await findMemberRowsByIdentity(c, email, email ? null : username, storeIds);
     if (rows.length === 0) return c.json({ error: 'Anggota tidak ditemukan' }, 404);
+    const subGuard = await requireActiveSubscriptions(c, rows.map((m) => m.store_id));
+    if (subGuard) return subGuard;
     const targetUsername = newUsername ?? username;
     for (const m of rows) {
       const dup = await sbGet<{ id: string }[]>(
@@ -623,6 +634,10 @@ teamRoutes.delete('/team/members/:key', async (c: AppContext) => {
   try {
     const stores = await sbGet<{ id: string }[]>(c.env, `stores?user_id=eq.${userId}&select=id`);
     const rows = await findMemberRowsByIdentity(c, isEmail ? key : null, isEmail ? null : key, (stores ?? []).map((s) => s.id));
+    if (rows.length > 0) {
+      const subGuard = await requireActiveSubscriptions(c, rows.map((m) => m.store_id));
+      if (subGuard) return subGuard;
+    }
     for (const m of rows) {
       await sbDelete(c.env, `cloud_team_members?id=eq.${m.id}`);
     }
@@ -654,6 +669,8 @@ teamRoutes.post('/team/verify', async (c: AppContext) => {
     );
     const store = st?.[0] ?? null;
     if (!store) return c.json({ error: 'ID Toko tidak ditemukan' }, 404);
+    const subGuard = await requireActiveSubscription(c, store.id);
+    if (subGuard) return subGuard;
     const rows = await sbGet<MemberRow[]>(
       c.env,
       `cloud_team_members?store_id=eq.${store.id}&invite_state=eq.active&username=eq.${encodeURIComponent(username)}&select=*&limit=1`,

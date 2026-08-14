@@ -753,3 +753,39 @@ KPI, grafik harian, top produk, per kasir, stok, hutang — sumber `sync_records
 - 1 langganan = 1 toko tetap; tim bersifat per toko (isolasi total antar toko).
 - Dashboard `/team` adalah sumber kebenaran kelola karyawan cloud; POS tetap
   memakai user PIN lokal sampai C4 diputuskan.
+
+
+---
+
+## 2026-08-14 — Lock fitur cloud per-toko diperluas (tim, price-rules, toko online)
+
+**Status:** Accepted
+
+Menerapkan "semua fitur cloud terkunci sebelum langganan Rp 25.000/bulan/toko" ke
+seluruh permukaan cloud yang sebelumnya hanya cek auth+ownership:
+
+1. **Helper baru** `requireActiveSubscription(c, storeId)` + `requireActiveSubscriptions`
+   (`workers/api/src/routes/helpers.ts`) — cek `store_entitlements.has_sync`, status 402
+   dengan pesan ajakan berlangganan. `requireSyncStore` (sync/backup) tetap.
+2. **Dikunci:** semua mutasi tim (`POST/PATCH/DELETE /api/team/*`, credentials,
+   `team/login` per store, `team/verify`), diskon bertingkat (`/api/stores/:id/price-rules`),
+   fitur toko online (`PATCH /stores/:id` selain rename nama, identifier, visibility,
+   upload/hapus logo).
+3. **Tetap gratis (sengaja):** `POST /api/stores` (jalur checkout), `GET` list/detail,
+   rename nama toko, backup lokal, POS offline, program affiliate, checkout/voucher.
+4. **UX:** banner lock (`lock-banner`) di halaman Tim & Peran, Diskon Bertingkat, Toko
+   Online pada `cloud.profitku.my.id` + CTA ke `/stores`.
+5. **Affiliate dashboard** (`affiliate.profitku.my.id`) di-refactor: sidebar + 5 halaman
+   (Ringkasan / Link & QR / Jaringan / Komisi / Pengaturan), tombol "Buka Kasir (POS)",
+   statistik klik & signup (`affiliates.click_count`/`signup_count` — migrasi
+   `20260814000000_affiliate_stats.sql`, counter di `GET /api/affiliate/lookup` &
+   `POST /api/affiliate/claim`), link kanonik `profitku.my.id/join?ref=KODE`, rate limit
+   lookup/claim.
+6. **Middleware (repo terpisah):** verifikasi manual — `fn_report_*` dan publikasi
+   katalog market harus menolak store tanpa `has_sync`.
+
+**Implications:**
+- Regresi potensial: dashboard cloud free-store kini menolak mutasi tim/price-rules/online
+  store dengan 402 — banner UI menjelaskan. `team/login` tanpa langganan ditolak.
+- `ponytail:` middleware reports/market belum diverifikasi di repo ini; payout threshold
+  & label "Mitra" menunggu keputusan terpisah.

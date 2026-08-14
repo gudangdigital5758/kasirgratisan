@@ -5,7 +5,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireSyncStore, requireUser } from './helpers';
+import { requireActiveSubscription, requireSyncStore, requireUser } from './helpers';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
 import { deleteBackupObject, getBackupObject, putBackupObject } from '../lib/backups';
 
@@ -141,6 +141,13 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   if (typeof body.name !== 'string' || !body.name.trim()) {
     return c.json({ error: 'Nama toko wajib' }, 400);
+  }
+  // Fitur toko online / market (semua field selain nama) = fitur cloud → terkunci
+  // sampai langganan aktif. Rename nama toko tetap gratis (dipakai alur daftar toko).
+  const hasMarketFields = Object.keys(body).some((k) => k !== 'name');
+  if (hasMarketFields) {
+    const subGuard = await requireActiveSubscription(c, storeId);
+    if (subGuard) return subGuard;
   }
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
@@ -460,6 +467,8 @@ storesRoutes.patch('/stores/:id/identifier', async (c: AppContext) => {
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   try {
     if (identifier !== null) {
       const taken = await sbGet<{ id: string }[]>(
@@ -494,6 +503,8 @@ storesRoutes.patch('/stores/:id/visibility', async (c: AppContext) => {
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   try {
     const rows = await sbPatch<StoreRow[]>(
       c.env,
@@ -534,6 +545,8 @@ storesRoutes.post('/stores/:id/logo', async (c: AppContext) => {
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   try {
     const key = `logos/${storeId}.${ext}`;
     await putBackupObject(c.env, key, await logoFile.arrayBuffer(), logoFile.type);
@@ -561,6 +574,8 @@ storesRoutes.delete('/stores/:id/logo', async (c: AppContext) => {
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
   }
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   try {
     const before = await sbGet<{ logo_path: string | null }[]>(
       c.env,

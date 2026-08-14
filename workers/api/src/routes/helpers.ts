@@ -102,6 +102,45 @@ export async function requireSyncStore(c: AppContext, storeId: string): Promise<
   return null;
 }
 
+/**
+ * Validasi langganan cloud AKTIF per toko (store_entitlements.has_sync).
+ * Source of truth untuk "fitur cloud terkunci sebelum berlangganan":
+ * tim & roles, price rules, toko online (market). Auth/ownership sudah
+ * diperiksa pemanggil (requireUser / requireManager) — helper ini murni cek
+ * entitlement. Status 402 = butuh langganan.
+ */
+export async function requireActiveSubscription(c: AppContext, storeId: string): Promise<null | Response> {
+  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return c.json({ error: 'Cloud database belum dikonfigurasi' }, 503);
+  }
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  try {
+    const ent = await sbGet<{ has_sync: boolean }[]>(
+      c.env,
+      `store_entitlements?store_id=eq.${storeId}&select=has_sync`,
+    );
+    if (!ent[0]?.has_sync) {
+      return c.json({ error: 'Langganan cloud belum aktif untuk toko ini. Aktifkan paket Profitku Cloud (Rp 25.000/bulan) dulu.' }, 402);
+    }
+    return null;
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[subscription gate]', err);
+    return c.json({ error: 'Gagal memvalidasi langganan/toko' }, 500);
+  }
+}
+
+/** Cek langganan aktif untuk SEMUA storeId. Return Response 402 bila ada yang belum aktif. */
+export async function requireActiveSubscriptions(c: AppContext, storeIds: string[]): Promise<null | Response> {
+  const uniq = [...new Set(storeIds)].filter(Boolean);
+  if (uniq.length === 0) return null;
+  for (const id of uniq) {
+    const guard = await requireActiveSubscription(c, id);
+    if (guard) return guard;
+  }
+  return null;
+}
+
 export async function handlePushSync(c: AppContext, explicitStoreId?: string) {
   const body = (await c.req.json().catch(() => ({}))) as {
     storeId?: string;

@@ -13,6 +13,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../env';
 import { sbGet, sbPatch } from '../lib/supabase';
+import { rateLimit } from '../lib/rate-limit';
 import {
   buildAffiliateTree,
   claimAffiliate,
@@ -68,6 +69,8 @@ const mapAffiliate = (r: AffiliateRow) => ({
   bankAccountNo: r.bank_account_no,
   bankAccountName: r.bank_account_name,
   isActive: r.is_active,
+  clickCount: r.click_count ?? 0,
+  signupCount: r.signup_count ?? 0,
   createdAt: r.created_at,
   updatedAt: r.updated_at ?? r.created_at,
 });
@@ -89,6 +92,10 @@ const mapCommission = (c: CommissionRow) => ({
 // --- Lookup (publik, tanpa auth) ---
 // Dipakai client saat user membuka link ?ref=KODE untuk memvalidasi + menampilkan nama affiliator.
 affiliateRoutes.get('/lookup', async (c) => {
+  const { allowed, retryAfterSeconds } = rateLimit(`affiliate-lookup:${c.req.header('cf-connecting-ip') ?? '?'}`, 60, 60_000);
+  if (!allowed) {
+    return c.json({ valid: false, error: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429);
+  }
   const code = normalizeAffiliateCode(c.req.query('code') || '');
   if (!code) return c.json({ valid: false, error: 'Kode affiliasi wajib' }, 400);
   if (!isValidAffiliateCode(code)) {
@@ -99,6 +106,18 @@ affiliateRoutes.get('/lookup', async (c) => {
       const affiliate = await loadAffiliateByCode(c.env, code);
       if (!affiliate) {
         return c.json({ valid: false, error: 'Kode affiliasi tidak ditemukan atau nonaktif' });
+      }
+      // Klik link undangan = hit counter (best-effort; race tidak masalah untuk statistik).
+      try {
+        const cur = await sbGet<{ click_count: number }[]>(
+          c.env,
+          `affiliates?id=eq.${affiliate.id}&select=click_count&limit=1`,
+        ).catch(() => [] as { click_count: number }[]);
+        await sbPatch(c.env, `affiliates?id=eq.${affiliate.id}`, {
+          click_count: (cur[0]?.click_count ?? 0) + 1,
+        });
+      } catch (err) {
+        console.warn('[affiliate lookup click]', err);
       }
       return c.json({ valid: true, code: affiliate.code, name: affiliate.name });
     }
@@ -135,6 +154,10 @@ affiliateRoutes.get('/settings', async (c) => {
 affiliateRoutes.post('/claim', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
+  const { allowed, retryAfterSeconds } = rateLimit(`affiliate-claim:${userId}`, 10, 60_000);
+  if (!allowed) {
+    return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
+  }
   if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {
     return c.json({ error: 'Layanan affiliasi belum tersedia' }, 503);
   }
@@ -152,6 +175,20 @@ affiliateRoutes.post('/claim', async (c) => {
       name: (body.name || '').trim().slice(0, 120) || null,
       refCode,
     });
+    // User baru via link undangan → naikkan counter signup pengundang (best-effort).
+    if (result.created && result.affiliate.referred_by) {
+      try {
+        const parent = await sbGet<{ signup_count: number }[]>(
+          c.env,
+          `affiliates?id=eq.${result.affiliate.referred_by}&select=signup_count&limit=1`,
+        ).catch(() => [] as { signup_count: number }[]);
+        await sbPatch(c.env, `affiliates?id=eq.${result.affiliate.referred_by}`, {
+          signup_count: (parent[0]?.signup_count ?? 0) + 1,
+        });
+      } catch (err) {
+        console.warn('[affiliate claim signup]', err);
+      }
+    }
     const settings = await getAffiliateSettings(c.env);
     return c.json({
       ok: true,
@@ -159,7 +196,7 @@ affiliateRoutes.post('/claim', async (c) => {
       affiliate: mapAffiliate(result.affiliate),
       parentCode: result.parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/?ref=${result.affiliate.code}`,
+      link: `https://profitku.my.id/join?ref=${result.affiliate.code}`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gagal mengklaim referral';
@@ -194,7 +231,7 @@ affiliateRoutes.get('/me', async (c) => {
       affiliate: mapAffiliate(me),
       parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/?ref=${me.code}`,
+      link: `https://profitku.my.id/join?ref=${me.code}`,
     });
   } catch (err) {
     console.warn('[affiliate me]', err);

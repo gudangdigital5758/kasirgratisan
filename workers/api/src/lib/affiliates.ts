@@ -45,6 +45,8 @@ export type AffiliateRow = {
   bank_account_no: string | null;
   bank_account_name: string | null;
   is_active: boolean;
+  click_count?: number;
+  signup_count?: number;
   created_at: string;
   updated_at?: string;
 };
@@ -101,7 +103,7 @@ export async function getAffiliateSettings(env: Env): Promise<AffiliateSettings>
 }
 
 const AFFILIATE_SELECT =
-  'id,code,name,user_id,referred_by,payout_note,bank_name,bank_account_no,bank_account_name,is_active,created_at,updated_at';
+  'id,code,name,user_id,referred_by,payout_note,bank_name,bank_account_no,bank_account_name,is_active,click_count,signup_count,created_at,updated_at';
 
 /** Muat affiliator aktif berdasarkan kode (case-insensitive). */
 export async function loadAffiliateByCode(

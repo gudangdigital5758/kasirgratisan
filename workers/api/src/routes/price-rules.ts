@@ -4,7 +4,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireUser } from './helpers';
+import { requireActiveSubscription, requireUser } from './helpers';
 import { requireManager } from './team';
 import { sbGet, sbPost, sbDelete, SupabaseError } from '../lib/supabase';
 
@@ -40,6 +40,8 @@ priceRulesRoutes.get('/stores/:id/price-rules', async (c: AppContext) => {
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
   const guard = await requireManager(c, storeId, userId);
   if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   const productSyncId = c.req.query('productSyncId');
   const filter = productSyncId ? `&product_sync_id=eq.${encodeURIComponent(productSyncId)}` : '';
   try {
@@ -60,6 +62,8 @@ priceRulesRoutes.post('/stores/:id/price-rules', async (c: AppContext) => {
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
   const guard = await requireManager(c, storeId, userId);
   if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   const body = (await c.req.json().catch(() => ({}))) as { productSyncId?: string; minQty?: number; discountPercent?: number };
   const productSyncId = String(body.productSyncId ?? '').trim();
   const minQty = Math.floor(Number(body.minQty));
@@ -98,6 +102,8 @@ priceRulesRoutes.delete('/stores/:id/price-rules/:ruleId', async (c: AppContext)
   if (!UUID_RE.test(storeId) || !UUID_RE.test(ruleId)) return c.json({ error: 'id tidak valid' }, 400);
   const guard = await requireManager(c, storeId, userId);
   if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
   try {
     await sbDelete(c.env, `price_rules?id=eq.${ruleId}&store_id=eq.${storeId}`);
     return c.json({ ok: true });
