@@ -13,6 +13,7 @@
  */
 import type { Env } from '../env';
 import { ensureProfile, sbGet, sbPost } from './supabase';
+import { getPlatformSetting } from './platform-settings';
 
 export type AffiliateSettings = {
   enabled: boolean;
@@ -62,6 +63,24 @@ export function normalizeAffiliateCode(raw: string): string {
 export function isValidAffiliateCode(code: string): boolean {
   const c = normalizeAffiliateCode(code);
   return c.length >= 4 && CODE_RE.test(c);
+}
+
+/**
+ * Link referral kanonik — template dari platform_settings['links'].referral
+ * (%s = kode). Fallback literal bila key belum ada. Mengubah format link
+ * cukup edit setting 'links' di admin, tanpa deploy.
+ */
+export async function referralLink(env: Env, code: string): Promise<string> {
+  try {
+    const tpl = await getPlatformSetting<{ referral?: unknown }>(env, 'links', {});
+    const t = tpl?.referral;
+    if (typeof t === 'string' && t.includes('%s')) {
+      return t.replace('%s', encodeURIComponent(code));
+    }
+  } catch (err) {
+    console.warn('[referralLink]', err);
+  }
+  return `https://profitku.my.id/join?ref=${encodeURIComponent(code)}`;
 }
 
 function clampPercent(n: number): number {

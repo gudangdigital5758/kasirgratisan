@@ -37,6 +37,7 @@ const toNum = (v: string, fallback = 0, min = 0, max = Infinity) => {
 
 export default function AffiliatesPage() {
   const [cfg, setCfg] = useState(emptyCfg);
+  const [linksTpl, setLinksTpl] = useState<string | null>(null);
   const [rows, setRows] = useState<AffiliateRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -64,6 +65,18 @@ export default function AffiliatesPage() {
         }),
       )
       .catch(() => setCfg({ ...emptyCfg, enabled: defaultSettings.enabled }));
+    // Template link referral dari platform_settings['links'] (single source of truth).
+    adminApi
+      .settings()
+      .then((r) => {
+        const links = (r.settings as Record<string, unknown> | undefined)?.links as
+          | { referral?: string }
+          | undefined;
+        setLinksTpl(
+          typeof links?.referral === 'string' && links.referral.includes('%s') ? links.referral : null,
+        );
+      })
+      .catch(() => setLinksTpl(null));
   }, []);
 
   useEffect(() => {
@@ -168,6 +181,10 @@ export default function AffiliatesPage() {
   // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
   const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
   const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
+
+  // Link referral dari template config (platform_settings['links']) — fallback kanonik.
+  const refLink = (code: string) =>
+    linksTpl ? linksTpl.replace('%s', code) : `https://profitku.my.id/join?ref=${code}`;
 
   // Filter pencarian kartu affiliator (nama/kode/email/bank/parent).
   const needle = q.trim().toLowerCase();
@@ -379,8 +396,8 @@ export default function AffiliatesPage() {
                 {bank && <div style={{ fontSize: 12 }}>💳 {bank}</div>}
                 {a.payoutNote && <div className="muted" style={{ fontSize: 11 }}>{a.payoutNote}</div>}
                 <div className="muted" style={{ fontSize: 11, wordBreak: 'break-all' }}>
-                  {/* Kanonik: DECISIONS 2026-08-10 — jangan kembalikan ke root /?ref= */}
-                  https://profitku.my.id/join?ref={a.code}
+                  {/* Template dari platform_settings['links'] — jangan hardcode di sini */}
+                  {refLink(a.code)}
                 </div>
                 <div className="row" style={{ gap: '1rem' }}>
                   <span style={{ fontSize: 12 }}>📥 {a.stats?.referrals ?? 0}</span>
@@ -393,7 +410,7 @@ export default function AffiliatesPage() {
                     type="button"
                     className="btn ghost"
                     style={{ fontSize: 12, padding: '4px 10px' }}
-                    onClick={() => void copyText(`https://profitku.my.id/join?ref=${a.code}`)}
+                    onClick={() => void copyText(refLink(a.code))}
                   >
                     📋 Salin link
                   </button>

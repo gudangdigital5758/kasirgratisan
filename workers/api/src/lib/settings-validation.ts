@@ -1,7 +1,7 @@
 const ACTION_BUTTONS = ['whatsNew', 'requestFeature', 'donate', 'telegram'] as const;
 const LINK_BUTTONS = new Set(['requestFeature', 'donate', 'telegram']);
 const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
-const PLATFORM_SETTINGS = ['maintenance_mode', 'dunning_enabled', 'mock_payment_note'] as const;
+const PLATFORM_SETTINGS = ['maintenance_mode', 'dunning_enabled', 'mock_payment_note', 'links'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -47,6 +47,11 @@ export function validatePlatformSettings(value: unknown): string | null {
   }
   if (value.mock_payment_note !== undefined && typeof value.mock_payment_note !== 'string') {
     return "Field 'mock_payment_note' harus string";
+  }
+  if (value.links !== undefined) {
+    if (!isRecord(value.links) || typeof value.links.referral !== 'string' || !value.links.referral.includes('%s')) {
+      return "Field 'links.referral' harus string berisi %s (template URL referral)";
+    }
   }
   return null;
 }

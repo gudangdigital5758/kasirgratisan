@@ -38,7 +38,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCloudAuth } from '@/hooks/use-cloud-auth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { deleteStore, CLOUD_DURATIONS } from '@/lib/cloud-api';
+import { deleteStore, CLOUD_DURATIONS, getCloudDurations } from '@/lib/cloud-api';
 import {
   storeRegistry,
   getActiveStoreKey,
@@ -452,7 +452,7 @@ export default function DaftarToko() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            {CLOUD_DURATIONS.map((d) => (
+            {getCloudDurations().map((d) => (
               <button
                 key={d.months}
                 type="button"

@@ -70,6 +70,49 @@ export const CLOUD_DURATIONS: CloudDuration[] = [
   { months: 12, priceFactor: 10, label: '12 bulan (bayar 10)', price: 250_000 },
 ];
 
+// Durasi display dari app_settings['cloud_durations'] (config terpusat).
+// Harga final langganan tetap dihitung worker — ini hanya untuk tampilan.
+let cloudDurationsCache: CloudDuration[] | null = null;
+
+export async function loadCloudDurations(): Promise<CloudDuration[]> {
+  if (cloudDurationsCache) return cloudDurationsCache;
+  const base = CLOUD_DURATIONS[0]?.price ?? 25_000;
+  try {
+    const res = await fetch(`${BASE_URL}/api/app-settings/cloud_durations`);
+    const data = (await res.json().catch(() => ({}))) as {
+      value?: { items?: { months?: number; priceFactor?: number; label?: string }[] };
+    };
+    const items = data.value?.items;
+    if (Array.isArray(items) && items.length > 0) {
+      const list: CloudDuration[] = items
+        .filter((i) => i.months === 1 || i.months === 6 || i.months === 12)
+        .map((i) => {
+          const factor = Number(i.priceFactor) || 1;
+          const months = i.months as 1 | 6 | 12;
+          return {
+            months,
+            priceFactor: factor,
+            label: typeof i.label === 'string' && i.label ? i.label : `${months} bulan`,
+            price: Math.round(factor * base),
+          };
+        });
+      if (list.length > 0) {
+        cloudDurationsCache = list;
+        return list;
+      }
+    }
+  } catch {
+    /* fallback konstanta */
+  }
+  cloudDurationsCache = CLOUD_DURATIONS;
+  return CLOUD_DURATIONS;
+}
+
+/** Versi sinkron (fallback) untuk render; warm-up via loadCloudDurations() saat app start. */
+export function getCloudDurations(): CloudDuration[] {
+  return cloudDurationsCache ?? CLOUD_DURATIONS;
+}
+
 /** Entitlement + pemakaian penyimpanan per toko cloud. */
 export interface CloudStoreEntitlement {
   hasSync: boolean;

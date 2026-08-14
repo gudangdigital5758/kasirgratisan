@@ -12,6 +12,7 @@ import {
   verifyPayment,
   previewVoucher,
   CLOUD_DURATIONS,
+  getCloudDurations,
   type VoucherPreviewResult,
 } from '@/lib/cloud-api';
 import { updateStore } from '@/lib/store-registry';
@@ -46,7 +47,7 @@ export default function CheckoutPage() {
   const pollRef = useRef<number | null>(null);
 
   const subtotal = validItems.reduce((sum, i) => {
-    const d = CLOUD_DURATIONS.find((x) => x.months === i.durationMonths);
+    const d = getCloudDurations().find((x) => x.months === i.durationMonths);
     return sum + (d?.price ?? 0);
   }, 0);
   const rp = (n: number) => `Rp ${n.toLocaleString(numberLocale)}`;
@@ -189,7 +190,7 @@ export default function CheckoutPage() {
         <CardContent className="p-4 space-y-2">
           <h2 className="text-sm font-semibold">{t('checkout.itemTitle')}</h2>
           {validItems.map((it, idx) => {
-            const d = CLOUD_DURATIONS.find((x) => x.months === it.durationMonths);
+            const d = getCloudDurations().find((x) => x.months === it.durationMonths);
             return (
               <div key={`${it.storeKey}-${idx}`} className="flex items-center justify-between gap-2 text-xs">
                 <div className="min-w-0">

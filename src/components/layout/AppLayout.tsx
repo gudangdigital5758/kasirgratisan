@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDefaultData } from '@/lib/db';
+import { loadCloudDurations } from '@/lib/cloud-api';
 import { useEffect } from 'react';
 import BottomNav from './BottomNav';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -19,6 +20,8 @@ export default function AppLayout() {
 
   useEffect(() => {
     seedDefaultData();
+    // Warm-up durasi langganan dari config terpusat (fallback konstanta).
+    void loadCloudDurations();
   }, []);
 
   const storeSettings = useLiveQuery(() => db.storeSettings.toCollection().first());

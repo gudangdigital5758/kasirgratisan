@@ -38,6 +38,7 @@ import {
   listBackups,
   downloadBackup,
   CLOUD_DURATIONS,
+  getCloudDurations,
   type CloudStore,
 } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
@@ -509,7 +510,7 @@ export default function CloudStoreSettings() {
                                   {subStoreId === store.id ? (
                                     <>
                                       <div className="flex gap-1">
-                                        {CLOUD_DURATIONS.map((d) => (
+                                        {getCloudDurations().map((d) => (
                                           <button
                                             key={d.months}
                                             type="button"

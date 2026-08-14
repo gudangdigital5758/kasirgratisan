@@ -23,6 +23,7 @@ import {
   loadAffiliateByCode,
   loadAffiliateByUserId,
   normalizeAffiliateCode,
+  referralLink,
   registerAffiliate,
   type AffiliateRow,
 } from '../lib/affiliates';
@@ -197,7 +198,7 @@ affiliateRoutes.post('/claim', async (c) => {
       affiliate: mapAffiliate(result.affiliate),
       parentCode: result.parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/join?ref=${result.affiliate.code}`,
+      link: await referralLink(c.env, result.affiliate.code),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gagal mengklaim referral';
@@ -232,7 +233,7 @@ affiliateRoutes.get('/me', async (c) => {
       affiliate: mapAffiliate(me),
       parentCode,
       tiers: settings.tiers,
-      link: `https://profitku.my.id/join?ref=${me.code}`,
+      link: await referralLink(c.env, me.code),
     });
   } catch (err) {
     console.warn('[affiliate me]', err);

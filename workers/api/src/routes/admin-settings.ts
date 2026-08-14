@@ -55,7 +55,7 @@ settings.patch('/settings', async (c) => {
   if (validationError) return c.json({ error: validationError }, 400);
   const body = parsed as Record<string, unknown>;
 
-  const allowed = ['maintenance_mode', 'dunning_enabled', 'mock_payment_note'] as const;
+  const allowed = ['maintenance_mode', 'dunning_enabled', 'mock_payment_note', 'links'] as const;
   const updates: string[] = [];
   try {
     for (const key of allowed) {

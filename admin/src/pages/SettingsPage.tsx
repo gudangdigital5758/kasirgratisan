@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const [note, setNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [linksReferral, setLinksReferral] = useState('');
 
   // Action buttons config
   const [actionButtons, setActionButtons] = useState<ActionButtonsValue>({
@@ -52,6 +53,10 @@ export default function SettingsPage() {
           },
         );
         setNote(r.secretsNote || '');
+        const links = (r.settings as Record<string, unknown> | undefined)?.links as
+          | { referral?: string }
+          | undefined;
+        setLinksReferral(typeof links?.referral === 'string' ? links.referral : '');
       })
       .catch((e) => setErr(e instanceof Error ? e.message : 'Gagal'));
   };
@@ -165,6 +170,47 @@ export default function SettingsPage() {
           />
           Dunning enabled
         </label>
+      </div>
+
+      <div className="card stack">
+        <strong>Link Referral (template)</strong>
+        <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Template URL undangan Mitra — <code>%s</code> diganti kode REF. Dibaca worker
+          (<code>/api/affiliate/me</code>, <code>/claim</code>) dan halaman Mitra admin.
+          Ubah di sini tanpa deploy.
+        </p>
+        <input
+          type="text"
+          value={linksReferral}
+          disabled={!capabilities.canWritePlatformSettings}
+          onChange={(e) => setLinksReferral(e.target.value)}
+          placeholder="https://profitku.my.id/join?ref=%s"
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            fontSize: 13,
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void save({ links: { referral: linksReferral } })}
+          disabled={!capabilities.canWritePlatformSettings || !linksReferral.includes('%s')}
+          style={{
+            padding: '8px 16px',
+            background: 'var(--ok)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600,
+            alignSelf: 'flex-start',
+          }}
+        >
+          Simpan template link
+        </button>
       </div>
 
       <div className="card stack">
