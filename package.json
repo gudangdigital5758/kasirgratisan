@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node scripts/bump-version.js && vite build",
     "build:dev": "node scripts/bump-version.js && vite build --mode development",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/guard-links.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
     "test": "vitest run",
@@ -24,7 +24,8 @@
     "admin:deploy": "node scripts/admin-env-from-root.mjs && npm run deploy --prefix admin",
     "cloud:check": "node scripts/cloud-check.mjs",
     "cloud:secrets-help": "node scripts/cloud-secrets-help.mjs",
-    "cloud:deploy-api": "npm run deploy --prefix workers/api"
+    "cloud:deploy-api": "npm run deploy --prefix workers/api",
+    "release": "npm run api:deploy && npm run build && npm --prefix workers/api exec wrangler pages deploy ../../dist --project-name=profitku --branch main && npm run admin:deploy"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

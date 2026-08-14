@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../lib/auth';
 import { useAdminTheme } from '../lib/theme';
+import version from '../../../version.json';
 
 const links = [
   { to: '/', end: true, label: 'Overview' },
@@ -110,6 +111,9 @@ export default function Shell() {
         >
           Keluar
         </button>
+        <p className="muted" style={{ marginTop: '1rem', fontSize: 11, textAlign: 'center' }}>
+          build v{version.appVersion} ({version.versionCode})
+        </p>
       </aside>
 
       <main className="main">

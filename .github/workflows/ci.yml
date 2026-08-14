@@ -37,3 +37,46 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npx tsc --noEmit
+
+  deploy:
+    name: Deploy production (main only)
+    if: github.ref == 'refs/heads/main'
+    needs: [web, api]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+        env:
+          VITE_AUTH_API_URL: https://api.profitku.my.id
+      - name: Deploy Worker
+        working-directory: workers/api
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Build POS
+        run: npm run build
+        env:
+          VITE_AUTH_API_URL: https://api.profitku.my.id
+      - name: Deploy POS (Pages profitku)
+        run: npm --prefix workers/api exec wrangler pages deploy ../../dist --project-name=profitku --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy Admin (Pages profitku-admin)
+        run: npm run admin:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Smoke test
+        run: |
+          curl -sf https://api.profitku.my.id/health | grep -q '"ok":true'
+          curl -sf https://api.profitku.my.id/api/app-settings/cloud_durations | grep -q 'cloud_durations'
+          curl -sf "https://api.profitku.my.id/api/affiliate/lookup?code=PROFITKU" | grep -q '"valid":true'
+          curl -sf https://profitku.my.id/sw.js -o /dev/null
+          curl -sf https://dashboard.profitku.my.id/ -o /dev/null
+
