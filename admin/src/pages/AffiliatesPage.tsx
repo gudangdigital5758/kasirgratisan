@@ -379,7 +379,8 @@ export default function AffiliatesPage() {
                 {bank && <div style={{ fontSize: 12 }}>💳 {bank}</div>}
                 {a.payoutNote && <div className="muted" style={{ fontSize: 11 }}>{a.payoutNote}</div>}
                 <div className="muted" style={{ fontSize: 11, wordBreak: 'break-all' }}>
-                  https://profitku.my.id/?ref={a.code}
+                  {/* Kanonik: DECISIONS 2026-08-10 — jangan kembalikan ke root /?ref= */}
+                  https://profitku.my.id/join?ref={a.code}
                 </div>
                 <div className="row" style={{ gap: '1rem' }}>
                   <span style={{ fontSize: 12 }}>📥 {a.stats?.referrals ?? 0}</span>
@@ -392,7 +393,7 @@ export default function AffiliatesPage() {
                     type="button"
                     className="btn ghost"
                     style={{ fontSize: 12, padding: '4px 10px' }}
-                    onClick={() => void copyText(`https://profitku.my.id/?ref=${a.code}`)}
+                    onClick={() => void copyText(`https://profitku.my.id/join?ref=${a.code}`)}
                   >
                     📋 Salin link
                   </button>

@@ -1,11 +1,12 @@
 -- Profitku Affiliate — link referral + komisi otomatis
 --
 -- Alur:
---   1. Admin membuat affiliator (kode unik) → link https://profitku.my.id/?ref=KODE
+--   1. Admin membuat affiliator (kode unik) → link https://profitku.my.id/join?ref=KODE
 --   2. User klik link → POS menyimpan jalur affiliate di localStorage
 --   3. Saat checkout/langganan & perpanjangan, payment.raw.affiliateCode diisi
 --   4. Setelah payment COMPLETED, Worker mencatat komisi = N% × amount_paid
 --   Komisi % diatur di Profitku Admin (platform_settings key 'affiliate').
+--   Kanonik: DECISIONS 2026-08-10 — /join?ref= (root /?ref= hanya backward-compat).
 
 -- === Affiliates ===
 create table if not exists public.affiliates (

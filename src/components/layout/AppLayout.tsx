@@ -26,6 +26,12 @@ export default function AppLayout() {
   // Loading state
   if (storeSettings === undefined || loading) return null;
 
+  // Pengunjung dari link mitra (?ref=) diarahkan ke funnel join (RootOrReferral →
+  // /join?ref=). Lewati onboarding & multi-user login supaya JoinPage tampil
+  // konsisten untuk semua status user; onboarding/login muncul saat kembali tanpa ref.
+  const hasRef = new URLSearchParams(window.location.search).get('ref');
+  if (hasRef) return <Outlet />;
+
   // Show onboarding if not done yet
   if (!storeSettings || !storeSettings.onboardingDone) {
     return <Onboarding onComplete={() => { /* Dexie live query will auto-refresh */ }} />;
