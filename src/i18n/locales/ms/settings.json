@@ -1001,7 +1001,7 @@
     "cloudEmailPlaceholder": "email@pekerja.com",
     "cloudPinLabel": "PIN Cloud",
     "cloudLoginButton": "Log Masuk Cloud",
-    "cloudHint": "PIN diuruskan pemilik kedai di cloud.profitku.my.id → Pasukan & Peranan. Pengesahan perlukan internet sekali; selepas itu log masuk tersimpan 7 hari."
+    "cloudHint": "Username & PIN diuruskan pemilik/admin kedai di cloud.profitku.my.id → Pasukan & Peranan. Pengesahan perlukan internet sekali; selepas itu log masuk tersimpan 7 hari."
   },
   "receipt": {
     "title": "Resit Transaksi",

@@ -129,13 +129,29 @@ async function bearerAuth(c: {
 
   // Never trust an undecoded JWT payload. If Supabase validation is not
   // configured, protected routes remain unauthenticated and fail closed.
+  let userId: string | null = null;
+  let userEmail: string | null = null;
   if (token && c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) {
     const user = await getUserFromJwt(c.env, token);
     if (user) {
-      c.set('userId', user.id);
-      c.set('userEmail', user.email ?? null);
+      userId = user.id;
+      userEmail = user.email ?? null;
     }
   }
+  // Login tim cloud: Bearer team:<token> (sesi dari POST /api/team/login).
+  if (!userId && token?.startsWith('team:') && c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const sessions = await sbGet<{ member_id: string }[]>(
+      c.env,
+      `cloud_team_sessions?token=eq.${token.slice(5)}&expires_at=gt.now&select=member_id&limit=1` ,
+    ).catch(() => [] as { member_id: string }[]);
+    const memberId = sessions[0]?.member_id;
+    if (memberId) {
+      userId = `team:${memberId}`;
+      userEmail = null;
+    }
+  }
+  c.set('userId', userId);
+  c.set('userEmail', userEmail);
 
   await next();
 }

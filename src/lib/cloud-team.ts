@@ -15,17 +15,17 @@ function apiBase(): string {
 }
 
 export interface CloudMember {
-  email: string;
+  username: string;
   name: string | null;
   role: string;
 }
 
-/** Verifikasi email + PIN anggota tim cloud (rate-limited di server). */
-export async function verifyCloudMember(storeId: string, email: string, pin: string): Promise<CloudMember> {
+/** Verifikasi username + PIN anggota tim cloud (rate-limited di server). */
+export async function verifyCloudMember(storeId: string, username: string, pin: string): Promise<CloudMember> {
   const res = await fetch(`${apiBase()}/api/stores/${storeId}/team/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, pin }),
+    body: JSON.stringify({ username, pin }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

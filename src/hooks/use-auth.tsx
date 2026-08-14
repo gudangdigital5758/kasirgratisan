@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sess = cloudStoreId ? loadCloudMemberSession(cloudStoreId) : null;
         if (sess) {
           user = {
-            username: sess.email,
+            username: sess.username,
             pinHash: '',
-            name: sess.name || sess.email,
+            name: sess.name || sess.username,
             role: 'staff',
             permissions: permissionsForCloudRole(sess.role),
             isActive: 1,
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await authLoginCloud(email, pin, storeId);
     if (result.ok && result.user) {
       saveCloudMemberSession(storeId, {
-        email: result.user.username,
+        username: result.user.username,
         name: result.user.name,
         role: result.cloudRole ?? 'karyawan',
       });

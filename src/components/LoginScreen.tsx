@@ -22,7 +22,7 @@ export default function LoginScreen() {
   const pinRef = useRef<HTMLInputElement>(null);
 
   // Login cloud (C4)
-  const [cloudEmail, setCloudEmail] = useState('');
+  const [cloudUsername, setCloudUsername] = useState('');
   const [cloudPin, setCloudPin] = useState('');
   const [cloudBusy, setCloudBusy] = useState(false);
 
@@ -51,7 +51,7 @@ export default function LoginScreen() {
     if (cloudBusy) return;
     setCloudBusy(true);
     try {
-      const result = await loginCloud(cloudEmail, cloudPin);
+      const result = await loginCloud(cloudUsername, cloudPin);
       if (!result.ok) {
         toast.error(result.error || t('loginScreen.loginFailed'));
         setCloudPin('');
@@ -161,14 +161,14 @@ export default function LoginScreen() {
           <div className="space-y-2">
             <Label htmlFor="cloud-email" className="flex items-center gap-1.5 text-sm">
               <UserIcon className="w-3.5 h-3.5" />
-              {t('loginScreen.cloudEmailLabel')}
+              {t('loginScreen.cloudUsernameLabel')}
             </Label>
             <Input
-              id="cloud-email"
+              id="cloud-username"
               type="email"
-              value={cloudEmail}
-              onChange={(e) => setCloudEmail(e.target.value)}
-              placeholder={t('loginScreen.cloudEmailPlaceholder')}
+              value={cloudUsername}
+              onChange={(e) => setCloudUsername(e.target.value)}
+              placeholder={t('loginScreen.cloudUsernamePlaceholder')}
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect="off"
@@ -203,7 +203,7 @@ export default function LoginScreen() {
             size="lg"
             variant="outline"
             className="w-full h-12 text-base font-semibold mt-2"
-            disabled={cloudBusy || !cloudEmail.trim() || cloudPin.length < 4}
+            disabled={cloudBusy || !cloudUsername.trim() || cloudPin.length < 4}
           >
             <LogIn className="w-4 h-4 mr-2" />
             {cloudBusy ? t('loginScreen.loggingIn') : t('loginScreen.cloudLoginButton')}

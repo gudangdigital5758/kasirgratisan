@@ -1418,7 +1418,7 @@
     "cloudEmailPlaceholder": "email@staff.com",
     "cloudPinLabel": "Cloud PIN",
     "cloudLoginButton": "Cloud Sign In",
-    "cloudHint": "PIN is set by the store owner at cloud.profitku.my.id → Team & Roles. Verification needs internet once; after that login is cached for 7 days."
+    "cloudHint": "Username & PIN are set by the store owner/admin at cloud.profitku.my.id → Team & Roles. Verification needs internet once; after that login is cached for 7 days."
   },
   "receipt": {
     "title": "Transaction Receipt",

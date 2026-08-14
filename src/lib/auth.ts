@@ -124,20 +124,21 @@ export async function login(username: string, pin: string): Promise<LoginResult>
 }
 
 /**
- * Login anggota tim cloud (email + PIN yang di-set owner di dashboard).
+ * Login anggota tim cloud (username + PIN yang di-set owner/admin di dashboard).
  * PIN diverifikasi SERVER (rate-limited); user pseudo dibuat lokal dengan
  * permission hasil pemetaan role cloud. Cache offline di handle use-auth.
  */
-export async function loginCloud(emailRaw: string, pin: string, storeId: string): Promise<LoginResult> {
-  const email = emailRaw.trim().toLowerCase();
-  if (!email || !pin) return { ok: false, error: 'Email dan PIN wajib diisi' };
+export async function loginCloud(usernameRaw: string, pin: string, storeId: string): Promise<LoginResult> {
+  const username = usernameRaw.trim().toLowerCase();
+  if (!username || !pin) return { ok: false, error: 'Username dan PIN wajib diisi' };
+  if (!isValidUsername(username)) return { ok: false, error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' };
   if (!isValidPin(pin)) return { ok: false, error: 'PIN harus 4-6 digit angka' };
   try {
-    const member = await verifyCloudMember(storeId, email, pin);
+    const member = await verifyCloudMember(storeId, username, pin);
     const user: User = {
-      username: email,
+      username,
       pinHash: '',
-      name: member.name || email,
+      name: member.name || username,
       role: 'staff',
       permissions: permissionsForCloudRole(member.role),
       isActive: 1,
