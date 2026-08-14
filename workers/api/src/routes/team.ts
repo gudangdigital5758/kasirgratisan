@@ -14,6 +14,7 @@ const teamRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ROLE_RE = /^(admin|kasir|salesman|kepala_gudang|karyawan)$/;
 const USERNAME_RE = /^[a-zA-Z0-9_.]{3,20}$/;
+const STORE_CODE_RE = /^[A-HJ-NP-Z2-9]{4,8}$/;
 
 type MemberRow = {
   id: string;
@@ -222,7 +223,7 @@ teamRoutes.post('/stores/:id/team/:memberId/credentials', async (c: AppContext) 
   if (!UUID_RE.test(storeId) || !UUID_RE.test(memberId)) return c.json({ error: 'id tidak valid' }, 400);
   const managerGuard = await requireManager(c, storeId, userId);
   if (managerGuard) return managerGuard;
-  const body = (await c.req.json().catch(() => ({}))) as { username?: string; pin?: string };
+  const body = (await c.req.json().catch(() => ({}))) as { storeCode?: string; username?: string; pin?: string };
   const username = String(body.username ?? '').trim().toLowerCase();
   const pin = String(body.pin ?? '').trim();
   if (!USERNAME_RE.test(username)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
@@ -258,7 +259,7 @@ teamRoutes.post('/stores/:id/team/verify', async (c: AppContext) => {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }
 
-  const body = (await c.req.json().catch(() => ({}))) as { username?: string; pin?: string };
+  const body = (await c.req.json().catch(() => ({}))) as { storeCode?: string; username?: string; pin?: string };
   const username = String(body.username ?? '').trim().toLowerCase();
   const pin = String(body.pin ?? '').trim();
   if (!USERNAME_RE.test(username)) return c.json({ error: 'Username tidak valid' }, 400);
@@ -301,16 +302,28 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
   if (!allowed) {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }
-  const body = (await c.req.json().catch(() => ({}))) as { username?: string; pin?: string };
+  const body = (await c.req.json().catch(() => ({}))) as { storeCode?: string; username?: string; pin?: string };
   const username = String(body.username ?? '').trim().toLowerCase();
   const pin = String(body.pin ?? '').trim();
   if (!USERNAME_RE.test(username)) return c.json({ error: 'Username tidak valid' }, 400);
   if (!PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
 
   try {
+    let scopedStore: { id: string; name: string } | null = null;
+    if (body.storeCode) {
+      const code = String(body.storeCode).trim().toUpperCase();
+      const st = await sbGet<{ id: string; name: string }[]>(
+        c.env,
+        `stores?store_code=eq.${encodeURIComponent(code)}&select=id,name&limit=1`,
+      );
+      scopedStore = st?.[0] ?? null;
+      if (!scopedStore) return c.json({ error: 'ID Toko tidak ditemukan' }, 404);
+    }
     const rows = await sbGet<MemberRow[]>(
       c.env,
-      `cloud_team_members?username=eq.${encodeURIComponent(username)}&invite_state=eq.active&select=*&limit=20` ,
+      scopedStore
+        ? `cloud_team_members?store_id=eq.${scopedStore.id}&invite_state=eq.active&username=eq.${encodeURIComponent(username)}&select=*&limit=1`
+        : `cloud_team_members?username=eq.${encodeURIComponent(username)}&invite_state=eq.active&select=*&limit=20` ,
     );
     const members = rows ?? [];
     const matches: MemberRow[] = [];
@@ -322,14 +335,16 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
     if (matches.length === 0) return c.json({ error: 'Username atau PIN salah' }, 401);
 
     const storeIds = [...new Set(matches.map((m) => m.store_id))];
-    const stores = await sbGet<{ id: string; name: string }[]>(
+    const stores = await sbGet<{ id: string; name: string; store_code: string | null }[]>(
       c.env,
-      `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=id,name` ,
-    ).catch(() => [] as { id: string; name: string }[]);
+      `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=id,name,store_code` ,
+    ).catch(() => [] as { id: string; name: string; store_code: string | null }[]);
     const storeNameById = new Map((stores ?? []).map((s) => [s.id, s.name]));
+    const storeCodeById = new Map((stores ?? []).map((s) => [s.id, s.store_code]));
     const memberships = matches.map((m) => ({
       storeId: m.store_id,
       storeName: storeNameById.get(m.store_id) ?? 'Toko',
+      storeCode: storeCodeById.get(m.store_id) ?? null,
       role: m.role,
       username,
     }));
@@ -373,11 +388,12 @@ teamRoutes.get('/team/me', async (c: AppContext) => {
     );
     const members = rows ?? [];
     const storeIds = [...new Set(members.map((m) => m.store_id))];
-    const stores = await sbGet<{ id: string; name: string }[]>(
+    const stores = await sbGet<{ id: string; name: string; store_code: string | null }[]>(
       c.env,
-      `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=id,name` ,
-    ).catch(() => [] as { id: string; name: string }[]);
+      `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=id,name,store_code` ,
+    ).catch(() => [] as { id: string; name: string; store_code: string | null }[]);
     const storeNameById = new Map((stores ?? []).map((s) => [s.id, s.name]));
+    const storeCodeById = new Map((stores ?? []).map((s) => [s.id, s.store_code]));
     return c.json({
       memberships: members.map((m) => ({
         storeId: m.store_id,
@@ -390,6 +406,248 @@ teamRoutes.get('/team/me', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[team me]', err);
     return c.json({ error: 'Gagal memuat keanggotaan' }, 500);
+  }
+});
+
+// === Member-centric (multi-toko): kelola anggota lintas toko owner ===
+
+async function memberEmail(c: AppContext, m: MemberRow): Promise<string | null> {
+  if (m.invite_email) return m.invite_email.toLowerCase();
+  if (m.user_id) {
+    const prof = await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${m.user_id}&select=email&limit=1`);
+    if (prof[0]?.email) return prof[0].email.toLowerCase();
+  }
+  return null;
+}
+
+async function findMemberRowsByEmail(c: AppContext, email: string, storeIds: string[]): Promise<MemberRow[]> {
+  if (storeIds.length === 0) return [];
+  const rows = await sbGet<MemberRow[]>(
+    c.env,
+    `cloud_team_members?or=(${encodeURIComponent(storeIds.map((s) => `store_id=eq.${s}`).join(','))})&select=*&limit=200`,
+  );
+  const out: MemberRow[] = [];
+  for (const m of rows ?? []) {
+    const em = await memberEmail(c, m);
+    if (em === email) out.push(m);
+  }
+  return out;
+}
+
+/** Daftar anggota semua toko owner, dikelompokkan per email. */
+teamRoutes.get('/team/members', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  try {
+    const stores = await sbGet<{ id: string; name: string; store_code: string | null }[]>(
+      c.env,
+      `stores?user_id=eq.${userId}&select=id,name,store_code`,
+    );
+    const storeIds = (stores ?? []).map((s) => s.id);
+    if (storeIds.length === 0) return c.json({ members: [] });
+    const rows = await sbGet<MemberRow[]>(
+      c.env,
+      `cloud_team_members?or=(${encodeURIComponent(storeIds.map((s) => `store_id=eq.${s}`).join(','))})&select=*&limit=200`,
+    );
+    const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
+    const byEmail = new Map<string, { email: string; name: string | null; username: string | null; stores: { storeId: string; storeName: string; storeCode: string | null; role: string; memberId: string }[] }>();
+    for (const m of rows ?? []) {
+      const em = await memberEmail(c, m);
+      if (!em) continue;
+      const store = storeById.get(m.store_id);
+      const entry = byEmail.get(em) ?? { email: em, name: null, username: null, stores: [] };
+      if (!entry.name && m.user_id) {
+        const prof = await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${m.user_id}&select=name&limit=1`);
+        entry.name = prof[0]?.name ?? null;
+      }
+      entry.username = entry.username ?? m.username;
+      entry.stores.push({
+        storeId: m.store_id,
+        storeName: store?.name ?? 'Toko',
+        storeCode: store?.store_code ?? null,
+        role: m.role,
+        memberId: m.id,
+      });
+      byEmail.set(em, entry);
+    }
+    return c.json({ members: [...byEmail.values()] });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[team members]', err);
+    return c.json({ error: 'Gagal memuat anggota' }, 500);
+  }
+});
+
+/** Tambah/ubah anggota multi-toko (owner). assignments = [{storeId, role}]. */
+teamRoutes.post('/team/members', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const body = (await c.req.json().catch(() => ({}))) as {
+    email?: string;
+    username?: string;
+    pin?: string;
+    assignments?: { storeId: string; role: string }[];
+  };
+  const email = String(body.email ?? '').trim().toLowerCase();
+  const assignments = (body.assignments ?? []).filter((a) => a && a.storeId && ROLE_RE.test(a.role ?? ''));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: 'Email tidak valid' }, 400);
+  if (assignments.length === 0) return c.json({ error: 'Pilih minimal satu toko' }, 400);
+  const username = body.username ? String(body.username).trim().toLowerCase() : null;
+  const pin = body.pin ? String(body.pin).trim() : null;
+  if (username && !USERNAME_RE.test(username)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
+  if (pin && !PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
+  try {
+    const storeIds = [...new Set(assignments.map((a) => a.storeId))];
+    const owned = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?user_id=eq.${userId}&or=(${encodeURIComponent(storeIds.map((s) => `id=eq.${s}`).join(','))})&select=id`,
+    );
+    const ownedSet = new Set((owned ?? []).map((s) => s.id));
+    if (storeIds.some((s) => !ownedSet.has(s))) return c.json({ error: 'Salah satu toko bukan milik Anda' }, 403);
+
+    const existing = await findMemberRowsByEmail(c, email, storeIds);
+    const existingByStore = new Map(existing.map((m) => [m.store_id, m]));
+    const rowForStore = new Map<string, MemberRow>();
+
+    for (const a of assignments) {
+      let row = existingByStore.get(a.storeId) ?? null;
+      if (row) {
+        const patch: Record<string, unknown> = { role: a.role };
+        if (username) patch['username'] = username;
+        if (pin) patch['pin_hash'] = await sha256Hex(`${pin}:${row.id}`);
+        await sbPatch(c.env, `cloud_team_members?id=eq.${row.id}`, patch);
+      } else {
+        const inserted = await sbPost<MemberRow[]>(c.env, 'cloud_team_members', {
+          store_id: a.storeId,
+          user_id: null,
+          role: a.role,
+          invite_email: email,
+          invite_state: 'active',
+          username: username ?? null,
+          pin_hash: pin ? await sha256Hex(`${pin}:x`) : null,
+        });
+        row = inserted[0];
+        if (pin) {
+          await sbPatch(c.env, `cloud_team_members?id=eq.${row.id}`, { pin_hash: await sha256Hex(`${pin}:${row.id}`) });
+        }
+      }
+      rowForStore.set(a.storeId, row);
+    }
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[team members post]', err);
+    return c.json({ error: 'Gagal menyimpan anggota' }, 500);
+  }
+});
+
+/** Set username + PIN untuk SEMUA toko anggota (owner). */
+teamRoutes.post('/team/credentials', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const body = (await c.req.json().catch(() => ({}))) as { email?: string; username?: string; pin?: string };
+  const email = String(body.email ?? '').trim().toLowerCase();
+  const username = String(body.username ?? '').trim().toLowerCase();
+  const pin = String(body.pin ?? '').trim();
+  if (!USERNAME_RE.test(username)) return c.json({ error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' }, 400);
+  if (!PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
+  try {
+    const stores = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?user_id=eq.${userId}&select=id`,
+    );
+    const storeIds = (stores ?? []).map((s) => s.id);
+    const rows = await findMemberRowsByEmail(c, email, storeIds);
+    if (rows.length === 0) return c.json({ error: 'Anggota tidak ditemukan' }, 404);
+    for (const m of rows) {
+      const dup = await sbGet<{ id: string }[]>(
+        c.env,
+        `cloud_team_members?store_id=eq.${m.store_id}&username=eq.${encodeURIComponent(username)}&id=neq.${m.id}&select=id&limit=1`,
+      );
+      if (dup && dup.length > 0) {
+        return c.json({ error: `Username sudah dipakai anggota lain di salah satu toko` }, 409);
+      }
+      await sbPatch(c.env, `cloud_team_members?id=eq.${m.id}`, {
+        username,
+        pin_hash: await sha256Hex(`${pin}:${m.id}`),
+      });
+    }
+    return c.json({ ok: true, stores: rows.length });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[team credentials]', err);
+    return c.json({ error: 'Gagal menyimpan login' }, 500);
+  }
+});
+
+/** Hapus anggota dari SEMUA tokonya (owner). */
+teamRoutes.delete('/team/members/:email', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const email = String(c.req.param('email') ?? '').trim().toLowerCase();
+  try {
+    const stores = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?user_id=eq.${userId}&select=id`,
+    );
+    const rows = await findMemberRowsByEmail(c, email, (stores ?? []).map((s) => s.id));
+    for (const m of rows) {
+      await sbDelete(c.env, `cloud_team_members?id=eq.${m.id}`);
+    }
+    return c.json({ ok: true, removed: rows.length });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[team member delete]', err);
+    return c.json({ error: 'Gagal menghapus anggota' }, 500);
+  }
+});
+
+/** Verifikasi login tim via ID Toko (store_code) � POS, tanpa sesi. */
+teamRoutes.post('/team/verify', async (c: AppContext) => {
+  const { allowed, retryAfterSeconds } = rateLimit(`team-verify:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000);
+  if (!allowed) {
+    return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as { storeCode?: string; username?: string; pin?: string };
+  const code = String(body.storeCode ?? '').trim().toUpperCase();
+  const username = String(body.username ?? '').trim().toLowerCase();
+  const pin = String(body.pin ?? '').trim();
+  if (!STORE_CODE_RE.test(code)) return c.json({ error: 'ID Toko tidak valid' }, 400);
+  if (!USERNAME_RE.test(username)) return c.json({ error: 'Username tidak valid' }, 400);
+  if (!PIN_RE.test(pin)) return c.json({ error: 'PIN harus 4-6 digit angka' }, 400);
+  try {
+    const st = await sbGet<{ id: string; name: string }[]>(
+      c.env,
+      `stores?store_code=eq.${encodeURIComponent(code)}&select=id,name&limit=1`,
+    );
+    const store = st?.[0] ?? null;
+    if (!store) return c.json({ error: 'ID Toko tidak ditemukan' }, 404);
+    const rows = await sbGet<MemberRow[]>(
+      c.env,
+      `cloud_team_members?store_id=eq.${store.id}&invite_state=eq.active&username=eq.${encodeURIComponent(username)}&select=*&limit=1`,
+    );
+    const member = rows?.[0] ?? null;
+    if (!member || !member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
+    const hash = await sha256Hex(`${pin}:${member.id}`);
+    if (hash !== member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
+    const prof = member.user_id
+      ? (await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${member.user_id}&select=name,picture&limit=1`))[0] ?? null
+      : null;
+    return c.json({
+      ok: true,
+      member: {
+        storeCode: code,
+        storeName: store.name,
+        username,
+        name: prof?.name ?? null,
+        role: member.role,
+        picture: prof?.picture ?? null,
+      },
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[team verify]', err);
+    return c.json({ error: 'Gagal memverifikasi login' }, 500);
   }
 });
 

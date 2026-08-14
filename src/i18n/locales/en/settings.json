@@ -1414,8 +1414,10 @@
     "forgotPin": "Forgot PIN? Contact the store owner to reset.",
     "logoAlt": "Logo",
     "cloudDivider": "or sign in with cloud account",
-    "cloudEmailLabel": "Email",
-    "cloudEmailPlaceholder": "email@staff.com",
+    "cloudUsernameLabel": "Team Username",
+    "cloudUsernamePlaceholder": "team username",
+    "cloudStoreCodeLabel": "Store ID",
+    "cloudStoreCodePlaceholder": "e.g. TK4B7Q",
     "cloudPinLabel": "Cloud PIN",
     "cloudLoginButton": "Cloud Sign In",
     "cloudHint": "Username & PIN are set by the store owner/admin at cloud.profitku.my.id → Team & Roles. Verification needs internet once; after that login is cached for 7 days."

@@ -124,17 +124,19 @@ export async function login(username: string, pin: string): Promise<LoginResult>
 }
 
 /**
- * Login anggota tim cloud (username + PIN yang di-set owner/admin di dashboard).
+ * Login anggota tim cloud (ID Toko + username + PIN yang di-set owner/admin).
  * PIN diverifikasi SERVER (rate-limited); user pseudo dibuat lokal dengan
  * permission hasil pemetaan role cloud. Cache offline di handle use-auth.
  */
-export async function loginCloud(usernameRaw: string, pin: string, storeId: string): Promise<LoginResult> {
+export async function loginCloud(storeCode: string, usernameRaw: string, pin: string): Promise<LoginResult> {
+  const store = storeCode.trim().toUpperCase();
   const username = usernameRaw.trim().toLowerCase();
-  if (!username || !pin) return { ok: false, error: 'Username dan PIN wajib diisi' };
+  if (!store || !username || !pin) return { ok: false, error: 'ID Toko, username dan PIN wajib diisi' };
+  if (!/^[A-HJ-NP-Z2-9]{4,8}$/.test(store)) return { ok: false, error: 'ID Toko tidak valid (4-8 huruf/angka, tanpa 0/O/1/I)' };
   if (!isValidUsername(username)) return { ok: false, error: 'Username 3-20 karakter (huruf/angka/underscore/titik)' };
   if (!isValidPin(pin)) return { ok: false, error: 'PIN harus 4-6 digit angka' };
   try {
-    const member = await verifyCloudMember(storeId, username, pin);
+    const member = await verifyCloudMember(store, username, pin);
     const user: User = {
       username,
       pinHash: '',

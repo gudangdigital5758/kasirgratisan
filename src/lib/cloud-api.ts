@@ -133,6 +133,7 @@ export interface CloudStore {
   updatedAt: string;
   isPublic?: boolean;
   identifier?: string | null;
+  storeCode?: string | null;
   address1?: string | null;
   address2?: string | null;
   provinceId?: number | null;

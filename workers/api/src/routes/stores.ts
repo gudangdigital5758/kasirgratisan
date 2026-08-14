@@ -27,6 +27,7 @@ storesRoutes.get('/stores', async (c: AppContext) => {
         updated_at: string;
         is_public: boolean;
         identifier: string | null;
+        store_code: string | null;
       };
       type StoreEnt = {
         store_id: string;
@@ -37,6 +38,9 @@ storesRoutes.get('/stores', async (c: AppContext) => {
         backup_bytes: number | string;
       };
       const rows = await sbGet<S[]>(c.env, `stores?user_id=eq.${userId}&order=created_at.desc&select=*`);
+      for (const s of rows) {
+        if (!s.store_code) s.store_code = await ensureStoreCode(c, s.id);
+      }
       const ents = await sbGet<StoreEnt[]>(
         c.env,
         `store_entitlements?user_id=eq.${userId}&select=store_id,has_sync,sync_expiry,is_lifetime,storage_limit_mb,backup_bytes`,
@@ -54,6 +58,7 @@ storesRoutes.get('/stores', async (c: AppContext) => {
             updatedAt: s.updated_at,
             isPublic: s.is_public,
             identifier: s.identifier,
+            storeCode: s.store_code,
             entitlement: e
               ? {
                   hasSync: e.has_sync,
@@ -94,6 +99,7 @@ storesRoutes.post('/stores', async (c: AppContext) => {
       name: string;
       created_at: string;
       updated_at: string;
+      store_code: string | null;
     };
 
     // Model per-toko berbayar: semua user boleh membuat toko (unlimited).
@@ -105,6 +111,7 @@ storesRoutes.post('/stores', async (c: AppContext) => {
     });
     const s = Array.isArray(result) ? result[0] : result;
     if (!s) return c.json({ error: 'Gagal membuat toko cloud' }, 500);
+    s.store_code = await ensureStoreCode(c, s.id);
     return c.json({
       store: {
         id: s.id,
@@ -144,6 +151,7 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
       updated_at: string;
       is_public: boolean;
       identifier: string | null;
+      store_code: string | null;
       logo_path: string | null;
       address1: string | null;
       address2: string | null;
@@ -183,6 +191,18 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
     copyNum('latitude', 'latitude');
     copyNum('longitude', 'longitude');
     if (body.operationalHours !== undefined) patch['operational_hours'] = body.operationalHours;
+    if (body.storeCode !== undefined) {
+      const code = String(body.storeCode).trim().toUpperCase();
+      if (!STORE_CODE_RE.test(code)) {
+        return c.json({ error: 'ID Toko 4-8 karakter huruf/angka (tanpa 0/O/1/I)' }, 400);
+      }
+      const dup = await sbGet<{ id: string }[]>(
+        c.env,
+        `stores?store_code=eq.${encodeURIComponent(code)}&id=neq.${storeId}&select=id&limit=1`,
+      );
+      if (dup && dup.length > 0) return c.json({ error: 'ID Toko sudah dipakai toko lain' }, 409);
+      patch['store_code'] = code;
+    }
 
     const rows = await sbPatch<S[]>(
       c.env,
@@ -191,6 +211,7 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
     );
     const s = rows[0];
     if (!s) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+    if (!s.store_code) s.store_code = await ensureStoreCode(c, s.id);
     const apiOrigin = c.env.API_ORIGIN || 'https://api.profitku.my.id';
     return c.json({
       store: {
@@ -201,6 +222,7 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
         updatedAt: s.updated_at,
         isPublic: s.is_public,
         identifier: s.identifier,
+        storeCode: s.store_code,
         logoUrl: s.logo_path ? `${apiOrigin}/api/stores/${s.id}/logo` : null,
         address1: s.address1,
         address2: s.address2,
@@ -297,6 +319,7 @@ type StoreRow = {
   updated_at: string;
   is_public: boolean;
   identifier: string | null;
+  store_code: string | null;
   logo_path: string | null;
   address1: string | null;
   address2: string | null;
@@ -323,6 +346,7 @@ function storeJson(c: AppContext, s: StoreRow) {
     updatedAt: s.updated_at,
     isPublic: s.is_public,
     identifier: s.identifier,
+    storeCode: s.store_code,
     logoUrl: s.logo_path ? `${apiOrigin}/api/stores/${s.id}/logo` : null,
     address1: s.address1,
     address2: s.address2,
@@ -338,6 +362,33 @@ function storeJson(c: AppContext, s: StoreRow) {
     timezone: s.timezone,
     operationalHours: s.operational_hours,
   };
+}
+// === ID Toko (store_code): auto-generate, unik global ===
+const STORE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const STORE_CODE_RE = /^[A-HJ-NP-Z2-9]{4,8}$/;
+
+function generateStoreCode(len = 6): string {
+  const out: string[] = [];
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < len; i++) out.push(STORE_CODE_ALPHABET[arr[i] % STORE_CODE_ALPHABET.length]);
+  return out.join('');
+}
+
+/** Pastikan toko punya store_code (auto-generate + simpan). Return code baru atau null. */
+async function ensureStoreCode(c: AppContext, storeId: string): Promise<string | null> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateStoreCode();
+    const dup = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?store_code=eq.${code}&select=id&limit=1`,
+    );
+    if (!dup || dup.length === 0) {
+      await sbPatch(c.env, `stores?id=eq.${storeId}`, { store_code: code });
+      return code;
+    }
+  }
+  return null;
 }
 
 /** Cek ketersediaan URL toko (slug) — global unique. */
@@ -362,6 +413,20 @@ storesRoutes.get('/stores/identifier/check', async (c: AppContext) => {
   }
 });
 
+/** Cek ketersediaan ID Toko (store_code) � global unique. */
+storesRoutes.get('/stores/store-code/check', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const q = String(c.req.query('q') ?? '').trim().toUpperCase();
+  if (!STORE_CODE_RE.test(q)) return c.json({ available: false, error: 'Format ID Toko tidak valid (4-8 huruf/angka, tanpa 0/O/1/I)' }, 400);
+  const rows = await sbGet<{ id: string }[]>(
+    c.env,
+    `stores?store_code=eq.${encodeURIComponent(q)}&select=id&limit=1`,
+  );
+  return c.json({ available: rows.length === 0 });
+});
+
+/** Set / hapus identifier (slug) toko � ownership + unique. */
 /** Set / hapus identifier (slug) toko — ownership + unique. */
 storesRoutes.patch('/stores/:id/identifier', async (c: AppContext) => {
   const userId = requireUser(c);

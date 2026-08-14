@@ -1414,8 +1414,10 @@
     "forgotPin": "Lupa PIN? Hubungi pemilik toko untuk reset.",
     "logoAlt": "Logo",
     "cloudDivider": "atau login dengan akun cloud",
-    "cloudEmailLabel": "Email",
-    "cloudEmailPlaceholder": "email@karyawan.com",
+    "cloudUsernameLabel": "Username Tim",
+    "cloudUsernamePlaceholder": "username tim",
+    "cloudStoreCodeLabel": "ID Toko",
+    "cloudStoreCodePlaceholder": "contoh: TK4B7Q",
     "cloudPinLabel": "PIN Cloud",
     "cloudLoginButton": "Masuk Cloud",
     "cloudHint": "Username & PIN diatur pemilik/admin toko di cloud.profitku.my.id → Tim & Peran. Verifikasi butuh internet sekali; setelah itu login tersimpan 7 hari."

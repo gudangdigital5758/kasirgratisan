@@ -21,7 +21,8 @@ export default function LoginScreen() {
   const usernameRef = useRef<HTMLInputElement>(null);
   const pinRef = useRef<HTMLInputElement>(null);
 
-  // Login cloud (C4)
+  // Login cloud (C4): ID Toko + username + PIN
+  const [cloudStoreCode, setCloudStoreCode] = useState('');
   const [cloudUsername, setCloudUsername] = useState('');
   const [cloudPin, setCloudPin] = useState('');
   const [cloudBusy, setCloudBusy] = useState(false);
@@ -51,7 +52,7 @@ export default function LoginScreen() {
     if (cloudBusy) return;
     setCloudBusy(true);
     try {
-      const result = await loginCloud(cloudUsername, cloudPin);
+      const result = await loginCloud(cloudStoreCode.trim().toUpperCase(), cloudUsername, cloudPin);
       if (!result.ok) {
         toast.error(result.error || t('loginScreen.loginFailed'));
         setCloudPin('');
@@ -61,6 +62,26 @@ export default function LoginScreen() {
     }
   };
 
+// Prefill ID Toko dari toko yang terhubung di device ini (best-effort).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const settings = await db.storeSettings.toCollection().first();
+        const cloudStoreId = settings?.cloudStoreId;
+        if (!cloudStoreId) return;
+        const { fetchStores } = await import('@/lib/cloud-api');
+        const stores = await fetchStores();
+        const linked = stores.find((s) => s.id === cloudStoreId);
+        if (linked?.storeCode && !cancelled) setCloudStoreCode(linked.storeCode);
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   return (
     <div
       className="fixed inset-0 z-[100] bg-background flex flex-col"
@@ -156,20 +177,37 @@ export default function LoginScreen() {
           </div>
         </div>
 
-        {/* Login cloud (C4: email + PIN dari dashboard cloud) */}
+{/* Login cloud (C4): ID Toko + username + PIN */}
         <form onSubmit={handleCloudSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="cloud-email" className="flex items-center gap-1.5 text-sm">
+            <Label htmlFor="cloud-store-code" className="flex items-center gap-1.5 text-sm">
+              <Store className="w-3.5 h-3.5" />
+              {t('loginScreen.cloudStoreCodeLabel')}
+            </Label>
+            <Input
+              id="cloud-store-code"
+              value={cloudStoreCode}
+              onChange={(e) => setCloudStoreCode(e.target.value.toUpperCase())}
+              placeholder={t('loginScreen.cloudStoreCodePlaceholder')}
+              maxLength={8}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-12 text-center tracking-widest font-mono"
+              disabled={cloudBusy}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cloud-username" className="flex items-center gap-1.5 text-sm">
               <UserIcon className="w-3.5 h-3.5" />
               {t('loginScreen.cloudUsernameLabel')}
             </Label>
             <Input
               id="cloud-username"
-              type="email"
               value={cloudUsername}
               onChange={(e) => setCloudUsername(e.target.value)}
               placeholder={t('loginScreen.cloudUsernamePlaceholder')}
-              autoComplete="email"
+              autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -177,7 +215,6 @@ export default function LoginScreen() {
               disabled={cloudBusy}
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="cloud-pin" className="flex items-center gap-1.5 text-sm">
               <Lock className="w-3.5 h-3.5" />
@@ -197,13 +234,12 @@ export default function LoginScreen() {
               disabled={cloudBusy}
             />
           </div>
-
           <Button
             type="submit"
             size="lg"
             variant="outline"
             className="w-full h-12 text-base font-semibold mt-2"
-            disabled={cloudBusy || !cloudUsername.trim() || cloudPin.length < 4}
+            disabled={cloudBusy || !cloudStoreCode.trim() || !cloudUsername.trim() || cloudPin.length < 4}
           >
             <LogIn className="w-4 h-4 mr-2" />
             {cloudBusy ? t('loginScreen.loggingIn') : t('loginScreen.cloudLoginButton')}
@@ -212,6 +248,7 @@ export default function LoginScreen() {
             {t('loginScreen.cloudHint')}
           </p>
         </form>
+
 
         <p className="text-[11px] text-muted-foreground text-center mt-6">
           {t('loginScreen.forgotPin')}

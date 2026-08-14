@@ -14,6 +14,7 @@ import {
   loadCloudMemberSession,
   saveCloudMemberSession,
   clearCloudMemberSession,
+  lastCloudStoreCode,
   permissionsForCloudRole,
 } from '@/lib/cloud-team';
 
@@ -30,8 +31,8 @@ interface AuthContextValue {
   // Owner-only flag (manage users, toggle multi-user, etc.)
   isOwner: boolean;
   login: (username: string, pin: string) => Promise<LoginResult>;
-  /** Login anggota tim cloud (email + PIN dari dashboard). */
-  loginCloud: (email: string, pin: string) => Promise<LoginResult>;
+  /** Login anggota tim cloud (ID Toko + username + PIN dari dashboard). */
+  loginCloud: (storeCode: string, username: string, pin: string) => Promise<LoginResult>;
   logout: () => void;
   // Refresh currentUser from DB (e.g. after permission changes).
   refresh: () => Promise<void>;
@@ -53,9 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let user = await restoreSession();
       if (!user) {
         // Coba session login cloud (cache offline 7 hari).
-        const settings = await db.storeSettings.toCollection().first();
-        const cloudStoreId = settings?.cloudStoreId;
-        const sess = cloudStoreId ? loadCloudMemberSession(cloudStoreId) : null;
+        const sess = loadCloudMemberSession(lastCloudStoreCode());
         if (sess) {
           user = {
             username: sess.username,
@@ -118,15 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   }, []);
 
-  const loginCloud = useCallback(async (email: string, pin: string): Promise<LoginResult> => {
-    const settings = await db.storeSettings.toCollection().first();
-    const storeId = settings?.cloudStoreId;
-    if (!storeId) {
-      return { ok: false, error: 'Device ini belum terhubung ke toko cloud' };
-    }
-    const result = await authLoginCloud(email, pin, storeId);
+  const loginCloud = useCallback(async (storeCode: string, username: string, pin: string): Promise<LoginResult> => {
+    const result = await authLoginCloud(storeCode, username, pin);
     if (result.ok && result.user) {
-      saveCloudMemberSession(storeId, {
+      saveCloudMemberSession({
+        storeCode: storeCode.trim().toUpperCase(),
+        storeName: '',
         username: result.user.username,
         name: result.user.name,
         role: result.cloudRole ?? 'karyawan',

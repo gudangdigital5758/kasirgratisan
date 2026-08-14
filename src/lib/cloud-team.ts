@@ -1,8 +1,8 @@
 /**
- * Login anggota tim cloud (C4 — keputusan 2026-08-13: PIN di-set owner via dashboard).
- * Verifikasi PIN dilakukan SERVER (api.profitku.my.id) — hash deterministik
- * lintas device. Session login cloud di-cache lokal 7 hari agar POS tetap bisa
- * dipakai offline setelah verifikasi pertama.
+ * Login anggota tim cloud (keputusan: ID Toko + username + PIN).
+ * Verifikasi PIN di SERVER (api.profitku.my.id) � hash deterministik lintas device.
+ * Session login cloud di-cache lokal 7 hari agar POS tetap bisa dipakai offline
+ * setelah verifikasi pertama.
  */
 import { BRAND } from './brand';
 import type { PermissionKey } from './db';
@@ -15,17 +15,19 @@ function apiBase(): string {
 }
 
 export interface CloudMember {
+  storeCode: string;
+  storeName: string;
   username: string;
   name: string | null;
   role: string;
 }
 
-/** Verifikasi username + PIN anggota tim cloud (rate-limited di server). */
-export async function verifyCloudMember(storeId: string, username: string, pin: string): Promise<CloudMember> {
-  const res = await fetch(`${apiBase()}/api/stores/${storeId}/team/verify`, {
+/** Verifikasi ID Toko + username + PIN (rate-limited di server). */
+export async function verifyCloudMember(storeCode: string, username: string, pin: string): Promise<CloudMember> {
+  const res = await fetch(`${apiBase()}/api/team/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, pin }),
+    body: JSON.stringify({ storeCode, username, pin }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -37,6 +39,7 @@ export async function verifyCloudMember(storeId: string, username: string, pin: 
 // === Session cache (offline login setelah verifikasi pertama) ===
 
 const CLOUD_SESSION_KEY = 'profitku_cloud_member_v1';
+const LAST_STORE_KEY = 'profitku_cloud_member_last_store';
 const CLOUD_SESSION_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari
 
 export interface CloudMemberSession extends CloudMember {
@@ -44,25 +47,35 @@ export interface CloudMemberSession extends CloudMember {
   exp: number;
 }
 
-export function saveCloudMemberSession(storeId: string, m: CloudMember): void {
+export function saveCloudMemberSession(m: CloudMember): void {
   try {
-    const s: CloudMemberSession = { ...m, storeId, exp: Date.now() + CLOUD_SESSION_MS };
+    const s: CloudMemberSession = { ...m, storeId: '', exp: Date.now() + CLOUD_SESSION_MS };
     localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(s));
+    localStorage.setItem(LAST_STORE_KEY, m.storeCode);
   } catch {
-    /* localStorage penuh/diblokir — user login ulang lain kali */
+    /* localStorage penuh/diblokir */
   }
 }
 
-export function loadCloudMemberSession(storeId: string): CloudMemberSession | null {
+export function loadCloudMemberSession(storeCode: string | null): CloudMemberSession | null {
   try {
     const raw = localStorage.getItem(CLOUD_SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as CloudMemberSession;
-    if (!s?.email || s.storeId !== storeId || s.exp < Date.now()) {
+    if (!s?.username || s.exp < Date.now()) {
       localStorage.removeItem(CLOUD_SESSION_KEY);
       return null;
     }
+    if (storeCode && s.storeCode !== storeCode) return null;
     return s;
+  } catch {
+    return null;
+  }
+}
+
+export function lastCloudStoreCode(): string | null {
+  try {
+    return localStorage.getItem(LAST_STORE_KEY);
   } catch {
     return null;
   }
@@ -76,7 +89,7 @@ export function clearCloudMemberSession(): void {
   }
 }
 
-// === Peta role cloud → permission POS (konservatif) ===
+// === Peta role cloud -> permission POS (konservatif) ===
 
 export const CLOUD_ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
   admin: [

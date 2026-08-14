@@ -997,8 +997,10 @@
     "forgotPin": "Lupa PIN? Hubungi pemilik kedai untuk set semula.",
     "logoAlt": "Logo",
     "cloudDivider": "atau log masuk dengan akaun cloud",
-    "cloudEmailLabel": "Email",
-    "cloudEmailPlaceholder": "email@pekerja.com",
+    "cloudUsernameLabel": "Username Pasukan",
+    "cloudUsernamePlaceholder": "username pasukan",
+    "cloudStoreCodeLabel": "ID Kedai",
+    "cloudStoreCodePlaceholder": "cth: TK4B7Q",
     "cloudPinLabel": "PIN Cloud",
     "cloudLoginButton": "Log Masuk Cloud",
     "cloudHint": "Username & PIN diuruskan pemilik/admin kedai di cloud.profitku.my.id → Pasukan & Peranan. Pengesahan perlukan internet sekali; selepas itu log masuk tersimpan 7 hari."
