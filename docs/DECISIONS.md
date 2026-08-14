@@ -823,3 +823,41 @@ Lanjutan roadmap affiliate (opsi 5 yang disepakati), bertahap:
 - Threshold berlaku global (platform_settings), bukan per-tier.
 - `ponytail:` payout otomatis bulanan & PPh 23 tetap menunggu volume.
 
+
+---
+
+## 2026-08-14 — FREE7 first_time_only + Payout bulanan Level 1 (PPh 23)
+
+**Status:** Accepted
+
+Eksekusi bertahap (a) lalu (b) dari opsi 5:
+
+### (a) FREE7 `first_time_only` — migrasi `20260814030000_voucher_first_time_only.sql`
+- Kolom `vouchers.first_time_only`; `FREE7 = true`.
+- `validateVoucherForUser`: user yang pernah punya baris `subscriptions`
+  (status apa pun) ditolak *"Kode trial hanya untuk pengguna baru"*.
+- Trial = alat akuisisi, bukan diskon berulang untuk churn. Win-back
+  memakai voucher `percent` terpisah bila diperlukan.
+
+### (b) Payout bulanan Level 1 — migrasi `20260814040000_affiliate_payouts.sql`
+- Tabel `affiliate_payouts` (period, gross/tax_rate/tax/net, snapshot rekening,
+  `commission_ids`, status `generated|paid|cancelled`, `unique(affiliate_id, period)`).
+- `affiliates.has_npwp` (2% PPh 23 dengan NPWP / 4% tanpa).
+- `affiliate_commissions.payout_id` → komisi dikunci payout; FK `on delete set
+  null` = batal payout → komisi kembali earned.
+- `lib/affiliate-payouts.ts`: `runMonthlyPayouts` — proses periode bulan
+  sebelumnya, threshold `min_amount_idr`, idempotent (skip bila periode sudah
+  ada), notif email/WA best-effort, `writeEvent` audit.
+- Cron daily `scheduled` memanggil payout (self-guard per periode).
+- Admin `/admin/api/affiliates/payouts` (+ list/export CSV e-Bupot/run/confirm/cancel)
+  + halaman admin baru "Pencairan" (`admin/src/pages/PayoutsPage.tsx`).
+- Portal Mitra: toggle NPWP di Pengaturan + hint PPh 23 di Komisi.
+
+**Implications:**
+- Transfer tetap manual (ops/finance) → konfirmasi di admin. Level 2 (API
+  disbursement Flip/Xendit) menunggu volume ≥ ~50 payout/bulan.
+- Kewajiban setor PPh 23 (tgl 10) & lapor e-Bupot (tgl 20) ada di finance;
+  CSV export menyediakan datanya.
+- `ponytail:` payout otomatis penuh, e-Bupot auto, dan per-mitra threshold
+  menunggu keputusan terpisah.
+

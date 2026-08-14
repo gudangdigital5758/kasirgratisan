@@ -246,6 +246,35 @@ export const adminApi = {
       method: 'POST',
     }),
 
+  // --- Payout komisi bulanan (Level 1) ---
+
+  payouts: (period: string) =>
+    request<{ period: string; payouts: AdminPayoutRow[] }>(
+      `/admin/api/affiliates/payouts?period=${encodeURIComponent(period)}`,
+    ),
+
+  runPayouts: (period?: string) =>
+    request<{ ok: boolean; period: string; created: number; skipped: boolean; errors: string[] }>(
+      '/admin/api/affiliates/payouts/run',
+      {
+        method: 'POST',
+        body: JSON.stringify(period ? { period } : {}),
+      },
+    ),
+
+  confirmPayout: (id: string) =>
+    request<{ ok: boolean; updated: number }>(`/admin/api/affiliates/payouts/${id}/confirm`, {
+      method: 'POST',
+    }),
+
+  cancelPayout: (id: string) =>
+    request<{ ok: boolean; removed: number }>(`/admin/api/affiliates/payouts/${id}`, {
+      method: 'DELETE',
+    }),
+
+  payoutExportUrl: (period: string) =>
+    `${API_URL}/admin/api/affiliates/payouts/export?period=${encodeURIComponent(period)}`,
+
   // --- Admin staff (admin_users) — hanya superadmin ---
 
   adminUsers: () => request<{ admins: AdminUserRow[] }>('/admin/api/admin-users'),
@@ -261,6 +290,25 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+};
+
+export type AdminPayoutRow = {
+  id: string;
+  affiliateId: string;
+  affiliateCode: string | null;
+  affiliateName: string | null;
+  period: string;
+  grossIdr: number;
+  taxRatePercent: number;
+  taxIdr: number;
+  netIdr: number;
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankAccountName: string | null;
+  status: string;
+  commissionCount: number;
+  paidAt: string | null;
+  createdAt: string;
 };
 
 export type AffiliateSettings = {

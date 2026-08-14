@@ -4,8 +4,9 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '../env';
-import { sbGet, sbPatch, sbPost } from '../lib/supabase';
+import { sbGet, sbPatch, sbPost, sbDelete } from '../lib/supabase';
 import { canWrite, requireAdmin, writeAudit, writeEvent, type AdminContext } from '../lib/admin';
+import { runMonthlyPayouts, previousPayoutPeriod, type AffiliatePayoutRow } from '../lib/affiliate-payouts';
 import {
   DEFAULT_AFFILIATE_SETTINGS,
   generateAffiliateCode,
@@ -49,6 +50,7 @@ type AffiliateRow = {
   bank_account_no: string | null;
   bank_account_name: string | null;
   is_active: boolean;
+  has_npwp?: boolean;
   created_at: string;
   updated_at?: string;
 };
@@ -64,6 +66,7 @@ const mapAffiliate = (r: AffiliateRow) => ({
   bankAccountNo: r.bank_account_no,
   bankAccountName: r.bank_account_name,
   isActive: r.is_active,
+  hasNpwp: r.has_npwp ?? false,
   createdAt: r.created_at,
   updatedAt: r.updated_at ?? r.created_at,
 });
@@ -182,7 +185,172 @@ affiliates.patch('/settings', async (c) => {
   }
 });
 
-// --- List with per-affiliate stats ---
+// --- Payout bulanan (Level 1): list / run / confirm / cancel / export ---
+// Didaftarkan sebelum GET /:id agar path '/payouts' tidak tertangkap param.
+
+const PERIOD_RE = /^\d{4}-\d{2}$/;
+
+type PayoutJson = {
+  id: string;
+  affiliateId: string;
+  affiliateCode: string | null;
+  affiliateName: string | null;
+  period: string;
+  grossIdr: number;
+  taxRatePercent: number;
+  taxIdr: number;
+  netIdr: number;
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankAccountName: string | null;
+  status: string;
+  commissionCount: number;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+type PayoutWithAffiliate = AffiliatePayoutRow & {
+  affiliates?: { code: string | null; name: string | null } | null;
+};
+
+function payoutJson(p: PayoutWithAffiliate): PayoutJson {
+  const ids = Array.isArray(p.commission_ids) ? (p.commission_ids as string[]) : [];
+  return {
+    id: p.id,
+    affiliateId: p.affiliate_id,
+    affiliateCode: p.affiliates?.code ?? null,
+    affiliateName: p.affiliates?.name ?? null,
+    period: p.period,
+    grossIdr: p.gross_idr,
+    taxRatePercent: p.tax_rate_percent,
+    taxIdr: p.tax_idr,
+    netIdr: p.net_idr,
+    bankName: p.bank_name,
+    bankAccountNo: p.bank_account_no,
+    bankAccountName: p.bank_account_name,
+    status: p.status,
+    commissionCount: ids.length,
+    paidAt: p.paid_at,
+    createdAt: p.created_at,
+  };
+}
+
+/** Daftar payout (default: periode bulan sebelumnya). */
+affiliates.get('/payouts', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  const periodRaw = c.req.query('period') || previousPayoutPeriod();
+  if (!PERIOD_RE.test(periodRaw)) return c.json({ error: 'Format periode YYYY-MM' }, 400);
+  try {
+    const rows = await sbGet<PayoutWithAffiliate[]>(
+      c.env,
+      `affiliate_payouts?period=eq.${periodRaw}&order=created_at.desc&select=*,affiliates(code,name)`,
+    );
+    return c.json({ period: periodRaw, payouts: (rows ?? []).map(payoutJson) });
+  } catch (err) {
+    console.error('[admin payouts list]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat payout' }, 500);
+  }
+});
+
+/** Export CSV (bahan e-Bupot / laporan finance). */
+affiliates.get('/payouts/export', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  const periodRaw = c.req.query('period') || previousPayoutPeriod();
+  if (!PERIOD_RE.test(periodRaw)) return c.json({ error: 'Format periode YYYY-MM' }, 400);
+  try {
+    const rows = await sbGet<PayoutWithAffiliate[]>(
+      c.env,
+      `affiliate_payouts?period=eq.${periodRaw}&order=created_at.desc&select=*,affiliates(code,name)`,
+    );
+    const esc = (v: string | number | null | undefined) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = [
+      ['periode', 'kode', 'nama', 'gross_idr', 'pph23_persen', 'pph23_idr', 'net_idr', 'bank', 'no_rekening', 'atas_nama', 'status'].join(','),
+      ...(rows ?? []).map((p) =>
+        [p.period, p.affiliates?.code, p.affiliates?.name, p.gross_idr, p.tax_rate_percent, p.tax_idr, p.net_idr, p.bank_name, p.bank_account_no, p.bank_account_name, p.status].map(esc).join(','),
+      ),
+    ];
+    return new Response(`\uFEFF${lines.join('\r\n')}`, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="payout-${periodRaw}.csv"`,
+      },
+    });
+  } catch (err) {
+    console.error('[admin payouts export]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal export payout' }, 500);
+  }
+});
+
+/** Jalankan payout manual (period default: bulan sebelumnya). Idempotent. */
+affiliates.post('/payouts/run', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canWrite(a.role)) return c.json({ error: 'Role tidak boleh menjalankan payout' }, 403);
+  const body = (await c.req.json().catch(() => ({}))) as { period?: string };
+  const period = body.period && PERIOD_RE.test(body.period) ? body.period : undefined;
+  try {
+    const result = await runMonthlyPayouts(c.env, period);
+    await writeAudit(c.env, a as AdminContext, 'affiliate.payout.run', 'affiliate_payouts', result.period, result);
+    return c.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[admin payouts run]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal menjalankan payout' }, 500);
+  }
+});
+
+/** Confirm: komisi terikat payout → paid (setelah transfer manual selesai). */
+affiliates.post('/payouts/:id/confirm', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canWrite(a.role)) return c.json({ error: 'Role tidak boleh mengonfirmasi payout' }, 403);
+  const id = c.req.param('id');
+  try {
+    const rows = await sbGet<AffiliatePayoutRow[]>(c.env, `affiliate_payouts?id=eq.${id}&select=*&limit=1`);
+    const payout = rows[0];
+    if (!payout) return c.json({ error: 'Payout tidak ditemukan' }, 404);
+    if (payout.status !== 'generated') return c.json({ error: `Payout sudah ${payout.status}` }, 400);
+
+    const now = new Date().toISOString();
+    await sbPatch(c.env, `affiliate_payouts?id=eq.${id}`, { status: 'paid', paid_at: now });
+    await sbPatch(c.env, `affiliate_commissions?payout_id=eq.${id}`, { status: 'paid', paid_at: now });
+    await writeAudit(c.env, a as AdminContext, 'affiliate.payout.confirm', 'affiliate_payouts', id, {
+      netIdr: payout.net_idr,
+    });
+    const ids = Array.isArray(payout.commission_ids) ? (payout.commission_ids as string[]).length : 0;
+    return c.json({ ok: true, updated: ids });
+  } catch (err) {
+    console.error('[admin payouts confirm]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal mengonfirmasi payout' }, 500);
+  }
+});
+
+/** Batal payout: baris dihapus → komisi kembali earned (FK set null). */
+affiliates.delete('/payouts/:id', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+  if (!canWrite(a.role)) return c.json({ error: 'Role tidak boleh membatalkan payout' }, 403);
+  const id = c.req.param('id');
+  try {
+    const rows = await sbGet<AffiliatePayoutRow[]>(c.env, `affiliate_payouts?id=eq.${id}&select=*&limit=1`);
+    const payout = rows[0];
+    if (!payout) return c.json({ ok: true, removed: 0 });
+    if (payout.status === 'paid') return c.json({ error: 'Payout sudah dibayar — tidak bisa dibatalkan' }, 400);
+    await sbDelete(c.env, `affiliate_payouts?id=eq.${id}`);
+    await writeAudit(c.env, a as AdminContext, 'affiliate.payout.cancel', 'affiliate_payouts', id, {
+      period: payout.period,
+    });
+    return c.json({ ok: true, removed: 1 });
+  } catch (err) {
+    console.error('[admin payouts cancel]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal membatalkan payout' }, 500);
+  }
+});
+
 affiliates.get('/', async (c) => {
   const a = await requireAdmin(c);
   if (a instanceof Response) return a;

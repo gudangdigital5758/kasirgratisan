@@ -20,6 +20,8 @@ export type VoucherRow = {
   plan_id: string | null;
   max_redemptions: number | null;
   max_per_user: number;
+  /** Trial khusus akun baru: user yang pernah punya subscriptions (status apa pun) ditolak. */
+  first_time_only: boolean;
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
@@ -190,6 +192,16 @@ export async function validateVoucherForUser(
     const perUser = await countRedemptions(env, voucher.id, opts.userId);
     if (perUser >= (voucher.max_per_user || 1)) {
       return { valid: false, error: 'Anda sudah memakai kode ini' };
+    }
+    if (voucher.first_time_only) {
+      // Trial khusus akun baru: pernah punya subscription (active/expired/canceled) = bukan baru.
+      const ever = await sbGet<{ id: string }[]>(
+        env,
+        `subscriptions?user_id=eq.${opts.userId}&select=id&limit=1`,
+      ).catch(() => [] as { id: string }[]);
+      if (ever.length > 0) {
+        return { valid: false, error: 'Kode trial hanya untuk pengguna baru' };
+      }
     }
   } catch {
     return { valid: false, error: 'Gagal cek kuota voucher' };

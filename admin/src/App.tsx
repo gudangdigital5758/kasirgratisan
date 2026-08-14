@@ -11,6 +11,7 @@ import SettingsPage from './pages/SettingsPage';
 import VouchersPage from './pages/VouchersPage';
 import AffiliatesPage from './pages/AffiliatesPage';
 import CommissionsPage from './pages/CommissionsPage';
+import PayoutsPage from './pages/PayoutsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="vouchers" element={<VouchersPage />} />
         <Route path="affiliates" element={<AffiliatesPage />} />
         <Route path="affiliate-commissions" element={<CommissionsPage />} />
+        <Route path="payouts" element={<PayoutsPage />} />
         <Route path="admin-users" element={<AdminUsersPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -46,6 +46,7 @@ import {
   verifySumopodToken,
 } from './lib/sumopod';
 import { fulfillCompletedPayment } from './lib/payments';
+import { runMonthlyPayouts } from './lib/affiliate-payouts';
 
 import adminRoutes from './routes/admin';
 import affiliateRoutes from './routes/affiliate';
@@ -623,6 +624,11 @@ export default {
         }),
         cleanupQuotaReservations(env).catch((err) => {
           console.error('[cron cleanup-quota-reservations]', err);
+        }),
+        // Payout komisi affiliate bulanan (Level 1): self-guard per periode,
+        // hanya memproses bila periode bulan sebelumnya belum punya baris.
+        runMonthlyPayouts(env).then((r) => {
+          console.log('[cron affiliate-payout]', JSON.stringify(r));
         }),
       ]),
     );

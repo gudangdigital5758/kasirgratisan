@@ -69,6 +69,7 @@ const mapAffiliate = (r: AffiliateRow) => ({
   bankAccountNo: r.bank_account_no,
   bankAccountName: r.bank_account_name,
   isActive: r.is_active,
+  hasNpwp: r.has_npwp ?? false,
   clickCount: r.click_count ?? 0,
   signupCount: r.signup_count ?? 0,
   createdAt: r.created_at,
@@ -252,13 +253,20 @@ affiliateRoutes.patch('/me', async (c) => {
     bankName?: unknown;
     bankAccountNo?: unknown;
     bankAccountName?: unknown;
+    hasNpwp?: unknown;
   };
   const clean = (v: unknown, max: number): string | null => {
     const s = String(v ?? '').trim();
     return s ? s.slice(0, max) : null;
   };
 
-  const update: Record<string, string | null> = {};
+  const update: Record<string, string | null | boolean> = {};
+  if (body.hasNpwp !== undefined) {
+    if (typeof body.hasNpwp !== 'boolean') {
+      return c.json({ error: 'hasNpwp harus boolean' }, 400);
+    }
+    update.has_npwp = body.hasNpwp;
+  }
   if (body.name !== undefined) {
     const name = clean(body.name, 120);
     if (!name) return c.json({ error: 'Nama wajib diisi' }, 400);
