@@ -25,7 +25,7 @@
     "cloud:check": "node scripts/cloud-check.mjs",
     "cloud:secrets-help": "node scripts/cloud-secrets-help.mjs",
     "cloud:deploy-api": "npm run deploy --prefix workers/api",
-    "release": "npm run api:deploy && npm run build && npm --prefix workers/api exec wrangler pages deploy ../../dist --project-name=profitku --branch main && npm run admin:deploy"
+    "release": "npm run api:deploy && npm run build && cd workers/api && npx --no-install wrangler pages deploy ../../dist --project-name=profitku --branch main && cd .. && npm run admin:deploy"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

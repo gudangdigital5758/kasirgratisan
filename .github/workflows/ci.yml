@@ -77,7 +77,8 @@ jobs:
       - name: Build POS
         run: npm run build
       - name: Deploy POS (Pages profitku)
-        run: npm --prefix workers/api exec wrangler pages deploy ../../dist --project-name=profitku --branch main
+        working-directory: workers/api
+        run: npx --no-install wrangler pages deploy ../../dist --project-name=profitku --branch main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
