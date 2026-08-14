@@ -348,3 +348,6 @@ Built with ❤️ for Indonesian small businesses.
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Lucide Icons](https://lucide.dev/)
 - [Recharts](https://recharts.org/)
+
+
+a
