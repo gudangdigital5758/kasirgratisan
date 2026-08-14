@@ -117,6 +117,10 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 - [x] 3.3 Version stamping: admin sidebar menampilkan `build v{appVersion} ({versionCode})`
       dari `version.json` (resolveJsonModule di tsconfig admin).
 - [x] 3.4 Fallback lokal `npm run release` (worker + POS + admin berurutan).
+- [x] 3.5 Penyempurnaan 2026-08-15: workflow trigger `branches: ['**']` (check semua
+      branch, deploy tetap main-only via `if: github.ref`) + `paths-ignore` docs/*.md
+      (commit docs = 0 menit CI) di kedua repo; kebijakan aktor (manusia vs agent)
+      dicatat di `docs/GIT-WORKFLOW.md`.
 - [x] Validasi: YAML parse OK; build admin hijau; guard lint hijau.
 - [x] Deploy: admin (`f75e3505`).
 - [x] Update tabel monitoring F3.
@@ -161,6 +165,8 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 - 2026-08-14: **F3 selesai** — CI/CD deploy otomatis kedua repo + smoke + version stamping +
   `npm run release`.
 - 2026-08-14: **F4 selesai** — guard-links (lint) + konvensi AGENTS; seluruh 5 fase tuntas.
+- 2026-08-15: **F3 penyempurnaan** — workflow check di semua branch (deploy main-only),
+  `paths-ignore` docs, kebijakan aktor manusia/agent di `docs/GIT-WORKFLOW.md`.
 
 ## 5. Risiko & keputusan terbuka
 
