@@ -28,6 +28,8 @@ storesRoutes.get('/stores', async (c: AppContext) => {
         is_public: boolean;
         identifier: string | null;
         store_code: string | null;
+        shopee_url: string | null;
+        tiktok_url: string | null;
       };
       type StoreEnt = {
         store_id: string;
@@ -59,6 +61,8 @@ storesRoutes.get('/stores', async (c: AppContext) => {
             isPublic: s.is_public,
             identifier: s.identifier,
             storeCode: s.store_code,
+            shopeeUrl: s.shopee_url,
+            tiktokUrl: s.tiktok_url,
             entitlement: e
               ? {
                   hasSync: e.has_sync,
@@ -187,6 +191,11 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
     copyStr('districtName', 'district_name');
     copyStr('phone', 'phone');
     copyStr('timezone', 'timezone');
+    const urlOk = (u: unknown) => typeof u === 'string' && (u === '' || /^https?:\/\/.+/i.test(u));
+    if (body.shopeeUrl !== undefined && !urlOk(body.shopeeUrl)) return c.json({ error: 'Link Shopee tidak valid (http/https)' }, 400);
+    if (body.tiktokUrl !== undefined && !urlOk(body.tiktokUrl)) return c.json({ error: 'Link TikTok tidak valid (http/https)' }, 400);
+    copyStr('shopeeUrl', 'shopee_url');
+    copyStr('tiktokUrl', 'tiktok_url');
     copyNum('provinceId', 'province_id');
     copyNum('cityId', 'city_id');
     copyNum('districtId', 'district_id');
@@ -225,6 +234,8 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
         isPublic: s.is_public,
         identifier: s.identifier,
         storeCode: s.store_code,
+        shopeeUrl: s.shopee_url,
+        tiktokUrl: s.tiktok_url,
         logoUrl: s.logo_path ? `${apiOrigin}/api/stores/${s.id}/logo` : null,
         address1: s.address1,
         address2: s.address2,
