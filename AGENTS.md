@@ -135,6 +135,10 @@ Aturan:
 - Jangan `rm -rf` massal / reset hard tanpa konfirmasi.
 - Jangan serang sistem eksternal; exploit/malware out of scope.
 - Destructive DB (drop production) — minta konfirmasi eksplisit.
+- **Konstanta bisnis user-facing (URL, harga, durasi, label) wajib dibaca dari config API
+  (`platform_settings` / `app_settings`) — hardcode hanya sebagai fallback + komentar.**
+  Guard CI: `scripts/guard-links.mjs` (via `npm run lint`) memblokir format link referral
+  root `profitku.my.id/?ref=` — kanonik `/join?ref=`.
 
 ## Out Of Scope (jangan “bawa dari MSC Studio”)
 
