@@ -424,7 +424,7 @@ async function findMemberRowsByEmail(c: AppContext, email: string, storeIds: str
   if (storeIds.length === 0) return [];
   const rows = await sbGet<MemberRow[]>(
     c.env,
-    `cloud_team_members?or=(${encodeURIComponent(storeIds.map((s) => `store_id=eq.${s}`).join(','))})&select=*&limit=200`,
+    `cloud_team_members?or=(${storeIds.map((s) => `store_id=eq.${s}`).join(',')})&select=*&limit=200`,
   );
   const out: MemberRow[] = [];
   for (const m of rows ?? []) {
@@ -447,7 +447,7 @@ teamRoutes.get('/team/members', async (c: AppContext) => {
     if (storeIds.length === 0) return c.json({ members: [] });
     const rows = await sbGet<MemberRow[]>(
       c.env,
-      `cloud_team_members?or=(${encodeURIComponent(storeIds.map((s) => `store_id=eq.${s}`).join(','))})&select=*&limit=200`,
+      `cloud_team_members?or=(${storeIds.map((s) => `store_id=eq.${s}`).join(',')})&select=*&limit=200`,
     );
     const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
     const byEmail = new Map<string, { email: string; name: string | null; username: string | null; stores: { storeId: string; storeName: string; storeCode: string | null; role: string; memberId: string }[] }>();
@@ -500,7 +500,7 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
     const storeIds = [...new Set(assignments.map((a) => a.storeId))];
     const owned = await sbGet<{ id: string }[]>(
       c.env,
-      `stores?user_id=eq.${userId}&or=(${encodeURIComponent(storeIds.map((s) => `id=eq.${s}`).join(','))})&select=id`,
+      `stores?user_id=eq.${userId}&or=(${storeIds.map((s) => `id=eq.${s}`).join(',')})&select=id`,
     );
     const ownedSet = new Set((owned ?? []).map((s) => s.id));
     if (storeIds.some((s) => !ownedSet.has(s))) return c.json({ error: 'Salah satu toko bukan milik Anda' }, 403);
