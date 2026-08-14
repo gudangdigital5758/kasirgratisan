@@ -44,19 +44,21 @@ label/status di beberapa halaman admin.
 ### F0 — Stabilisasi link affiliate (quick win)
 **Tujuan:** semua surface menghasilkan link kanonik `/join?ref=`; funnel join konsisten.
 
-- [ ] A1 `admin/src/pages/AffiliatesPage.tsx:382,395` → `https://profitku.my.id/join?ref=${code}`
+- [x] A1 `admin/src/pages/AffiliatesPage.tsx:382,395` → `https://profitku.my.id/join?ref=${code}`
       (+ komentar "kanonik: DECISIONS 2026-08-10 — jangan kembalikan ke root").
-- [ ] A2 `apps/affiliate/src/App.tsx:297` → `href={POS_JOIN_URL}` (buang `?ref=` kosong).
-- [ ] A3 `supabase/migrations/20260807120000_affiliates.sql` komentar → `/join?ref=KODE`.
-- [ ] A4 `src/components/layout/AppLayout.tsx`: `if (hasRef) return <Outlet />` sebelum
+- [x] A2 `apps/affiliate/src/App.tsx:297` → `href={POS_JOIN_URL}` (buang `?ref=` kosong).
+- [x] A3 `supabase/migrations/20260807120000_affiliates.sql` komentar → `/join?ref=KODE`.
+- [x] A4 `src/components/layout/AppLayout.tsx`: `if (hasRef) return <Outlet />` sebelum
       cek onboarding & multi-user → semua pengunjung link mitra lihat JoinPage.
-- [ ] Validasi: `npm run lint`, `npx vitest run src/test/affiliate.test.ts`,
-      `npm run admin:build`, build affiliate; live curl `/?ref=` (200) & `/join?ref=` (302→root, query utuh).
-- [ ] Deploy: admin, affiliate, POS.
-- [ ] Update tabel monitoring F0.
+- [x] Validasi: `npm run lint` (0 error), `npx vitest run src/test/affiliate.test.ts` (3/3),
+      `npm run admin:build`, build affiliate, build POS (PWA v1.2.0); live curl `/?ref=` (200)
+      & `/join?ref=` (302→root, query utuh); guard grep `/?ref=` di source = bersih;
+      `index.html` + `sw.js` live = hash sama dengan build lokal.
+- [x] Deploy: admin (`aee60aac`), affiliate (`f8e8ac5b`), POS (`6ca073e5`).
+- [x] Update tabel monitoring F0.
 
 **Definition of Done:** tidak ada `profitku.my.id/?ref=` di source ter-track;
-user baru & lama dari link mitra sama-sama mendarat di JoinPage.
+user baru & lama dari link mitra sama-sama mendarat di JoinPage. ✅
 
 ### F1 — Konfigurasi terpusat (single source of truth)
 **Tujuan:** nilai bisnis yang bisa berubah hidup di DB; UI render dari API.
@@ -133,7 +135,7 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 
 | Fase | Status | Tanggal selesai | Commit | Deploy | Bukti validasi |
 |---|---|---|---|---|---|
-| F0 Stabilisasi link | [ ] | — | — | — | — |
+| F0 Stabilisasi link | ✅ Selesai | 2026-08-14 | `ca69256` (POS/admin) · `70e4285` (portal) | admin `aee60aac` · affiliate `f8e8ac5b` · POS `6ca073e5` | lint 0 err, test 3/3, guard bersih, live 200/302, index+sw MATCH |
 | F1 Config terpusat | [ ] | — | — | — | — |
 | F2 Auto-refresh admin | [ ] | — | — | — | — |
 | F3 CI/CD | [ ] | — | — | — | — |
@@ -141,6 +143,8 @@ ter-verifikasi — "update otomatis saat ada perubahan di halaman lain".
 
 **Log perubahan file ini:**
 - 2026-08-14: dibuat — baseline audit + rencana 5 fase (F0–F4).
+- 2026-08-14: **F0 selesai** — link kanonik `/join?ref=` di semua surface (admin, portal),
+  funnel join konsisten (AppLayout `hasRef → Outlet`), deploy admin/affiliate/POS, live verified.
 
 ## 5. Risiko & keputusan terbuka
 
