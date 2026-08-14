@@ -31,7 +31,7 @@ function parseEnv(path) {
   return out;
 }
 
-const env = parseEnv(rootEnvPath);
+const env = existsSync(rootEnvPath) ? parseEnv(rootEnvPath) : process.env;
 const api =
   process.env.ADMIN_API_URL ||
   'https://api.profitku.my.id';

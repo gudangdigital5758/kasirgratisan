@@ -10,6 +10,14 @@ on:
   pull_request:
     branches: [main]
 
+# Nilai PUBLIC client (anon key, client id, onesignal) — aman di bundle, bukan secret.
+env:
+  VITE_AUTH_API_URL: https://api.profitku.my.id
+  VITE_SUPABASE_URL: https://zrlcmoffzwpopuhopkju.supabase.co
+  VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpybGNtb2Zmendwb3B1aG9wa2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDIzNDcsImV4cCI6MjEwMDM3ODM0N30.0o288EowW0bhCt8yrAZq73lzGqfZWXU5bbwswWvpu-o
+  VITE_GOOGLE_CLIENT_ID: 1040830182815-5pmkm6h03p9v0v8d7e3megblojhm73jc.apps.googleusercontent.com
+  VITE_ONESIGNAL_APP_ID: f4c3717b-0f15-4d50-92aa-29a88f4f66ad
+
 jobs:
   web:
     name: Web (lint + test + build)
@@ -54,8 +62,12 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-        env:
-          VITE_AUTH_API_URL: https://api.profitku.my.id
+      - name: Install worker deps
+        working-directory: workers/api
+        run: npm ci
+      - name: Install admin deps
+        working-directory: admin
+        run: npm ci
       - name: Deploy Worker
         working-directory: workers/api
         run: npx wrangler deploy
@@ -64,8 +76,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Build POS
         run: npm run build
-        env:
-          VITE_AUTH_API_URL: https://api.profitku.my.id
       - name: Deploy POS (Pages profitku)
         run: npm --prefix workers/api exec wrangler pages deploy ../../dist --project-name=profitku --branch main
         env:
