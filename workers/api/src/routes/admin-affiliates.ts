@@ -51,6 +51,7 @@ type AffiliateRow = {
   bank_account_name: string | null;
   is_active: boolean;
   has_npwp?: boolean;
+  min_amount_idr?: number | null;
   created_at: string;
   updated_at?: string;
 };
@@ -67,6 +68,7 @@ const mapAffiliate = (r: AffiliateRow) => ({
   bankAccountName: r.bank_account_name,
   isActive: r.is_active,
   hasNpwp: r.has_npwp ?? false,
+  minAmountIdr: r.min_amount_idr ?? null,
   createdAt: r.created_at,
   updatedAt: r.updated_at ?? r.created_at,
 });
@@ -588,6 +590,7 @@ affiliates.patch('/:id', async (c) => {
     bankAccountNo?: string | null;
     bankAccountName?: string | null;
     isActive?: boolean;
+    minAmountIdr?: number | null;
   };
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -613,6 +616,17 @@ affiliates.patch('/:id', async (c) => {
       return c.json({ error: "Field 'isActive' harus boolean" }, 400);
     }
     update.is_active = body.isActive;
+  }
+  if (body.minAmountIdr !== undefined) {
+    if (body.minAmountIdr === null) {
+      update.min_amount_idr = null;
+    } else {
+      const n = Math.floor(Number(body.minAmountIdr));
+      if (!Number.isFinite(n) || n < 0) {
+        return c.json({ error: "Field 'minAmountIdr' harus angka >= 0 atau null" }, 400);
+      }
+      update.min_amount_idr = n;
+    }
   }
 
   try {
@@ -650,12 +664,18 @@ affiliates.post('/:id/mark-paid', async (c) => {
     if (rows.length === 0) {
       return c.json({ ok: true, updated: 0 });
     }
-    // Threshold payout: komisi belum mencapai minimal → tolak mark-paid.
+    // Threshold payout: per-mitra (override) atau global. Komisi belum mencapai
+    // minimal → tolak mark-paid.
+    const affRows = await sbGet<{ min_amount_idr: number | null }[]>(
+      c.env,
+      `affiliates?id=eq.${id}&select=min_amount_idr&limit=1`,
+    ).catch(() => [] as { min_amount_idr: number | null }[]);
+    const threshold = affRows[0]?.min_amount_idr ?? settings.min_amount_idr;
     const earnedTotal = rows.reduce((s, r) => s + (r.commission_idr || 0), 0);
-    if (settings.min_amount_idr > 0 && earnedTotal < settings.min_amount_idr) {
+    if (threshold > 0 && earnedTotal < threshold) {
       return c.json(
         {
-          error: `Komisi earned Rp ${earnedTotal.toLocaleString('id-ID')} belum mencapai minimal payout Rp ${settings.min_amount_idr.toLocaleString('id-ID')}`,
+          error: `Komisi earned Rp ${earnedTotal.toLocaleString('id-ID')} belum mencapai minimal payout Rp ${threshold.toLocaleString('id-ID')}`,
         },
         400,
       );

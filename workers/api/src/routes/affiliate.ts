@@ -71,6 +71,7 @@ const mapAffiliate = (r: AffiliateRow) => ({
   bankAccountName: r.bank_account_name,
   isActive: r.is_active,
   hasNpwp: r.has_npwp ?? false,
+  minAmountIdr: r.min_amount_idr ?? null,
   clickCount: r.click_count ?? 0,
   signupCount: r.signup_count ?? 0,
   createdAt: r.created_at,
@@ -346,15 +347,17 @@ affiliateRoutes.get('/commissions', async (c) => {
 
     const settings = await getAffiliateSettings(c.env);
     const pendingIdr = Math.max(0, earnedIdr - paidIdr);
+    // Threshold per mitra (override) atau global.
+    const payoutThresholdIdr = me.min_amount_idr ?? settings.min_amount_idr;
 
     return c.json({
       ok: true,
       commissions: rows.map(mapCommission),
       summary,
       totals: { earnedIdr, paidIdr },
-      payoutThresholdIdr: settings.min_amount_idr,
+      payoutThresholdIdr,
       pendingIdr,
-      eligibleForPayout: settings.min_amount_idr <= 0 || pendingIdr >= settings.min_amount_idr,
+      eligibleForPayout: payoutThresholdIdr <= 0 || pendingIdr >= payoutThresholdIdr,
     });
   } catch (err) {
     console.warn('[affiliate commissions]', err);

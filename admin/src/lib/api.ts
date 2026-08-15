@@ -234,6 +234,7 @@ export const adminApi = {
       bankAccountNo?: string | null;
       bankAccountName?: string | null;
       isActive?: boolean;
+      minAmountIdr?: number | null;
     },
   ) =>
     request<{ ok: boolean; affiliate: AffiliateRow }>(`/admin/api/affiliates/${id}`, {
@@ -334,6 +335,7 @@ export type AffiliateRow = {
   bankAccountNo: string | null;
   bankAccountName: string | null;
   isActive: boolean;
+  minAmountIdr?: number | null;
   createdAt: string;
   updatedAt: string;
   stats?: {

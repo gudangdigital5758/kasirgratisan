@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../lib/auth';
 import { useAdminTheme } from '../lib/theme';
+import { adminApi } from '../lib/api';
 import version from '../../../version.json';
 
 const links = [
@@ -23,6 +24,38 @@ export default function Shell() {
   const { dark, toggle } = useAdminTheme();
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  // Jumlah affiliator dengan komisi pending (badge di nav Komisi Affiliate).
+  const [pendingAffCount, setPendingAffCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      adminApi
+        .affiliateCommissions()
+        .then((r) => {
+          if (cancelled) return;
+          const affs = new Set<string>();
+          for (const c of r.commissions) {
+            if (c.status !== 'void' && c.status !== 'paid') affs.add(c.affiliateId);
+          }
+          setPendingAffCount(affs.size);
+        })
+        .catch(() => setPendingAffCount(null));
+    };
+    load();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', onVisible);
+    const id = window.setInterval(load, 120_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(id);
+    };
+  }, []);
 
   // Tutup drawer saat pindah halaman (mobile).
   useEffect(() => {
@@ -101,6 +134,11 @@ export default function Shell() {
               className={({ isActive }) => (isActive ? 'active' : undefined)}
             >
               {l.label}
+              {l.to === '/affiliate-commissions' && pendingAffCount !== null && pendingAffCount > 0 && (
+                <span className="badge" style={{ marginLeft: 6, background: '#b45309', color: '#fff' }}>
+                  {pendingAffCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

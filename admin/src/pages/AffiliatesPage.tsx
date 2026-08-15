@@ -31,6 +31,8 @@ export default function AffiliatesPage() {
   const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [copyDone, setCopyDone] = useState<Record<string, boolean>>({});
   const [toggleDone, setToggleDone] = useState<Record<string, boolean>>({});
+  const [minInputs, setMinInputs] = useState<Record<string, string>>({});
+  const [minDone, setMinDone] = useState<Record<string, boolean>>({});
 
   const load = useCallback(() => {
     setErr(null);
@@ -111,6 +113,29 @@ export default function AffiliatesPage() {
   };
 
   /** Tandai paid dipindah ke halaman Komisi Affiliate (panel Per Affiliator). */
+
+  /** Simpan override min payout per mitra (kosong = ikut global). */
+  const saveMinPayout = async (a: AffiliateRow) => {
+    const raw = (minInputs[a.id] ?? '').trim();
+    const n = raw === '' ? null : Math.floor(Number(raw));
+    if (raw !== '' && (n === null || !Number.isFinite(n) || n < 0)) {
+      setErr('Min payout harus angka >= 0 atau kosong (ikut global)');
+      return;
+    }
+    setActionBusy(`min:${a.id}`);
+    setErr(null);
+    setOk(null);
+    try {
+      await adminApi.patchAffiliate(a.id, { minAmountIdr: n });
+      setMinDone((m) => ({ ...m, [a.id]: true }));
+      setTimeout(() => setMinDone((m) => ({ ...m, [a.id]: false })), 1500);
+      load();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Gagal simpan min payout');
+    } finally {
+      setActionBusy(null);
+    }
+  };
 
   /** Salin link dengan feedback tombol (Disalin). */
   const copyLinkFor = async (a: AffiliateRow) => {
@@ -293,6 +318,30 @@ export default function AffiliatesPage() {
                   <span style={{ fontSize: 12 }}>👥 {a.stats?.referredUsers ?? 0} user</span>
                   <span style={{ fontSize: 12 }}>💰 earned {rp(earned)}</span>
                   <span style={{ fontSize: 12 }}>✅ paid {rp(a.stats?.paidCommissionIdr ?? 0)}</span>
+                </div>
+                <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Min payout (kosong = global)"
+                    style={{ fontSize: 12, padding: '4px 6px', width: 150 }}
+                    value={minInputs[a.id] ?? (a.minAmountIdr ?? '')}
+                    disabled={actionBusy !== null}
+                    onChange={(e) => setMinInputs((m) => ({ ...m, [a.id]: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ fontSize: 12, padding: '4px 8px' }}
+                    disabled={actionBusy !== null}
+                    onClick={() => void saveMinPayout(a)}
+                  >
+                    {minDone[a.id]
+                      ? 'Tersimpan'
+                      : actionBusy === `min:${a.id}`
+                        ? '...'
+                        : 'Atur'}
+                  </button>
                 </div>
                 <div className="row" style={{ flexWrap: 'wrap' }}>
                   <button

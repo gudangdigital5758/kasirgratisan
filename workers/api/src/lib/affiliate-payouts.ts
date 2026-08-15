@@ -40,6 +40,7 @@ type AffRow = {
   id: string;
   user_id: string | null;
   has_npwp: boolean;
+  min_amount_idr: number | null;
   bank_name: string | null;
   bank_account_no: string | null;
   bank_account_name: string | null;
@@ -93,7 +94,7 @@ export async function runMonthlyPayouts(env: Env, period?: string): Promise<Payo
     const [affiliates, commissions] = await Promise.all([
       sbGet<AffRow[]>(
         env,
-        'affiliates?select=id,user_id,has_npwp,bank_name,bank_account_no,bank_account_name&limit=2000',
+        'affiliates?select=id,user_id,has_npwp,min_amount_idr,bank_name,bank_account_no,bank_account_name&limit=2000',
       ).catch(() => [] as AffRow[]),
       sbGet<CmRow[]>(
         env,
@@ -114,7 +115,9 @@ export async function runMonthlyPayouts(env: Env, period?: string): Promise<Payo
 
     for (const aff of affiliates) {
       const e = byAff.get(aff.id);
-      if (!e || e.total < settings.min_amount_idr) continue;
+      // Threshold per mitra (override) atau global.
+      const threshold = aff.min_amount_idr ?? settings.min_amount_idr;
+      if (!e || e.total < threshold) continue;
 
       const rate = aff.has_npwp ? 2 : 4;
       const tax = Math.round((e.total * rate) / 100);
