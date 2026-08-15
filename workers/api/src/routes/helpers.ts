@@ -266,6 +266,8 @@ export const MENU_KEYS = [
   'affiliate',
   'cashier',
   'finance',
+  'products',
+  'suppliers',
   'pos_app',
 ] as const;
 export type MenuKey = (typeof MENU_KEYS)[number];
@@ -274,11 +276,11 @@ export type MenuKey = (typeof MENU_KEYS)[number];
 export const BUILTIN_ROLES: Record<string, { name: string; menus: string[] }> = {
   admin: {
     name: 'Admin',
-    menus: ['overview', 'billing', 'backups', 'reports', 'team', 'pricing', 'online_store', 'sales', 'ai', 'finance', 'pos_app'],
+    menus: ['overview', 'billing', 'backups', 'reports', 'team', 'pricing', 'online_store', 'sales', 'ai', 'finance', 'products', 'suppliers', 'pos_app'],
   },
   kasir: { name: 'Kasir', menus: ['cashier', 'pos_app'] },
   salesman: { name: 'Salesman', menus: ['sales', 'pos_app'] },
-  kepala_gudang: { name: 'Kepala Gudang', menus: ['reports', 'pricing', 'finance', 'pos_app'] },
+  kepala_gudang: { name: 'Kepala Gudang', menus: ['reports', 'pricing', 'finance', 'suppliers', 'pos_app'] },
   karyawan: { name: 'Karyawan', menus: ['pos_app'] },
 };
 

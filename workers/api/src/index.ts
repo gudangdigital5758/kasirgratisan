@@ -60,6 +60,7 @@ import destinationsRoutes from './routes/destinations';
 import teamRoutes from './routes/team';
 import onlineRoutes from './routes/online';
 import financeRoutes from './routes/finance';
+import masterRoutes from './routes/master-data';
 import priceRulesRoutes from './routes/price-rules';
 import syncRoutes from './routes/sync';
 import backupsRoutes from './routes/backups';
@@ -241,6 +242,7 @@ app.route('/api', destinationsRoutes); // /destinations/provinces|cities|distric
 app.route('/api', teamRoutes); // /stores/:id/team*
 app.route('/api', onlineRoutes); // /online/checkout, /online/history (kasir online)
 app.route('/api', financeRoutes); // /finance/* (pengeluaran, hutang, stok)
+app.route('/api', masterRoutes); // /products, /suppliers (master data online)
 app.route('/api', priceRulesRoutes); // /stores/:id/price-rules*
 app.route('/api', syncRoutes); // /sync/push, /sync/pull, /stores/:storeId/sync
 app.route('/api', backupsRoutes); // /backups, /backups/:id/...
