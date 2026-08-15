@@ -9,6 +9,7 @@ on:
       - '*.md'
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # Nilai PUBLIC client (anon key, client id, onesignal) — aman di bundle, bukan secret.
 env:

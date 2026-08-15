@@ -1,5 +1,10 @@
 # Setup GitHub Actions CI/CD untuk Profitku
 
+> ⚠️ **USANG (2026-08-15).** Pipeline aktif = `.github/workflows/ci.yml` dengan **2 secrets**
+> (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) di kedua repo. Dokumen ini menyebut
+> `deploy.yml` lama & 8 secrets — disimpan hanya sebagai referensi sejarah.
+> Panduan terkini: `docs/GIT-WORKFLOW.md` + `docs/IMPLEMENTATION-PLAN-ADMIN-SYNC.md`.
+
 Panduan aktivasi workflow `.github/workflows/deploy.yml` untuk smart auto-deploy.
 
 ---

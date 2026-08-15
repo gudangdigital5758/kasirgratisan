@@ -861,3 +861,39 @@ Eksekusi bertahap (a) lalu (b) dari opsi 5:
 - `ponytail:` payout otomatis penuh, e-Bupot auto, dan per-mitra threshold
   menunggu keputusan terpisah.
 
+
+---
+
+## 2026-08-15 — Sinkronisasi Admin Profitku & CI/CD (F0–F4)
+
+**Status:** Accepted
+
+Menuntaskan rencana `docs/IMPLEMENTATION-PLAN-ADMIN-SYNC.md` (5 fase):
+
+1. **F0 Link kanonik** — semua surface menghasilkan `profitku.my.id/join?ref=KODE`
+   (admin, worker, portal); `/?ref=` hanya backward-compat. Funnel join konsisten:
+   URL dengan `?ref` melewati onboarding/multi-user login (`AppLayout hasRef → Outlet`).
+2. **F1 Config terpusat** — `platform_settings['links']` (template referral `%s`, bisa
+   diedit admin) & `app_settings['cloud_durations']` (durasi display). Worker
+   (`/me`, `/claim`) + admin + POS + cloud membaca dari config (fallback literal).
+   `ponytail:` harga final `cloudDurationFactor` server masih statis.
+3. **F2 Auto-refresh admin** — hook `useAutoRefresh` (focus + poll 60s + stamp
+   kesegaran) di 5 halaman admin. Realtime Events (F2.3) ditunda.
+4. **F3 CI/CD** — GitHub Actions kedua repo: check semua branch, deploy main-only,
+   smoke test; `workflow_dispatch`; `npm run release` fallback lokal; version
+   stamping admin. Wrangler di-pin 4.113.0 (`npx --no-install`). 2 secrets:
+   `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
+5. **F4 Guardrails** — `scripts/guard-links.mjs` (via lint) memblokir
+   `profitku.my.id/?ref=` di kode; konvensi AGENTS: konstanta bisnis wajib dari
+   config API.
+6. **Versioning** — `bump-version.js` timezone Asia/Jakarta; CI build tanpa bump
+   (`npx vite build`) sehingga versi dashboard admin = versi git.
+7. **Branch policy** — main = rilis (deploy), branch lain = check saja, docs = 0
+   menit CI; kebijakan aktor (manusia vs agent) di `docs/GIT-WORKFLOW.md`.
+
+**Implications:**
+- Deploy produksi otomatis dari push `main` (dua repo) dengan smoke test wajib.
+- Versi tampilan admin selalu bisa diverifikasi ke commit git.
+- `ponytail:` tersisa: durasi server-side (C3), Realtime (C1), payout Level 2,
+  e-Bupot otomatis, threshold per-mitra, i18n portal.
+

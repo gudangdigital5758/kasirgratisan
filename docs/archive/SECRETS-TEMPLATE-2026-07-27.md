@@ -1,5 +1,9 @@
 # GitHub Secrets Template
 
+> ⚠️ **USANG (2026-08-15).** Pipeline aktif hanya butuh **2 secrets** per repo:
+> `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (nilai VITE_* publik sudah di `env:`
+> workflow). Dokumen ini (8 secrets) disimpan sebagai referensi sejarah.
+
 Template untuk copy-paste setup GitHub Secrets.
 
 **⚠️ JANGAN commit file ini dengan nilai actual secrets!**
