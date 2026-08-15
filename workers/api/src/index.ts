@@ -58,6 +58,7 @@ import paymentsRoutes from './routes/payments';
 import storesRoutes from './routes/stores';
 import destinationsRoutes from './routes/destinations';
 import teamRoutes from './routes/team';
+import onlineRoutes from './routes/online';
 import priceRulesRoutes from './routes/price-rules';
 import syncRoutes from './routes/sync';
 import backupsRoutes from './routes/backups';
@@ -237,6 +238,7 @@ app.route('/api', paymentsRoutes); // /payments/checkout|verify|history|google-p
 app.route('/api', storesRoutes); // /stores, /stores/:id
 app.route('/api', destinationsRoutes); // /destinations/provinces|cities|districts
 app.route('/api', teamRoutes); // /stores/:id/team*
+app.route('/api', onlineRoutes); // /online/checkout, /online/history (kasir online)
 app.route('/api', priceRulesRoutes); // /stores/:id/price-rules*
 app.route('/api', syncRoutes); // /sync/push, /sync/pull, /stores/:storeId/sync
 app.route('/api', backupsRoutes); // /backups, /backups/:id/...
