@@ -204,6 +204,17 @@ export const adminApi = {
   affiliateCommissions: () =>
     request<{ commissions: AdminCommissionRow[] }>('/admin/api/affiliate-commissions'),
 
+  /** Export CSV komisi affiliate (blob) — untuk finance/e-Bupot. */
+  affiliateCommissionsExport: async () => {
+    const session = await supabase?.auth.getSession();
+    const token = session?.data.session?.access_token ?? '';
+    const res = await fetch(`${API_URL}/admin/api/affiliate-commissions/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Gagal export komisi affiliate');
+    return res.blob();
+  },
+
   affiliate: (id: string) =>
     request<{ affiliate: AffiliateRow; commissions: AffiliateCommission[] }>(
       `/admin/api/affiliates/${id}`,

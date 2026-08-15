@@ -874,9 +874,9 @@ Menuntaskan rencana `docs/IMPLEMENTATION-PLAN-ADMIN-SYNC.md` (5 fase):
    (admin, worker, portal); `/?ref=` hanya backward-compat. Funnel join konsisten:
    URL dengan `?ref` melewati onboarding/multi-user login (`AppLayout hasRef → Outlet`).
 2. **F1 Config terpusat** — `platform_settings['links']` (template referral `%s`, bisa
-   diedit admin) & `app_settings['cloud_durations']` (durasi display). Worker
+   diedit admin) & `app_settings['cloud_durations']` (durasi: display + **faktor harga
+   server** via `lib/cloud-config.ts` sejak 2026-08-15). Worker
    (`/me`, `/claim`) + admin + POS + cloud membaca dari config (fallback literal).
-   `ponytail:` harga final `cloudDurationFactor` server masih statis.
 3. **F2 Auto-refresh admin** — hook `useAutoRefresh` (focus + poll 60s + stamp
    kesegaran) di 5 halaman admin. Realtime Events (F2.3) ditunda.
 4. **F3 CI/CD** — GitHub Actions kedua repo: check semua branch, deploy main-only,

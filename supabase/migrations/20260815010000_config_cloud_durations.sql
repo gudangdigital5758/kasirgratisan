@@ -1,6 +1,6 @@
--- Profitku Cloud — konfigurasi terpusat: durasi langganan (display).
--- Harga final tetap dihitung worker (seed-plans cloudDurationFactor);
--- config ini dipakai UI (label + faktor display) dengan fallback konstanta.
+-- Profitku Cloud — konfigurasi terpusat: durasi langganan (display + faktor harga).
+-- Faktor harga (1/5/10) dibaca worker (lib/cloud-config.ts) untuk kalkulasi
+-- harga final checkout; UI memakai label + faktor dengan fallback konstanta.
 
 do $$
 begin
@@ -9,7 +9,7 @@ begin
     values (
       'cloud_durations',
       '{"items":[{"months":1,"priceFactor":1,"label":"1 bulan"},{"months":6,"priceFactor":5,"label":"6 bulan (bayar 5)"},{"months":12,"priceFactor":10,"label":"12 bulan (bayar 10)"}]}'::jsonb,
-      'Durasi langganan cloud: months + priceFactor (display). Harga final server-side.',
+      'Durasi langganan cloud: months + priceFactor (display & harga server).',
       now()
     );
   end if;

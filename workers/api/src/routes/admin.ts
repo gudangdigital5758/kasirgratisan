@@ -46,62 +46,123 @@ type AdminCommissionRow = {
   created_at: string;
 };
 
+type CommissionContext = {
+  rows: AdminCommissionRow[];
+  affById: Map<string, { id: string; code: string; name: string }>;
+  emailById: Map<string, string | null>;
+};
+
+async function loadCommissions(c: { env: Env }): Promise<CommissionContext> {
+  const [rows, affiliates] = await Promise.all([
+    sbGet<AdminCommissionRow[]>(
+      c.env,
+      'affiliate_commissions?select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at&order=created_at.desc&limit=5000',
+    ),
+    sbGet<{ id: string; code: string; name: string }[]>(
+      c.env,
+      'affiliates?select=id,code,name&limit=5000',
+    ),
+  ]);
+  const affById = new Map(affiliates.map((x) => [x.id, x]));
+
+  // Email pembayar (user_id) untuk konteks komisi.
+  const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
+  let emailById = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    try {
+      const profs = await sbGet<{ id: string; email: string | null }[]>(
+        c.env,
+        `profiles?id=in.(${userIds.join(',')})&select=id,email`,
+      );
+      emailById = new Map(profs.map((p) => [p.id, p.email]));
+    } catch {
+      /* email optional */
+    }
+  }
+  return { rows, affById, emailById };
+}
+
+function commissionJson(
+  r: AdminCommissionRow,
+  affById: CommissionContext['affById'],
+  emailById: CommissionContext['emailById'],
+) {
+  const aff = affById.get(r.affiliate_id);
+  return {
+    id: r.id,
+    affiliateId: r.affiliate_id,
+    affiliateCode: aff?.code ?? null,
+    affiliateName: aff?.name ?? null,
+    paymentId: r.payment_id,
+    userId: r.user_id,
+    userEmail: r.user_id ? (emailById.get(r.user_id) ?? null) : null,
+    amountPaid: r.amount_paid,
+    ratePercent: r.rate_percent,
+    commissionIdr: r.commission_idr,
+    tier: r.tier ?? 1,
+    status: r.status,
+    paidAt: r.paid_at,
+    createdAt: r.created_at,
+  };
+}
+
 admin.get('/affiliate-commissions', async (c) => {
   const a = await requireAdmin(c);
   if (a instanceof Response) return a;
 
   try {
-    const [rows, affiliates] = await Promise.all([
-      sbGet<AdminCommissionRow[]>(
-        c.env,
-        'affiliate_commissions?select=id,affiliate_id,payment_id,user_id,amount_paid,rate_percent,commission_idr,tier,status,paid_at,created_at&order=created_at.desc&limit=5000',
-      ),
-      sbGet<{ id: string; code: string; name: string }[]>(
-        c.env,
-        'affiliates?select=id,code,name&limit=5000',
-      ),
-    ]);
-    const affById = new Map(affiliates.map((x) => [x.id, x]));
-
-    // Email pembayar (user_id) untuk konteks komisi.
-    const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
-    let emailById = new Map<string, string | null>();
-    if (userIds.length > 0) {
-      try {
-        const profs = await sbGet<{ id: string; email: string | null }[]>(
-          c.env,
-          `profiles?id=in.(${userIds.join(',')})&select=id,email`,
-        );
-        emailById = new Map(profs.map((p) => [p.id, p.email]));
-      } catch {
-        /* email optional */
-      }
-    }
-
+    const ctx = await loadCommissions(c);
     return c.json({
-      commissions: rows.map((r) => {
-        const aff = affById.get(r.affiliate_id);
-        return {
-          id: r.id,
-          affiliateId: r.affiliate_id,
-          affiliateCode: aff?.code ?? null,
-          affiliateName: aff?.name ?? null,
-          paymentId: r.payment_id,
-          userId: r.user_id,
-          userEmail: r.user_id ? (emailById.get(r.user_id) ?? null) : null,
-          amountPaid: r.amount_paid,
-          ratePercent: r.rate_percent,
-          commissionIdr: r.commission_idr,
-          tier: r.tier ?? 1,
-          status: r.status,
-          paidAt: r.paid_at,
-          createdAt: r.created_at,
-        };
-      }),
+      commissions: ctx.rows.map((r) => commissionJson(r, ctx.affById, ctx.emailById)),
     });
   } catch (err) {
     console.error('[admin affiliate commissions]', err);
     return c.json({ error: err instanceof Error ? err.message : 'Gagal memuat komisi affiliate' }, 500);
+  }
+});
+
+/** Export CSV komisi affiliate (bahan finance/e-Bupot). */
+admin.get('/affiliate-commissions/export', async (c) => {
+  const a = await requireAdmin(c);
+  if (a instanceof Response) return a;
+
+  try {
+    const ctx = await loadCommissions(c);
+    const esc = (v: string | number | null | undefined) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = [
+      ['tanggal', 'kode_affiliator', 'nama_affiliator', 'email_pembayar', 'payment_id', 'tier', 'amount_paid_idr', 'rate_persen', 'komisi_idr', 'status', 'paid_at'].join(','),
+      ...ctx.rows.map((r) => {
+        const aff = ctx.affById.get(r.affiliate_id);
+        const email = r.user_id ? (ctx.emailById.get(r.user_id) ?? null) : null;
+        return [
+          r.created_at,
+          aff?.code,
+          aff?.name,
+          email,
+          r.payment_id,
+          r.tier ?? 1,
+          r.amount_paid,
+          r.rate_percent,
+          r.commission_idr,
+          r.status,
+          r.paid_at,
+        ]
+          .map(esc)
+          .join(',');
+      }),
+    ];
+    return new Response(`\uFEFF${lines.join('\r\n')}`, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="komisi-affiliate.csv"',
+      },
+    });
+  } catch (err) {
+    console.error('[admin affiliate commissions export]', err);
+    return c.json({ error: err instanceof Error ? err.message : 'Gagal export komisi affiliate' }, 500);
   }
 });
 

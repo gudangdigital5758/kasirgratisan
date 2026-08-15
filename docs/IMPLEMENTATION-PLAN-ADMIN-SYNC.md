@@ -72,7 +72,8 @@ user baru & lama dari link mitra sama-sama mendarat di JoinPage. ✅
       (sudah mengembalikan semua `platform_settings`) — fallback literal bila key belum ada.
 - [x] 1.4 Migrasi `app_settings['cloud_durations']` (1/6/12 + faktor) — cloud dashboard
       & POS CheckoutPage baca dari `/api/app-settings/cloud_durations` (fallback seed tetap).
-      Catatan: `ponytail:` harga final tetap di worker (`cloudDurationFactor` statis).
+      Penyempurnaan 2026-08-15 (C3): worker `lib/cloud-config.ts` membaca faktor yang sama
+      untuk harga final checkout & preview voucher — durasi kini sepenuhnya config-driven.
 - [x] 1.5 Admin `SettingsPage`: render `links` + flag + `mock_payment_note` dari API
       (bukan hardcode); tampilkan `updated_at` (indikator refresh F2).
 - [x] Validasi: worker `tsc`, build admin/cloud/POS/affiliate, curl

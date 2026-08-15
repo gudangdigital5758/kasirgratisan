@@ -5,7 +5,8 @@ import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireUser } from './helpers';
 import { resolveListPrice, validateVoucherForUser } from '../lib/vouchers';
-import { cloudDurationFactor, normalizeDurationMonths } from '../data/seed-plans';
+import { cloudDurationFactor } from '../lib/cloud-config';
+import { normalizeDurationMonths } from '../data/seed-plans';
 
 const vouchersRoutes = new Hono<AppEnv>();
 
@@ -33,7 +34,7 @@ vouchersRoutes.post('/vouchers/preview', async (c: AppContext) => {
   }
   const { amount: listPriceBase } = priced;
   // Durasi 6/12 bulan memakai price factor (bayar 5/10 bulan) — harga dihitung server.
-  const listPrice = Math.round(listPriceBase * cloudDurationFactor(normalizeDurationMonths(body.durationMonths)));
+  const listPrice = Math.round(listPriceBase * (await cloudDurationFactor(c.env, normalizeDurationMonths(body.durationMonths))));
   const result = await validateVoucherForUser(c.env, {
     code,
     userId: String(userId),

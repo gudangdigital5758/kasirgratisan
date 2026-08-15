@@ -12,9 +12,9 @@ import {
   CLOUD_PLAN_ID,
   CLOUD_PLAN_PRICE_IDR,
   SEED_PLANS,
-  cloudDurationFactor,
   normalizeDurationMonths,
 } from '../data/seed-plans';
+import { cloudDurationFactor } from '../lib/cloud-config';
 import {
   createSnapTransaction,
   getTransactionStatus,
@@ -147,7 +147,7 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
     }
   }
 
-  amount = Math.round(amount * cloudDurationFactor(durationMonths));
+  amount = Math.round(amount * (await cloudDurationFactor(c.env, durationMonths)));
   amountBefore = amount;
 
   let voucherMeta: {
@@ -518,7 +518,7 @@ paymentsRoutes.post('/payments/checkout-batch', async (c: AppContext) => {
   }
   let amount = 0;
   for (const it of items) {
-    amount += Math.round(priced.amount * cloudDurationFactor(it.durationMonths));
+    amount += Math.round(priced.amount * (await cloudDurationFactor(c.env, it.durationMonths)));
   }
 
   let voucherMeta: {

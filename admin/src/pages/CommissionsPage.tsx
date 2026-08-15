@@ -84,6 +84,21 @@ export default function CommissionsPage() {
     }
   };
 
+  /** Unduh CSV komisi (blob → file). */
+  const exportCsv = async () => {
+    try {
+      const blob = await adminApi.affiliateCommissionsExport();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `komisi-affiliate-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Gagal export CSV');
+    }
+  };
+
   const needle = q.trim().toLowerCase();
   const filtered = useMemo(
     () =>
@@ -117,6 +132,12 @@ export default function CommissionsPage() {
         <p className="muted">
           Semua komisi lintas affiliator · {rows.length} baris{lastSync ? ` · refresh ${lastSync}` : ''}
         </p>
+      </div>
+
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className="btn ghost small" onClick={() => void exportCsv()}>
+          Export CSV
+        </button>
       </div>
 
       {err && <p className="err">{err}</p>}
