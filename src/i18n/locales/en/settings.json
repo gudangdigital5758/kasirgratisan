@@ -587,7 +587,7 @@
   },
   "cloudDashboard": {
     "title": "Profitku Cloud",
-    "description": "Manage subscriptions, backups, online store & team at cloud.profitku.my.id",
+    "description": "Manage subscriptions, backups, online cashier, reports, online store & team at cloud.profitku.my.id",
     "open": "Open Cloud Dashboard"
   },
   "checkout": {
