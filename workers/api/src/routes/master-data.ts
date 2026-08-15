@@ -78,6 +78,7 @@ masterRoutes.post('/products', async (c: AppContext) => {
     trackStock?: boolean;
     description?: string;
     barcode?: string;
+    categorySyncId?: string;
   };
   const storeId = String(body.storeId ?? '').trim();
   const guard = await guardStore(c, storeId, 'products');
@@ -94,6 +95,7 @@ masterRoutes.post('/products', async (c: AppContext) => {
   if (!sku) return c.json({ error: 'SKU wajib & unik' }, 400);
   if (!Number.isFinite(price) || price < 0) return c.json({ error: 'Harga jual tidak valid' }, 400);
   if (!Number.isFinite(hpp) || hpp < 0) return c.json({ error: 'Harga pokok tidak valid' }, 400);
+  const categorySyncId = body.categorySyncId && UUID_RE.test(body.categorySyncId) ? body.categorySyncId : null;
   const iso = new Date().toISOString();
   const syncId = crypto.randomUUID();
   try {
@@ -108,7 +110,7 @@ masterRoutes.post('/products', async (c: AppContext) => {
         name,
         sku,
         categoryId: null,
-        categorySyncId: null,
+        categorySyncId,
         price,
         hpp,
         stock: 0,
@@ -156,6 +158,8 @@ masterRoutes.patch('/products/:syncId', async (c: AppContext) => {
     trackStock?: boolean;
     description?: string;
     barcode?: string;
+    categorySyncId?: string | null;
+    photo?: string | null;
   };
   const storeId = String(body.storeId ?? '').trim();
   const guard = await guardStore(c, storeId, 'products');
@@ -171,6 +175,9 @@ masterRoutes.patch('/products/:syncId', async (c: AppContext) => {
     const row = rows?.[0];
     if (!row) return c.json({ error: 'Produk tidak ditemukan' }, 404);
     const patch: Record<string, unknown> = {};
+    if (body.categorySyncId !== undefined) {
+      patch['categorySyncId'] = body.categorySyncId && UUID_RE.test(body.categorySyncId) ? body.categorySyncId : null;
+    }
     if (body.name !== undefined) {
       const name = String(body.name).trim().slice(0, 120);
       if (!name) return c.json({ error: 'Nama produk wajib' }, 400);
@@ -203,6 +210,16 @@ masterRoutes.patch('/products/:syncId', async (c: AppContext) => {
     }
     if (body.barcode !== undefined) {
       patch['barcode'] = String(body.barcode).trim().slice(0, 60) || null;
+    }
+    if (body.photo !== undefined) {
+      const photo = body.photo === null ? null : String(body.photo);
+      if (photo && !photo.startsWith('data:image/')) {
+        return c.json({ error: 'Foto harus berupa data URL gambar' }, 400);
+      }
+      if (photo && photo.length > 550_000) {
+        return c.json({ error: 'Foto terlalu besar (maks ±400 KB setelah kompresi)' }, 400);
+      }
+      patch['photo'] = photo;
     }
     if (Object.keys(patch).length === 0) return c.json({ ok: true });
     const iso = new Date().toISOString();
@@ -403,6 +420,145 @@ masterRoutes.delete('/suppliers/:syncId', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[suppliers delete]', err);
     return c.json({ error: 'Gagal menghapus supplier' }, 500);
+  }
+});
+
+// === Kategori produk (menu 'products') ===
+
+masterRoutes.get('/categories', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  const guard = await guardStore(c, storeId, 'products');
+  if (guard) return guard;
+  try {
+    const rows = await sbGet<Row[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.categories&deleted=eq.false&order=server_updated_at.desc&limit=100&select=id,sync_id,data,server_updated_at`,
+    );
+    const categories = (rows ?? []).filter((r) => String(r.data?.isDeleted ?? 0) !== '1');
+    return c.json({
+      categories: categories.map((r) => ({ syncId: r.sync_id, data: r.data, serverUpdatedAt: r.server_updated_at })),
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[categories list]', err);
+    return c.json({ error: 'Gagal memuat kategori' }, 500);
+  }
+});
+
+masterRoutes.post('/categories', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const body = (await c.req.json().catch(() => ({}))) as { storeId?: string; name?: string; color?: string };
+  const storeId = String(body.storeId ?? '').trim();
+  const guard = await guardStore(c, storeId, 'products');
+  if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
+  const name = String(body.name ?? '').trim().slice(0, 60);
+  if (!name) return c.json({ error: 'Nama kategori wajib' }, 400);
+  const iso = new Date().toISOString();
+  const syncId = crypto.randomUUID();
+  const palette = ['#0067fd', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#64748b'];
+  try {
+    await sbPost(c.env, 'sync_records', {
+      store_id: storeId,
+      table_name: 'categories',
+      sync_id: syncId,
+      data: {
+        name,
+        color: String(body.color ?? '').trim().slice(0, 9) || palette[syncId.charCodeAt(0) % palette.length],
+        icon: '',
+        createdAt: iso,
+        isDeleted: 0,
+        deletedAt: null,
+        updatedAt: iso,
+      },
+      deleted: false,
+      server_updated_at: iso,
+      client_updated_at: iso,
+    });
+    return c.json({ ok: true, syncId });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[categories create]', err);
+    return c.json({ error: 'Gagal menyimpan kategori' }, 500);
+  }
+});
+
+masterRoutes.patch('/categories/:syncId', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const syncId = c.req.param('syncId') ?? '';
+  const body = (await c.req.json().catch(() => ({}))) as { storeId?: string; name?: string; color?: string };
+  const storeId = String(body.storeId ?? '').trim();
+  const guard = await guardStore(c, storeId, 'products');
+  if (guard) return guard;
+  if (!UUID_RE.test(syncId)) return c.json({ error: 'syncId tidak valid' }, 400);
+  try {
+    const rows = await sbGet<Row[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.categories&sync_id=eq.${syncId}&select=id,sync_id,data,server_updated_at&limit=1`,
+    );
+    const row = rows?.[0];
+    if (!row) return c.json({ error: 'Kategori tidak ditemukan' }, 404);
+    const patch: Record<string, unknown> = {};
+    if (body.name !== undefined) {
+      const name = String(body.name).trim().slice(0, 60);
+      if (!name) return c.json({ error: 'Nama kategori wajib' }, 400);
+      patch['name'] = name;
+    }
+    if (body.color !== undefined) patch['color'] = String(body.color).trim().slice(0, 9);
+    if (Object.keys(patch).length === 0) return c.json({ ok: true });
+    const iso = new Date().toISOString();
+    patch['updatedAt'] = iso;
+    await sbPatch(c.env, `sync_records?id=eq.${row.id}`, {
+      data: { ...row.data, ...patch },
+      server_updated_at: iso,
+      client_updated_at: iso,
+    });
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[categories patch]', err);
+    return c.json({ error: 'Gagal menyimpan kategori' }, 500);
+  }
+});
+
+masterRoutes.delete('/categories/:syncId', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  const syncId = c.req.param('syncId') ?? '';
+  const guard = await guardStore(c, storeId, 'products');
+  if (guard) return guard;
+  if (!UUID_RE.test(syncId)) return c.json({ error: 'syncId tidak valid' }, 400);
+  try {
+    const rows = await sbGet<Row[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.categories&sync_id=eq.${syncId}&select=id,sync_id,data,server_updated_at&limit=1`,
+    );
+    const row = rows?.[0];
+    if (!row) return c.json({ error: 'Kategori tidak ditemukan' }, 404);
+    const used = await sbGet<{ sync_id: string }[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.products&deleted=eq.false&data->>categorySyncId=eq.${syncId}&select=sync_id&limit=1`,
+    ).catch(() => [] as { sync_id: string }[]);
+    if (used && used.length > 0) {
+      return c.json({ error: 'Kategori masih dipakai produk — pindahkan produknya dulu' }, 409);
+    }
+    const iso = new Date().toISOString();
+    await sbPatch(c.env, `sync_records?id=eq.${row.id}`, {
+      data: { ...row.data, isDeleted: 1, deletedAt: iso, updatedAt: iso },
+      server_updated_at: iso,
+      client_updated_at: iso,
+    });
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[categories delete]', err);
+    return c.json({ error: 'Gagal menghapus kategori' }, 500);
   }
 });
 

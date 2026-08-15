@@ -35,6 +35,7 @@ storesRoutes.get('/stores', async (c: AppContext) => {
         store_code: string | null;
         shopee_url: string | null;
         tiktok_url: string | null;
+        qris_id: string | null;
       };
       type StoreEnt = {
         store_id: string;
@@ -68,6 +69,7 @@ storesRoutes.get('/stores', async (c: AppContext) => {
             storeCode: s.store_code,
             shopeeUrl: s.shopee_url,
             tiktokUrl: s.tiktok_url,
+            qrisId: s.qris_id,
             entitlement: e
               ? {
                   hasSync: e.has_sync,
@@ -105,6 +107,7 @@ async function teamStoresJson(c: AppContext, memberId: string): Promise<Response
     store_code: string | null;
     shopee_url: string | null;
     tiktok_url: string | null;
+    qris_id: string | null;
   };
   type StoreEnt = {
     store_id: string;
@@ -147,6 +150,7 @@ async function teamStoresJson(c: AppContext, memberId: string): Promise<Response
           storeCode: s.store_code,
           shopeeUrl: s.shopee_url,
           tiktokUrl: s.tiktok_url,
+          qrisId: s.qris_id,
           role: roleByStore.get(s.id) ?? 'karyawan',
           entitlement: e
             ? {
@@ -282,6 +286,7 @@ storesRoutes.put('/stores/:id', async (c: AppContext) => {
     copyStr('districtName', 'district_name');
     copyStr('phone', 'phone');
     copyStr('timezone', 'timezone');
+    copyStr('qrisId', 'qris_id');
     const urlOk = (u: unknown) => typeof u === 'string' && (u === '' || /^https?:\/\/.+/i.test(u));
     if (body.shopeeUrl !== undefined && !urlOk(body.shopeeUrl)) return c.json({ error: 'Link Shopee tidak valid (http/https)' }, 400);
     if (body.tiktokUrl !== undefined && !urlOk(body.tiktokUrl)) return c.json({ error: 'Link TikTok tidak valid (http/https)' }, 400);
