@@ -4,16 +4,18 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireUser } from './helpers';
+import { requireMenu, requireUser } from './helpers';
 import { sbGet, sbPost, sbPatch, sbDelete } from '../lib/supabase';
 import {
   deleteBackupMeta,
   deleteBackupObject,
   fileKeyFor,
   getBackupMeta,
+  getBackupMetaByStore,
   getBackupObject,
   insertBackupMeta,
   listBackupMeta,
+  listBackupMetaByStore,
   putBackupObject,
   r2Configured,
 } from '../lib/backups';
@@ -27,7 +29,13 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
   if (userId instanceof Response) return userId;
   const storeId = c.req.query('storeId') ?? '';
   if (storeId && !UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
-  if (storeId) {
+  // F2: tim wajib storeId + role-nya punya menu 'backups' (default: admin).
+  const isTeam = userId.startsWith('team:');
+  if (isTeam) {
+    if (!storeId) return c.json({ error: 'storeId wajib untuk akses tim' }, 400);
+    const menuGuard = await requireMenu(c, storeId, 'backups');
+    if (menuGuard) return menuGuard;
+  } else if (storeId) {
     const own = await sbGet<{ id: string }[]>(
       c.env,
       `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id`,
@@ -40,7 +48,9 @@ backupsRoutes.get('/backups', async (c: AppContext) => {
   const limit = Number.isFinite(limitRaw) && limitRaw >= 1 ? Math.min(Math.floor(limitRaw), 100) : 60;
 
   try {
-    const rows = await listBackupMeta(c.env, String(userId), limit, storeId || undefined);
+    const rows = isTeam
+      ? await listBackupMetaByStore(c.env, storeId, limit)
+      : await listBackupMeta(c.env, String(userId), limit, storeId || undefined);
     const backups = rows.map((b) => ({
       id: b.id,
       storeId: b.store_id,
@@ -196,16 +206,26 @@ backupsRoutes.get('/backups/:id/download', async (c: AppContext) => {
   const storeId = c.req.query('storeId') ?? '';
   if (storeId && !UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
 
+  // F2: tim wajib storeId + menu 'backups'; metadata di-scope per toko.
+  const isTeam = userId.startsWith('team:');
+  if (isTeam) {
+    if (!storeId) return c.json({ error: 'storeId wajib untuk akses tim' }, 400);
+    const menuGuard = await requireMenu(c, storeId, 'backups');
+    if (menuGuard) return menuGuard;
+  }
+
   try {
-    const meta = await getBackupMeta(c.env, id, String(userId));
+    const meta = isTeam
+      ? await getBackupMetaByStore(c.env, id, storeId)
+      : await getBackupMeta(c.env, id, String(userId));
     if (!meta) return c.json({ error: 'Backup tidak ditemukan' }, 404);
     // CLOUD-007: backup hanya boleh direstore ke toko pemiliknya. Restore
     // lintas toko dalam akun yang sama ditolak (hindari menimpa DB yang salah).
-    if (storeId) {
+    if (!isTeam && storeId) {
       if (meta.store_id !== storeId) {
         return c.json({ error: 'Backup ini bukan milik toko yang dipilih' }, 400);
       }
-    } else if (meta.store_id) {
+    } else if (!isTeam && meta.store_id) {
       return c.json({ error: 'storeId wajib untuk mengunduh backup toko' }, 400);
     }
     const obj = await getBackupObject(c.env, meta.file_key);

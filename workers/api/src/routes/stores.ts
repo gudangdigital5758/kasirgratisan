@@ -17,6 +17,11 @@ storesRoutes.get('/stores', async (c: AppContext) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
 
+  // F2: anggota tim melihat toko keanggotaannya (role + menus per toko).
+  if (userId.startsWith('team:')) {
+    return teamStoresJson(c, userId.slice(5));
+  }
+
   try {
     if (c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
       type S = {
@@ -86,6 +91,85 @@ storesRoutes.get('/stores', async (c: AppContext) => {
   }
   return c.json({ stores: [] });
 });
+
+/** F2: daftar toko untuk anggota tim (id + role per toko, entitlement toko). */
+async function teamStoresJson(c: AppContext, memberId: string): Promise<Response> {
+  type S = {
+    id: string;
+    user_id: string;
+    name: string;
+    created_at: string;
+    updated_at: string;
+    is_public: boolean;
+    identifier: string | null;
+    store_code: string | null;
+    shopee_url: string | null;
+    tiktok_url: string | null;
+  };
+  type StoreEnt = {
+    store_id: string;
+    has_sync: boolean;
+    sync_expiry: string | null;
+    is_lifetime: boolean;
+    storage_limit_mb: number;
+    backup_bytes: number | string;
+  };
+  try {
+    const memberRows = await sbGet<{ store_id: string; role: string }[]>(
+      c.env,
+      `cloud_team_members?id=eq.${memberId}&invite_state=eq.active&select=store_id,role&limit=50`,
+    );
+    const rows = memberRows ?? [];
+    if (rows.length === 0) return c.json({ stores: [] });
+    const storeIds = rows.map((m) => m.store_id);
+    const stores = await sbGet<S[]>(c.env, `stores?${storeIds.map((s) => `id=eq.${s}`).join('&')}&select=*`);
+    for (const s of stores ?? []) {
+      if (!s.store_code) s.store_code = await ensureStoreCode(c, s.id);
+    }
+    const ents = await sbGet<StoreEnt[]>(
+      c.env,
+      `store_entitlements?or=(${storeIds.map((s) => `store_id.eq.${s}`).join(',')})&select=store_id,has_sync,sync_expiry,is_lifetime,storage_limit_mb,backup_bytes`,
+    ).catch(() => [] as StoreEnt[]);
+    const entByStore = new Map(ents.map((e) => [e.store_id, e]));
+    const roleByStore = new Map(rows.map((m) => [m.store_id, m.role]));
+    return c.json({
+      stores: (stores ?? []).map((s) => {
+        const e = entByStore.get(s.id);
+        const backupBytes = e ? Number(e.backup_bytes ?? 0) : 0;
+        return {
+          id: s.id,
+          userId: null,
+          name: s.name,
+          createdAt: s.created_at,
+          updatedAt: s.updated_at,
+          isPublic: s.is_public,
+          identifier: s.identifier,
+          storeCode: s.store_code,
+          shopeeUrl: s.shopee_url,
+          tiktokUrl: s.tiktok_url,
+          role: roleByStore.get(s.id) ?? 'karyawan',
+          entitlement: e
+            ? {
+                hasSync: e.has_sync,
+                syncExpiry: e.sync_expiry,
+                isLifetime: e.is_lifetime,
+                storageLimitMb: e.storage_limit_mb || 0,
+                backupBytes,
+                usedMb: Number((backupBytes / (1024 * 1024)).toFixed(2)),
+                remainingMb: Math.max(
+                  0,
+                  Number(((e.storage_limit_mb || 0) - backupBytes / (1024 * 1024)).toFixed(2)),
+                ),
+              }
+            : null,
+        };
+      }),
+    });
+  } catch (err) {
+    console.warn('[stores team]', err);
+    return c.json({ stores: [] });
+  }
+}
 
 storesRoutes.post('/stores', async (c: AppContext) => {
   const userId = requireUser(c);

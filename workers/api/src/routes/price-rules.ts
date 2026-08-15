@@ -4,7 +4,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireActiveSubscription, requireUser } from './helpers';
+import { requireActiveSubscription, requireMenu, requireUser } from './helpers';
 import { requireManager } from './team';
 import { sbGet, sbPost, sbDelete, SupabaseError } from '../lib/supabase';
 
@@ -38,8 +38,14 @@ priceRulesRoutes.get('/stores/:id/price-rules', async (c: AppContext) => {
   if (userId instanceof Response) return userId;
   const storeId = c.req.param('id') ?? '';
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
-  const guard = await requireManager(c, storeId, userId);
-  if (guard) return guard;
+  // F2: tim boleh baca bila role punya menu 'pricing'; tulis tetap owner/admin.
+  if (userId.startsWith('team:')) {
+    const menuGuard = await requireMenu(c, storeId, 'pricing');
+    if (menuGuard) return menuGuard;
+  } else {
+    const guard = await requireManager(c, storeId, userId);
+    if (guard) return guard;
+  }
   const subGuard = await requireActiveSubscription(c, storeId);
   if (subGuard) return subGuard;
   const productSyncId = c.req.query('productSyncId');

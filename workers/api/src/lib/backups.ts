@@ -62,6 +62,25 @@ export async function getBackupMeta(env: Env, id: string, userId: string): Promi
   return rows[0] ?? null;
 }
 
+/** F2: daftar backup per toko (tim — tanpa filter user_id pemilik). */
+export async function listBackupMetaByStore(env: Env, storeId: string, limit = 60): Promise<BackupMeta[]> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  return sbGet<BackupMeta[]>(
+    env,
+    `backups?store_id=eq.${storeId}&order=created_at.desc&limit=${limit}&select=*`,
+  );
+}
+
+/** F2: meta backup per toko (tim). */
+export async function getBackupMetaByStore(env: Env, id: string, storeId: string): Promise<BackupMeta | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const rows = await sbGet<BackupMeta[]>(
+    env,
+    `backups?id=eq.${id}&store_id=eq.${storeId}&select=*&limit=1`,
+  );
+  return rows[0] ?? null;
+}
+
 export async function insertBackupMeta(
   env: Env,
   row: {

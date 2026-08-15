@@ -6,7 +6,15 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { requireActiveSubscription, requireActiveSubscriptions, requireUser } from './helpers';
+import {
+  BUILTIN_ROLES,
+  ensureRoleSeed,
+  MENU_KEYS,
+  menusForRole,
+  requireActiveSubscription,
+  requireActiveSubscriptions,
+  requireUser,
+} from './helpers';
 import { rateLimit } from '../lib/rate-limit';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
 
@@ -15,6 +23,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const ROLE_RE = /^(admin|kasir|salesman|kepala_gudang|karyawan)$/;
 const USERNAME_RE = /^[a-zA-Z0-9_.]{3,20}$/;
 const STORE_CODE_RE = /^[A-HJ-NP-Z2-9]{4,8}$/;
+/** Key role: built-in (huruf kecil) atau custom (a-z0-9_). */
+const ROLE_KEY_RE = /^[a-z0-9_]{3,24}$/;
 
 type MemberRow = {
   id: string;
@@ -402,13 +412,19 @@ teamRoutes.get('/team/me', async (c: AppContext) => {
     ).catch(() => [] as { id: string; name: string; store_code: string | null }[]);
     const storeNameById = new Map((stores ?? []).map((s) => [s.id, s.name]));
     const storeCodeById = new Map((stores ?? []).map((s) => [s.id, s.store_code]));
+    const roleMenus: Record<string, string[]> = {};
+    for (const m of members) {
+      if (!roleMenus[m.store_id]) roleMenus[m.store_id] = await menusForRole(c.env, m.store_id, m.role);
+    }
     return c.json({
       memberships: members.map((m) => ({
         storeId: m.store_id,
         storeName: storeNameById.get(m.store_id) ?? 'Toko',
+        storeCode: storeCodeById.get(m.store_id) ?? null,
         role: m.role,
         username: m.username,
       })),
+      roleMenus,
     });
   } catch (err) {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
@@ -523,7 +539,9 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
   };
   const email = String(body.email ?? '').trim().toLowerCase() || null;
   const name = String(body.name ?? '').trim().slice(0, 80) || null;
-  const assignments = (body.assignments ?? []).filter((a) => a && a.storeId && ROLE_RE.test(a.role ?? ''));
+  const assignments = (body.assignments ?? []).filter(
+    (a) => a && a.storeId && (ROLE_RE.test(a.role ?? '') || ROLE_KEY_RE.test(a.role ?? '')),
+  );
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: 'Email tidak valid' }, 400);
   if (assignments.length === 0) return c.json({ error: 'Pilih minimal satu toko' }, 400);
   const username = body.username ? String(body.username).trim().toLowerCase() : null;
@@ -538,6 +556,11 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
     );
     const ownedSet = new Set((owned ?? []).map((s) => s.id));
     if (storeIds.some((s) => !ownedSet.has(s))) return c.json({ error: 'Salah satu toko bukan milik Anda' }, 403);
+    for (const a of assignments) {
+      if (!(await roleExists(c, a.storeId, a.role))) {
+        return c.json({ error: `Role "${a.role}" tidak dikenal untuk toko tersebut` }, 400);
+      }
+    }
     const subGuard = await requireActiveSubscriptions(c, storeIds);
     if (subGuard) return subGuard;
 
@@ -697,6 +720,172 @@ teamRoutes.post('/team/verify', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[team verify]', err);
     return c.json({ error: 'Gagal memverifikasi login' }, 500);
+  }
+});
+
+// === F2: Role & Hak Akses Menu (owner/admin) — custom role + toggle menu ===
+
+type RoleRow = {
+  id: string;
+  store_id: string;
+  key: string;
+  name: string;
+  menus: string[];
+  is_built_in: boolean;
+  created_at: string;
+};
+
+/** Role dikenali: built-in selalu ada; custom harus terdaftar di cloud_team_roles toko tsb. */
+async function roleExists(c: AppContext, storeId: string, role: string): Promise<boolean> {
+  if (BUILTIN_ROLES[role]) return true;
+  const rows = await sbGet<{ id: string }[]>(
+    c.env,
+    `cloud_team_roles?store_id=eq.${storeId}&key=eq.${encodeURIComponent(role)}&select=id&limit=1`,
+  ).catch(() => [] as { id: string }[]);
+  return (rows ?? []).length > 0;
+}
+
+/** Validasi daftar menu: semua key harus dikenal registry. */
+function validMenus(list: unknown): string[] | null {
+  if (!Array.isArray(list)) return null;
+  const known = MENU_KEYS as readonly string[];
+  const out = list.filter((m): m is string => typeof m === 'string' && known.includes(m));
+  return out.length === list.length ? out : null;
+}
+
+function roleJson(r: RoleRow) {
+  return { key: r.key, name: r.name, menus: r.menus ?? [], isBuiltIn: r.is_built_in };
+}
+
+/** Daftar role + menu (owner/admin). Seed built-in otomatis untuk store baru. */
+teamRoutes.get('/team/roles', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const guard = await requireManager(c, storeId, userId);
+  if (guard) return guard;
+  await ensureRoleSeed(c.env, storeId);
+  try {
+    const rows = await sbGet<RoleRow[]>(
+      c.env,
+      `cloud_team_roles?store_id=eq.${storeId}&order=is_built_in.desc,created_at.asc&select=*&limit=100`,
+    );
+    return c.json({ roles: (rows ?? []).map(roleJson) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[roles list]', err);
+    return c.json({ error: 'Gagal memuat role' }, 500);
+  }
+});
+
+/** Buat role custom (owner/admin). */
+teamRoutes.post('/team/roles', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const body = (await c.req.json().catch(() => ({}))) as { storeId?: string; key?: string; name?: string; menus?: unknown };
+  const storeId = String(body.storeId ?? '').trim();
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const guard = await requireManager(c, storeId, userId);
+  if (guard) return guard;
+  const key = String(body.key ?? '').trim().toLowerCase();
+  const name = String(body.name ?? '').trim().slice(0, 40);
+  if (!ROLE_KEY_RE.test(key)) return c.json({ error: 'Key role 3-24 karakter (huruf kecil/angka/underscore)' }, 400);
+  if (BUILTIN_ROLES[key]) return c.json({ error: 'Role bawaan tidak bisa dibuat ulang' }, 400);
+  if (!name) return c.json({ error: 'Nama role wajib' }, 400);
+  const menus = validMenus(body.menus);
+  if (!menus) return c.json({ error: 'Daftar menu tidak valid' }, 400);
+  try {
+    const dup = await sbGet<{ id: string }[]>(
+      c.env,
+      `cloud_team_roles?store_id=eq.${storeId}&key=eq.${key}&select=id&limit=1`,
+    );
+    if (dup && dup.length > 0) return c.json({ error: 'Role dengan key ini sudah ada' }, 409);
+    const inserted = await sbPost<RoleRow[]>(c.env, 'cloud_team_roles', {
+      store_id: storeId,
+      key,
+      name,
+      menus,
+      is_built_in: false,
+    });
+    return c.json({ role: roleJson(inserted[0]) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[roles create]', err);
+    return c.json({ error: 'Gagal membuat role' }, 500);
+  }
+});
+/** Ubah nama (custom) & menu (semua role) — owner/admin. */
+teamRoutes.patch('/team/roles/:key', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const key = String(c.req.param('key') ?? '').trim().toLowerCase();
+  const body = (await c.req.json().catch(() => ({}))) as { storeId?: string; name?: string; menus?: unknown };
+  const storeId = String(body.storeId ?? '').trim();
+  if (!UUID_RE.test(storeId) || !ROLE_KEY_RE.test(key)) return c.json({ error: 'Parameter tidak valid' }, 400);
+  const guard = await requireManager(c, storeId, userId);
+  if (guard) return guard;
+  try {
+    const rows = await sbGet<RoleRow[]>(
+      c.env,
+      `cloud_team_roles?store_id=eq.${storeId}&key=eq.${key}&select=*&limit=1`,
+    );
+    const row = rows?.[0];
+    if (!row) return c.json({ error: 'Role tidak ditemukan' }, 404);
+    const patch: Record<string, unknown> = {};
+    if (body.name !== undefined) {
+      const name = String(body.name).trim().slice(0, 40);
+      if (!name) return c.json({ error: 'Nama role wajib' }, 400);
+      if (row.is_built_in) return c.json({ error: 'Nama role bawaan tidak bisa diubah' }, 400);
+      patch['name'] = name;
+    }
+    if (body.menus !== undefined) {
+      const menus = validMenus(body.menus);
+      if (!menus) return c.json({ error: 'Daftar menu tidak valid' }, 400);
+      patch['menus'] = menus;
+    }
+    if (Object.keys(patch).length > 0) {
+      await sbPatch(c.env, `cloud_team_roles?id=eq.${row.id}`, patch);
+    }
+    const fresh = await sbGet<RoleRow[]>(c.env, `cloud_team_roles?id=eq.${row.id}&select=*&limit=1`);
+    return c.json({ role: roleJson(fresh?.[0] ?? row) });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[roles patch]', err);
+    return c.json({ error: 'Gagal menyimpan role' }, 500);
+  }
+});
+
+/** Hapus role custom (owner/admin). Built-in & role terpakai diblokir. */
+teamRoutes.delete('/team/roles/:key', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const key = String(c.req.param('key') ?? '').trim().toLowerCase();
+  const storeId = c.req.query('storeId') ?? '';
+  if (!UUID_RE.test(storeId) || !ROLE_KEY_RE.test(key)) return c.json({ error: 'Parameter tidak valid' }, 400);
+  const guard = await requireManager(c, storeId, userId);
+  if (guard) return guard;
+  try {
+    const rows = await sbGet<RoleRow[]>(
+      c.env,
+      `cloud_team_roles?store_id=eq.${storeId}&key=eq.${key}&select=*&limit=1`,
+    );
+    const row = rows?.[0];
+    if (!row) return c.json({ error: 'Role tidak ditemukan' }, 404);
+    if (row.is_built_in) return c.json({ error: 'Role bawaan tidak bisa dihapus' }, 400);
+    const inUse = await sbGet<{ id: string }[]>(
+      c.env,
+      `cloud_team_members?store_id=eq.${storeId}&role=eq.${key}&invite_state=eq.active&select=id&limit=1`,
+    );
+    if (inUse && inUse.length > 0) {
+      return c.json({ error: 'Role masih dipakai anggota — pindahkan role anggota tersebut dulu' }, 409);
+    }
+    await sbDelete(c.env, `cloud_team_roles?id=eq.${row.id}`);
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[roles delete]', err);
+    return c.json({ error: 'Gagal menghapus role' }, 500);
   }
 });
 

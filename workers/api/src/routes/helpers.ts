@@ -249,3 +249,133 @@ export async function handlePushSync(c: AppContext, explicitStoreId?: string) {
     return c.json({ error: 'Gagal menyimpan data sync' }, 500);
   }
 }
+
+// === RBAC dashboard cloud (F2) — role → menu per toko ===
+
+/** Registry menu dashboard cloud — WAJIB sinkron dengan apps/cloud & worker middleware. */
+export const MENU_KEYS = [
+  'overview',
+  'billing',
+  'backups',
+  'reports',
+  'team',
+  'pricing',
+  'online_store',
+  'sales',
+  'ai',
+  'affiliate',
+  'cashier',
+  'pos_app',
+] as const;
+export type MenuKey = (typeof MENU_KEYS)[number];
+
+/** Default role built-in (fallback bila baris cloud_team_roles belum ada). */
+export const BUILTIN_ROLES: Record<string, { name: string; menus: string[] }> = {
+  admin: {
+    name: 'Admin',
+    menus: ['overview', 'billing', 'backups', 'reports', 'team', 'pricing', 'online_store', 'sales', 'ai', 'pos_app'],
+  },
+  kasir: { name: 'Kasir', menus: ['cashier', 'pos_app'] },
+  salesman: { name: 'Salesman', menus: ['sales', 'pos_app'] },
+  kepala_gudang: { name: 'Kepala Gudang', menus: ['reports', 'pricing', 'pos_app'] },
+  karyawan: { name: 'Karyawan', menus: ['pos_app'] },
+};
+
+/** Seed built-in role untuk toko (idempotent) — store baru yang lahir setelah migrasi. */
+export async function ensureRoleSeed(env: Env, storeId: string): Promise<void> {
+  try {
+    const rows = await sbGet<{ id: string }[]>(env, `cloud_team_roles?store_id=eq.${storeId}&select=id&limit=1`);
+    if (rows && rows.length > 0) return;
+    for (const [key, def] of Object.entries(BUILTIN_ROLES)) {
+      await sbPost(env, 'cloud_team_roles', {
+        store_id: storeId,
+        key,
+        name: def.name,
+        menus: def.menus,
+        is_built_in: true,
+      }).catch(() => undefined);
+    }
+  } catch (err) {
+    console.warn('[role seed]', err);
+  }
+}
+
+/** Peran aktor pada satu toko: 'owner' (Supabase) atau role tim. Return null bila tanpa akses. */
+export async function resolveRoleForStore(
+  c: AppContext,
+  storeId: string,
+  userId: string,
+): Promise<string | null> {
+  try {
+    if (userId.startsWith('team:')) {
+      const rows = await sbGet<{ role: string }[]>(
+        c.env,
+        `cloud_team_members?id=eq.${userId.slice(5)}&store_id=eq.${storeId}&invite_state=eq.active&select=role&limit=1`,
+      );
+      return rows?.[0]?.role ?? null;
+    }
+    const owned = await sbGet<{ id: string }[]>(
+      c.env,
+      `stores?id=eq.${storeId}&user_id=eq.${userId}&select=id&limit=1`,
+    );
+    if (owned && owned.length > 0) return 'owner';
+    const admin = await sbGet<{ role: string }[]>(
+      c.env,
+      `cloud_team_members?store_id=eq.${storeId}&user_id=eq.${userId}&role=eq.admin&invite_state=eq.active&select=role&limit=1`,
+    );
+    return admin?.[0]?.role ?? null;
+  } catch (err) {
+    console.warn('[resolveRoleForStore]', err);
+    return null;
+  }
+}
+
+/** Daftar menu role pada toko (dari cloud_team_roles, fallback default built-in). */
+export async function menusForRole(env: Env, storeId: string, role: string): Promise<string[]> {
+  try {
+    const rows = await sbGet<{ menus: string[] }[]>(
+      env,
+      `cloud_team_roles?store_id=eq.${storeId}&key=eq.${encodeURIComponent(role)}&select=menus&limit=1`,
+    );
+    if (rows?.[0]?.menus && Array.isArray(rows[0].menus)) return rows[0].menus;
+  } catch {
+    /* fallback */
+  }
+  return BUILTIN_ROLES[role]?.menus ?? [];
+}
+
+/** Guard menu untuk aktor tim (owner implicit all). Return Response bila ditolak. */
+export async function requireMenu(
+  c: AppContext,
+  storeId: string,
+  menuKey: string,
+): Promise<Response | null> {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const role = await resolveRoleForStore(c, storeId, userId);
+  if (!role) return c.json({ error: 'Toko tidak ditemukan atau bukan milik Anda' }, 404);
+  if (role === 'owner') return null;
+  const menus = await menusForRole(c.env, storeId, role);
+  if (!menus.includes(menuKey)) {
+    return c.json({ error: 'Role Anda tidak memiliki akses ke fitur ini' }, 403);
+  }
+  return null;
+}
+
+/** Daftar store yang diakses aktor (owner: milik; team: keanggotaan aktif). */
+export async function accessibleStoreIds(c: AppContext, userId: string): Promise<string[]> {
+  try {
+    if (userId.startsWith('team:')) {
+      const rows = await sbGet<{ store_id: string }[]>(
+        c.env,
+        `cloud_team_members?id=eq.${userId.slice(5)}&invite_state=eq.active&select=store_id`,
+      );
+      return (rows ?? []).map((r) => r.store_id);
+    }
+    const rows = await sbGet<{ id: string }[]>(c.env, `stores?user_id=eq.${userId}&select=id`);
+    return (rows ?? []).map((r) => r.id);
+  } catch (err) {
+    console.warn('[accessibleStoreIds]', err);
+    return [];
+  }
+}
