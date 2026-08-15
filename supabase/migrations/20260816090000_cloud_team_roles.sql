@@ -24,15 +24,15 @@ alter table public.cloud_team_members
 
 -- Seed built-in untuk semua toko existing (idempotent). Store baru di-seed worker (ensureRoleSeed).
 insert into public.cloud_team_roles (store_id, key, name, menus, is_built_in)
-select s.id, r.key, r.name, r.menus, true
+select s.id, r.key, r.name, r.menus::text[], true
 from public.stores s
 cross join (
   values
-    ('admin', 'Admin', '{overview,billing,backups,reports,team,pricing,online_store,sales,ai,pos_app}'),
-    ('kasir', 'Kasir', '{cashier,pos_app}'),
-    ('salesman', 'Salesman', '{sales,pos_app}'),
-    ('kepala_gudang', 'Kepala Gudang', '{reports,pricing,pos_app}'),
-    ('karyawan', 'Karyawan', '{pos_app}')
+    ('admin', 'Admin', '{overview,billing,backups,reports,team,pricing,online_store,sales,ai,pos_app}'::text[]),
+    ('kasir', 'Kasir', '{cashier,pos_app}'::text[]),
+    ('salesman', 'Salesman', '{sales,pos_app}'::text[]),
+    ('kepala_gudang', 'Kepala Gudang', '{reports,pricing,pos_app}'::text[]),
+    ('karyawan', 'Karyawan', '{pos_app}'::text[])
 ) as r(key, name, menus)
 on conflict (store_id, key) do nothing;
 
