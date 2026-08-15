@@ -2,17 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   adminApi,
   type AffiliateRow,
-  type AffiliateSettings,
 } from '../lib/api';
 import { useAutoRefresh, refreshStamp } from '../lib/use-auto-refresh';
-
-const defaultSettings: AffiliateSettings = {
-  enabled: true,
-  commission_percent: 10,
-  tiers: [20, 5, 3, 2, 1],
-  attribution_days: 3650,
-  min_amount_idr: 0,
-};
 
 const emptyForm = {
   code: '',
@@ -27,25 +18,20 @@ const emptyForm = {
 
 const rp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
-/** Field angka disimpan sebagai string agar bisa dikosongkan (tanpa paksa 0 / leading zero). */
-const emptyCfg = { enabled: true, tiers: ['20', '5', '3', '2', '1'], attribution_days: '', min_amount_idr: '' };
-
-const toNum = (v: string, fallback = 0, min = 0, max = Infinity) => {
-  const n = Number(v.trim());
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-};
-
 export default function AffiliatesPage() {
-  const [cfg, setCfg] = useState(emptyCfg);
   const [linksTpl, setLinksTpl] = useState<string | null>(null);
   const [rows, setRows] = useState<AffiliateRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [createBusy, setCreateBusy] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [q, setQ] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
+  // Feedback tombol aksi per mitra: busy + status sukses sementara.
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [copyDone, setCopyDone] = useState<Record<string, boolean>>({});
+  const [paidDone, setPaidDone] = useState<Record<string, boolean>>({});
+  const [toggleDone, setToggleDone] = useState<Record<string, boolean>>({});
 
   const load = useCallback(() => {
     setErr(null);
@@ -59,17 +45,6 @@ export default function AffiliatesPage() {
   }, []);
 
   const loadSettings = useCallback(() => {
-    adminApi
-      .affiliateSettings()
-      .then((r) =>
-        setCfg({
-          enabled: r.settings.enabled,
-          tiers: (r.settings.tiers?.length ? r.settings.tiers : [r.settings.commission_percent]).map(String),
-          attribution_days: String(r.settings.attribution_days),
-          min_amount_idr: String(r.settings.min_amount_idr),
-        }),
-      )
-      .catch(() => setCfg({ ...emptyCfg, enabled: defaultSettings.enabled }));
     // Template link referral dari platform_settings['links'] (single source of truth).
     adminApi
       .settings()
@@ -93,35 +68,9 @@ export default function AffiliatesPage() {
   // Auto-refresh: fokus tab + setiap 60 detik (komisi/counter mitra selalu segar).
   useAutoRefresh(load, 60_000);
 
-  const saveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    setOk(null);
-    try {
-      const res = await adminApi.patchAffiliateSettings({
-        enabled: cfg.enabled,
-        tiers: cfg.tiers.map((t) => toNum(t, 0, 0, 100)),
-        attribution_days: toNum(cfg.attribution_days, 3650, 1, 3650),
-        min_amount_idr: toNum(cfg.min_amount_idr, 0, 0),
-      });
-      setCfg({
-        enabled: res.settings.enabled,
-        tiers: (res.settings.tiers?.length ? res.settings.tiers : [res.settings.commission_percent]).map(String),
-        attribution_days: String(res.settings.attribution_days),
-        min_amount_idr: String(res.settings.min_amount_idr),
-      });
-      setOk('Settings affiliate disimpan');
-    } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : 'Gagal simpan settings');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
+    setCreateBusy(true);
     setErr(null);
     setOk(null);
     try {
@@ -141,34 +90,53 @@ export default function AffiliatesPage() {
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Gagal membuat affiliator');
     } finally {
-      setBusy(false);
+      setCreateBusy(false);
     }
   };
 
+  /** Toggle aktif/nonaktif dengan feedback tombol (Disabled/Enabled). */
   const toggleActive = async (a: AffiliateRow) => {
+    setActionBusy(`toggle:${a.id}`);
+    setErr(null);
+    setOk(null);
     try {
       await adminApi.patchAffiliate(a.id, { isActive: !a.isActive });
+      setToggleDone((m) => ({ ...m, [a.id]: true }));
+      setTimeout(() => setToggleDone((m) => ({ ...m, [a.id]: false })), 1500);
       load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Gagal update');
+    } finally {
+      setActionBusy(null);
     }
   };
 
   /** Tandai semua komisi earned satu affiliator sebagai paid (dari kartu). */
   const markPaidFor = async (a: AffiliateRow) => {
     if (!window.confirm(`Tandai SEMUA komisi earned ${a.code} sebagai PAID?`)) return;
-    setBusy(true);
+    setActionBusy(`paid:${a.id}`);
     setErr(null);
     setOk(null);
     try {
       const res = await adminApi.markAffiliatePaid(a.id);
+      setPaidDone((m) => ({ ...m, [a.id]: true }));
+      setTimeout(() => setPaidDone((m) => ({ ...m, [a.id]: false })), 1500);
       setOk(`${res.updated} komisi ditandai paid`);
       load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Gagal menandai paid');
     } finally {
-      setBusy(false);
+      setActionBusy(null);
     }
+  };
+
+  /** Salin link dengan feedback tombol (Disalin). */
+  const copyLinkFor = async (a: AffiliateRow) => {
+    setActionBusy(`copy:${a.id}`);
+    await copyText(refLink(a.code));
+    setActionBusy(null);
+    setCopyDone((m) => ({ ...m, [a.id]: true }));
+    setTimeout(() => setCopyDone((m) => ({ ...m, [a.id]: false })), 1500);
   };
 
   const bankText = (a: AffiliateRow) => {
@@ -185,10 +153,6 @@ export default function AffiliatesPage() {
       setErr('Gagal menyalin link');
     }
   };
-
-  // Total komisi maks dari nilai tier yang sedang diisi (dinamis).
-  const tierValues = cfg.tiers.map((t) => toNum(t, 0, 0, 100));
-  const totalTiersPercent = tierValues.reduce((s, n) => s + n, 0);
 
   // Link referral dari template config (platform_settings['links']) — fallback kanonik.
   const refLink = (code: string) =>
@@ -218,72 +182,7 @@ export default function AffiliatesPage() {
       {err && <p className="err">{err}</p>}
       {ok && <p className="ok">{ok}</p>}
 
-      <form className="card stack" onSubmit={(e) => void saveSettings(e)}>
-        <h3 style={{ margin: 0, fontSize: '1rem' }}>Settings komisi</h3>
-        <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
-          {cfg.tiers.map((t, i) => (
-            <label key={i} className="stack" style={{ flex: '0 1 110px' }}>
-              <span className="muted">Tier {i + 1} (%)</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={t}
-                onChange={(e) =>
-                  setCfg((s) => ({ ...s, tiers: s.tiers.map((x, j) => (j === i ? e.target.value : x)) }))
-                }
-                placeholder="0"
-              />
-            </label>
-          ))}
-          <label className="stack" style={{ flex: '0 1 150px' }}>
-            <span className="muted">Atribusi (hari)</span>
-            <input
-              type="number"
-              min={1}
-              max={3650}
-              value={cfg.attribution_days}
-              onChange={(e) => setCfg((s) => ({ ...s, attribution_days: e.target.value }))}
-              placeholder="3650"
-            />
-          </label>
-          <label className="stack" style={{ flex: '0 1 170px' }}>
-            <span className="muted">Min pembayaran (Rp)</span>
-            <input
-              type="number"
-              min={0}
-              value={cfg.min_amount_idr}
-              onChange={(e) => setCfg((s) => ({ ...s, min_amount_idr: e.target.value }))}
-              placeholder="0"
-            />
-          </label>
-          <label className="stack" style={{ flex: '0 1 150px' }}>
-            <span className="muted">Aktif</span>
-            <select
-              value={cfg.enabled ? '1' : '0'}
-              onChange={(e) => setCfg((s) => ({ ...s, enabled: e.target.value === '1' }))}
-            >
-              <option value="1">Ya</option>
-              <option value="0">Tidak</option>
-            </select>
-          </label>
-        </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.75rem', maxWidth: 640 }}>
-          <b>Komisi 5 tier</b> (persen dari nominal pembayaran): tier 1 = referrer langsung,
-          tier 2–5 = ancestor di atasnya. Set 0 untuk menonaktifkan tier tertentu. Total maks{' '}
-          <b>
-            {totalTiersPercent}% ({tierValues.join('+')})
-          </b>
-          . <b>Atribusi (hari):</b> masa berlaku jalur referral — user harus berlangganan dalam X
-          hari sejak mengklik link, kalau lewat komisi tidak berlaku.
-        </p>
-        <div className="row" style={{ gap: '0.5rem' }}>
-          <button type="submit" className="btn" disabled={busy}>
-            {busy ? 'Menyimpan…' : 'Simpan settings'}
-          </button>
-        </div>
-      </form>
-
+      {/* Buat affiliator (settings komisi ada di menu Pengaturan Mitra) */}
       <form className="card stack" onSubmit={(e) => void create(e)}>
         <h3 style={{ margin: 0, fontSize: '1rem' }}>Buat affiliator</h3>
         <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -359,8 +258,8 @@ export default function AffiliatesPage() {
           />
         </label>
         <div className="row" style={{ gap: '0.5rem' }}>
-          <button type="submit" className="btn" disabled={busy}>
-            {busy ? 'Menyimpan…' : 'Buat affiliator'}
+          <button type="submit" className="btn" disabled={createBusy}>
+            {createBusy ? 'Menyimpan…' : 'Buat affiliator'}
           </button>
         </div>
       </form>
@@ -418,27 +317,46 @@ export default function AffiliatesPage() {
                     type="button"
                     className="btn ghost"
                     style={{ fontSize: 12, padding: '4px 10px' }}
-                    onClick={() => void copyText(refLink(a.code))}
+                    disabled={actionBusy !== null}
+                    onClick={() => void copyLinkFor(a)}
                   >
-                    📋 Salin link
+                    {copyDone[a.id]
+                      ? 'Disalin'
+                      : actionBusy === `copy:${a.id}`
+                        ? '...'
+                        : '📋 Salin link'}
                   </button>
                   {earned > 0 && (
                     <button
                       type="button"
                       className="btn ghost"
                       style={{ fontSize: 12, padding: '4px 10px' }}
+                      disabled={actionBusy !== null}
                       onClick={() => void markPaidFor(a)}
                     >
-                      Tandai paid
+                      {paidDone[a.id]
+                        ? 'Done paid'
+                        : actionBusy === `paid:${a.id}`
+                          ? '...'
+                          : 'Tandai paid'}
                     </button>
                   )}
                   <button
                     type="button"
                     className="btn ghost"
                     style={{ fontSize: 12, padding: '4px 10px' }}
+                    disabled={actionBusy !== null}
                     onClick={() => void toggleActive(a)}
                   >
-                    {a.isActive ? 'Disable' : 'Enable'}
+                    {actionBusy === `toggle:${a.id}`
+                      ? '...'
+                      : toggleDone[a.id]
+                        ? a.isActive
+                          ? 'Enabled'
+                          : 'Disabled'
+                        : a.isActive
+                          ? 'Disable'
+                          : 'Enable'}
                   </button>
                 </div>
               </div>

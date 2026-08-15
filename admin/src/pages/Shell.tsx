@@ -10,6 +10,7 @@ const links = [
   { to: '/payments', label: 'Payments' },
   { to: '/vouchers', label: 'Vouchers' },
   { to: '/affiliates', label: 'Mitra' },
+  { to: '/affiliate-settings', label: 'Pengaturan Mitra' },
   { to: '/affiliate-commissions', label: 'Commissions' },
   { to: '/payouts', label: 'Pencairan' },
   { to: '/admin-users', label: 'Staff' },

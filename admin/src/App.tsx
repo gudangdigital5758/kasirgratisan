@@ -10,6 +10,7 @@ import EventsPage from './pages/EventsPage';
 import SettingsPage from './pages/SettingsPage';
 import VouchersPage from './pages/VouchersPage';
 import AffiliatesPage from './pages/AffiliatesPage';
+import MitraSettingsPage from './pages/MitraSettingsPage';
 import CommissionsPage from './pages/CommissionsPage';
 import PayoutsPage from './pages/PayoutsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="vouchers" element={<VouchersPage />} />
         <Route path="affiliates" element={<AffiliatesPage />} />
+        <Route path="affiliate-settings" element={<MitraSettingsPage />} />
         <Route path="affiliate-commissions" element={<CommissionsPage />} />
         <Route path="payouts" element={<PayoutsPage />} />
         <Route path="admin-users" element={<AdminUsersPage />} />
