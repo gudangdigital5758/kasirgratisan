@@ -30,7 +30,6 @@ export default function AffiliatesPage() {
   // Feedback tombol aksi per mitra: busy + status sukses sementara.
   const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [copyDone, setCopyDone] = useState<Record<string, boolean>>({});
-  const [paidDone, setPaidDone] = useState<Record<string, boolean>>({});
   const [toggleDone, setToggleDone] = useState<Record<string, boolean>>({});
 
   const load = useCallback(() => {
@@ -111,24 +110,7 @@ export default function AffiliatesPage() {
     }
   };
 
-  /** Tandai semua komisi earned satu affiliator sebagai paid (dari kartu). */
-  const markPaidFor = async (a: AffiliateRow) => {
-    if (!window.confirm(`Tandai SEMUA komisi earned ${a.code} sebagai PAID?`)) return;
-    setActionBusy(`paid:${a.id}`);
-    setErr(null);
-    setOk(null);
-    try {
-      const res = await adminApi.markAffiliatePaid(a.id);
-      setPaidDone((m) => ({ ...m, [a.id]: true }));
-      setTimeout(() => setPaidDone((m) => ({ ...m, [a.id]: false })), 1500);
-      setOk(`${res.updated} komisi ditandai paid`);
-      load();
-    } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : 'Gagal menandai paid');
-    } finally {
-      setActionBusy(null);
-    }
-  };
+  /** Tandai paid dipindah ke halaman Komisi Affiliate (panel Per Affiliator). */
 
   /** Salin link dengan feedback tombol (Disalin). */
   const copyLinkFor = async (a: AffiliateRow) => {
@@ -326,21 +308,6 @@ export default function AffiliatesPage() {
                         ? '...'
                         : '📋 Salin link'}
                   </button>
-                  {earned > 0 && (
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      style={{ fontSize: 12, padding: '4px 10px' }}
-                      disabled={actionBusy !== null}
-                      onClick={() => void markPaidFor(a)}
-                    >
-                      {paidDone[a.id]
-                        ? 'Done paid'
-                        : actionBusy === `paid:${a.id}`
-                          ? '...'
-                          : 'Tandai paid'}
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="btn ghost"
