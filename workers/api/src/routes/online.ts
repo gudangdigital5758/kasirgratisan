@@ -120,4 +120,51 @@ onlineRoutes.get('/online/history', async (c: AppContext) => {
   }
 });
 
+/** Arsip struk digital: transaksi + item-nya (guard menu 'reports'). */
+onlineRoutes.get('/online/transactions', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
+  const menuGuard = await requireMenu(c, storeId, 'reports');
+  if (menuGuard) return menuGuard;
+  const limitRaw = Number(c.req.query('limit') ?? '');
+  const limit = Number.isFinite(limitRaw) && limitRaw >= 1 ? Math.min(Math.floor(limitRaw), 100) : 50;
+  try {
+    const rows = await sbGet<{ sync_id: string; data: Record<string, unknown>; server_updated_at: string }[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.transactions&deleted=eq.false&order=server_updated_at.desc&limit=${limit}&select=sync_id,data,server_updated_at`,
+    );
+    const txs = rows ?? [];
+    const ids = txs.map((t) => t.sync_id);
+    let itemsByTx = new Map<string, { sync_id: string; data: Record<string, unknown> }[]>();
+    if (ids.length > 0) {
+      const itemRows = await sbGet<{ sync_id: string; data: Record<string, unknown> }[]>(
+        c.env,
+        `sync_records?store_id=eq.${storeId}&table_name=eq.transactionItems&deleted=eq.false&data->>transactionSyncId=in.(${ids.join(',')})&select=sync_id,data&limit=500`,
+      ).catch(() => [] as { sync_id: string; data: Record<string, unknown> }[]);
+      itemsByTx = new Map();
+      for (const it of itemRows ?? []) {
+        const key = String(it.data?.transactionSyncId ?? '');
+        if (!key) continue;
+        const list = itemsByTx.get(key) ?? [];
+        list.push(it);
+        itemsByTx.set(key, list);
+      }
+    }
+    return c.json({
+      transactions: txs.map((t) => ({
+        syncId: t.sync_id,
+        data: t.data,
+        items: (itemsByTx.get(t.sync_id) ?? []).map((it) => it.data),
+        serverUpdatedAt: t.server_updated_at,
+      })),
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[online transactions]', err);
+    return c.json({ error: 'Gagal memuat arsip' }, 500);
+  }
+});
+
 export default onlineRoutes;
