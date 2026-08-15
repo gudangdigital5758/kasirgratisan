@@ -89,7 +89,7 @@ export default function LoginScreen() {
     >
       <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-md mx-auto w-full">
         {/* Store header */}
-        <div className="flex flex-col items-center text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-6">
           <div className="w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden mb-3">
             {storeSettings?.logo ? (
               <img src={storeSettings.logo} alt={t('loginScreen.logoAlt')} className="w-full h-full object-cover" />
@@ -101,6 +101,8 @@ export default function LoginScreen() {
           <p className="text-xs text-muted-foreground mt-1">{t('loginScreen.continuePrompt')}</p>
         </div>
 
+        {/* Panel login (wireframe login-form: form dalam satu card) */}
+        <div className="bg-card text-card-foreground border border-border rounded-2xl shadow-sm px-5 py-6 space-y-5">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username" className="flex items-center gap-1.5 text-sm">
@@ -248,6 +250,7 @@ export default function LoginScreen() {
             {t('loginScreen.cloudHint')}
           </p>
         </form>
+        </div>
 
 
         <p className="text-[11px] text-muted-foreground text-center mt-6">
