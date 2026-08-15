@@ -26,9 +26,9 @@ function rpcMessage(err: unknown): string {
   return err instanceof SupabaseError ? String(err.message) : 'Operasi gagal, coba lagi';
 }
 
-async function guardStore(c: AppContext, storeId: string): Promise<Response | null> {
+async function guardStore(c: AppContext, storeId: string, menuKey = 'finance'): Promise<Response | null> {
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
-  const menuGuard = await requireMenu(c, storeId, 'finance');
+  const menuGuard = await requireMenu(c, storeId, menuKey);
   if (menuGuard) return menuGuard;
   return null;
 }
@@ -302,6 +302,166 @@ financeRoutes.post('/finance/stock', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: rpcMessage(err) }, 400);
     console.error('[finance stock move]', err);
     return c.json({ error: 'Gagal memproses stok' }, 500);
+  }
+});
+
+// === Shift online (menu 'cashier' — workflow kasir) ===
+
+financeRoutes.get('/finance/shifts', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  const guard = await guardStore(c, storeId, 'cashier');
+  if (guard) return guard;
+  const limitRaw = Number(c.req.query('limit') ?? '');
+  const limit = Number.isFinite(limitRaw) && limitRaw >= 1 ? Math.min(Math.floor(limitRaw), 20) : 10;
+  try {
+    const rows = await sbGet<Row[]>(
+      c.env,
+      `sync_records?store_id=eq.${storeId}&table_name=eq.cashierShifts&deleted=eq.false&order=server_updated_at.desc&limit=${limit}&select=id,sync_id,data,server_updated_at`,
+    );
+    return c.json({
+      shifts: (rows ?? []).map((r) => ({ syncId: r.sync_id, data: r.data, serverUpdatedAt: r.server_updated_at })),
+    });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[finance shifts list]', err);
+    return c.json({ error: 'Gagal memuat shift' }, 500);
+  }
+});
+
+financeRoutes.post('/finance/shifts/open', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const body = (await c.req.json().catch(() => ({}))) as { storeId?: string; openingCash?: number };
+  const storeId = String(body.storeId ?? '').trim();
+  const guard = await guardStore(c, storeId, 'cashier');
+  if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
+  const openingCash = Number(body.openingCash);
+  if (!Number.isFinite(openingCash) || openingCash < 0) {
+    return c.json({ error: 'Uang awal tidak valid' }, 400);
+  }
+  const iso = new Date().toISOString();
+  const syncId = crypto.randomUUID();
+  try {
+    await sbPost(c.env, 'sync_records', {
+      store_id: storeId,
+      table_name: 'cashierShifts',
+      sync_id: syncId,
+      data: {
+        userId: null,
+        userName: actorName(c, userId),
+        openedAt: iso,
+        closedAt: null,
+        openingCash,
+        closingCash: null,
+        expectedCash: null,
+        cashSales: 0,
+        cashExpenses: 0,
+        txCount: 0,
+        salesTotal: 0,
+        notes: '',
+        status: 'open',
+        updatedAt: iso,
+      },
+      deleted: false,
+      server_updated_at: iso,
+      client_updated_at: iso,
+    });
+    await writeEvent(c.env, {
+      type: 'online_shift_open',
+      message: `Shift dibuka (${openingCash})`,
+      actorUserId: userId,
+      payload: { storeId },
+    }).catch(() => undefined);
+    return c.json({ ok: true, syncId });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
+    console.error('[finance shift open]', err);
+    return c.json({ error: 'Gagal membuka shift' }, 500);
+  }
+});
+
+financeRoutes.post('/finance/shifts/:syncId/close', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const syncId = c.req.param('syncId') ?? '';
+  const body = (await c.req.json().catch(() => ({}))) as {
+    storeId?: string;
+    closingCash?: number;
+    notes?: string;
+  };
+  const storeId = String(body.storeId ?? '').trim();
+  const guard = await guardStore(c, storeId, 'cashier');
+  if (guard) return guard;
+  const subGuard = await requireActiveSubscription(c, storeId);
+  if (subGuard) return subGuard;
+  if (!UUID_RE.test(syncId)) return c.json({ error: 'syncId tidak valid' }, 400);
+  const closingCash = Number(body.closingCash);
+  if (!Number.isFinite(closingCash) || closingCash < 0) {
+    return c.json({ error: 'Uang tunai akhir tidak valid' }, 400);
+  }
+  try {
+    const result = await sbPost<{
+      ok: boolean;
+      expectedCash: number;
+      salesTotal: number;
+      txCount: number;
+      cashSales: number;
+      cashExpenses: number;
+    }>(c.env, 'rpc/fn_online_close_shift', {
+      p_store_id: storeId,
+      p_shift_sync_id: syncId,
+      p_closing_cash: closingCash,
+      p_notes: String(body.notes ?? '').trim().slice(0, 300),
+    });
+    await writeEvent(c.env, {
+      type: 'online_shift_close',
+      message: `Shift ditutup: ${result.txCount} tx, kas ${result.expectedCash}`,
+      actorUserId: userId,
+      payload: { storeId },
+    }).catch(() => undefined);
+    return c.json(result);
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: rpcMessage(err) }, 400);
+    console.error('[finance shift close]', err);
+    return c.json({ error: 'Gagal menutup shift' }, 500);
+  }
+});
+
+// === Laba-Rugi periode (P&L) ===
+
+financeRoutes.get('/finance/pnl', async (c: AppContext) => {
+  const userId = requireUser(c);
+  if (userId instanceof Response) return userId;
+  const storeId = c.req.query('storeId') ?? '';
+  const guard = await guardStore(c, storeId, 'finance');
+  if (guard) return guard;
+  const fromRaw = new Date(c.req.query('from') ?? '');
+  const toRaw = new Date(c.req.query('to') ?? '');
+  const from = Number.isNaN(fromRaw.getTime()) ? new Date(Date.now() - 30 * 86400_000) : fromRaw;
+  const to = Number.isNaN(toRaw.getTime()) ? new Date() : toRaw;
+  try {
+    const result = await sbPost<{
+      revenue: number;
+      profit: number;
+      cogs: number;
+      expenses: number;
+      net: number;
+      txCount: number;
+      expenseCount: number;
+    }>(c.env, 'rpc/fn_online_pnl', {
+      p_store_id: storeId,
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    });
+    return c.json({ ok: true, pnl: result });
+  } catch (err) {
+    if (err instanceof SupabaseError) return c.json({ error: rpcMessage(err) }, 400);
+    console.error('[finance pnl]', err);
+    return c.json({ error: 'Gagal menghitung laba-rugi' }, 500);
   }
 });
 
