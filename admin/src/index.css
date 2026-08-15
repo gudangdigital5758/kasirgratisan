@@ -1,49 +1,88 @@
+/* ============================================================
+   Profitku Admin — "sanity" design system (NeedMCP)
+   Tokens dipetakan dari style "sanity" v1 via
+   https://needmcp.com/mcp (get-style-tokens-tool).
+   Khas sanity: coral #f36458 + biru #0052ef (≈ brand blue),
+   Space Grotesk, elevasi via ring/color shift, button pill 44px.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   line-height: 1.45;
   color-scheme: light;
-  /* Tema Profitku (brand blue #0067FD ≈ primary POS hsl(215 100% 50%)) */
-  --primary: #0067FD;
-  --primary-soft: #dbeafe;
-  --border: #e2e8f0;
-  --muted: #64748b;
+  /* sanity: primary coral #f36458, secondary biru #0052ef */
+  --primary: #f36458;
+  --primary-hover: #0052ef; /* spek sanity: hover button pindah ke secondary (biru) */
+  --primary-active: #003cb0;
+  --primary-soft: rgba(243, 100, 88, 0.1);
+  --secondary: #0052ef;
+  --border: #ededed; /* hairline */
+  --border-strong: #212121;
+  --muted: #797979; /* ash */
   --card: #ffffff;
-  --bg: #f1f5f9;
-  --text: #0f172a;
-  --danger: #dc2626;
-  --ok: #16a34a;
-  --badge-bg: #e2e8f0;
-  --badge-text: #334155;
-  --badge-ok-bg: #dcfce7;
-  --badge-ok-text: #166534;
-  --badge-warn-bg: #ffedd5;
-  --badge-warn-text: #9a3412;
-  --code-bg: #f8fafc;
+  --bg: #f7f7f7; /* canvas */
+  --text: #0b0b0b; /* ink */
+  --danger: #dd0000;
+  --danger-soft: rgba(221, 0, 0, 0.1);
+  --ok: #19d600;
+  --ok-soft: rgba(25, 214, 0, 0.1);
+  --warn: #f59e0b;
+  --warn-soft: rgba(245, 158, 11, 0.1);
+  --badge-bg: rgba(11, 11, 11, 0.08);
+  --badge-text: #0b0b0b;
+  --badge-ok-bg: var(--ok-soft);
+  --badge-ok-text: #129f00;
+  --badge-warn-bg: var(--warn-soft);
+  --badge-warn-text: #b45309;
+  --code-bg: #f0f0f0;
   --input-bg: #ffffff;
-  --shadow: 0 1px 2px rgb(15 23 42 / 4%);
+  /* Elevasi sanity: depth via ring/color shift, bukan shadow */
+  --shadow: 0 0 0 1px #ededed; /* level1 (light) */
+  --shadow-md: 0 0 0 2px rgba(0, 82, 239, 0.2); /* level2 — ring biru */
+  --shadow-lg: 0 0 0 2px rgba(0, 82, 239, 0.25);
+  --radius-sm: 3px; /* rounded.xs — inputs */
+  --radius-md: 5px; /* rounded.sm — button-ghost */
+  --radius-lg: 6px; /* rounded.md — cards */
+  --radius-xl: 12px; /* rounded.lg — feature/login card */
+  --radius-pill: 9999px; /* rounded.full — buttons, badges */
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode — selaras palet dark Profitku (slate) */
+/* Dark mode — sanity: canvas #0b0b0b, surface #212121, coral+biru */
 html.dark {
   color-scheme: dark;
-  --primary: #0067FD;
-  --primary-soft: #1e3a8a;
-  --border: #334155;
-  --muted: #94a3b8;
-  --card: #1e293b;
-  --bg: #0f172a;
-  --text: #e2e8f0;
-  --danger: #ef4444;
-  --ok: #22c55e;
-  --badge-bg: #334155;
-  --badge-text: #cbd5e1;
-  --badge-ok-bg: #14532d;
-  --badge-ok-text: #bbf7d0;
-  --badge-warn-bg: #7c2d12;
-  --badge-warn-text: #fed7aa;
-  --code-bg: #0b1220;
-  --input-bg: #0f172a;
-  --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  --primary: #f36458;
+  --primary-hover: #0052ef;
+  --primary-active: #003cb0;
+  --primary-soft: rgba(243, 100, 88, 0.15);
+  --secondary: #55beff;
+  --border: #212121; /* hairline dark */
+  --border-strong: #797979;
+  --muted: #797979;
+  --card: #212121;
+  --bg: #0b0b0b;
+  --text: #ffffff;
+  --danger: #ff2222;
+  --danger-soft: rgba(221, 0, 0, 0.15);
+  --ok: #37cd84;
+  --ok-soft: rgba(25, 214, 0, 0.15);
+  --warn: #fbb52b;
+  --warn-soft: rgba(245, 158, 11, 0.15);
+  --badge-bg: rgba(255, 255, 255, 0.1);
+  --badge-text: #b9b9b9;
+  --badge-ok-bg: var(--ok-soft);
+  --badge-ok-text: #37cd84;
+  --badge-warn-bg: var(--warn-soft);
+  --badge-warn-text: #fbb52b;
+  --code-bg: #161616;
+  --input-bg: #0b0b0b;
+  --shadow: 0 0 0 1px #212121; /* level1 (dark) */
+  --shadow-md: 0 0 0 2px rgba(0, 82, 239, 0.3); /* level2 — ring biru */
+  --shadow-lg: 0 0 0 2px rgba(0, 82, 239, 0.35);
 }
 
 * {
@@ -55,6 +94,15 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+}
+
+/* Heading Space Grotesk (sanity: display/heading font) */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -75,8 +123,17 @@ textarea {
   background: var(--input-bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm); /* rounded.xs 3px */
   padding: 0.5rem 0.7rem;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 2px rgba(0, 82, 239, 0.2); /* ring-focus sanity */
 }
 
 input::placeholder,
@@ -86,21 +143,10 @@ textarea::placeholder {
 
 code {
   background: var(--code-bg);
-  border-radius: 0.3rem;
+  border-radius: var(--radius-sm);
   padding: 0.1rem 0.3rem;
   font-size: 0.85em;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  font-family: var(--font-mono); /* IBM Plex Mono */
 }
 
 /* ===== Layout mobile-first ===== */
@@ -108,7 +154,7 @@ textarea {
   min-height: 100vh;
 }
 
-/* Topbar (mobile) — hamburger + brand */
+/* Topbar (mobile) — hamburger + brand; sanity nav-bar = surface-dark */
 .topbar {
   position: sticky;
   top: 0;
@@ -117,7 +163,7 @@ textarea {
   align-items: center;
   gap: 0.6rem;
   padding: 0.55rem 0.9rem;
-  background: #0f172a;
+  background: #212121;
   color: #fff;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
 }
@@ -133,7 +179,7 @@ textarea {
   border-radius: 6px;
 }
 .hamburger:hover {
-  background: #1e293b;
+  background: #353535;
 }
 .hamburger span {
   display: block;
@@ -164,29 +210,29 @@ textarea {
   border-radius: 6px;
 }
 .theme-toggle:hover {
-  background: #1e293b;
+  background: #353535;
 }
 .theme-toggle-side {
   justify-content: flex-start;
   width: 100%;
   margin: 0.25rem 0 0.5rem;
-  color: #cbd5e1;
-  border-color: #334155;
+  color: #b9b9b9;
+  border-color: #353535;
 }
 .theme-toggle-side:hover {
-  background: #1e293b;
+  background: #353535;
   color: #fff;
 }
 
-/* Backdrop (mobile) */
+/* Backdrop (mobile) — overlay sanity */
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(15 23 42 / 0.5);
+  background: rgba(0, 0, 0, 0.4);
   z-index: 45;
 }
 
-/* Sidebar = drawer off-canvas (mobile default) */
+/* Sidebar = drawer off-canvas (mobile default); surface-dark sanity */
 .sidebar {
   position: fixed;
   top: 0;
@@ -194,8 +240,8 @@ textarea {
   bottom: 0;
   width: min(280px, 82vw);
   z-index: 50;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: #212121;
+  color: #b9b9b9;
   padding: 1.25rem 1rem;
   overflow-y: auto;
   transform: translateX(-100%);
@@ -225,7 +271,7 @@ textarea {
   border-radius: 6px;
 }
 .sidebar-close:hover {
-  background: #1e293b;
+  background: #353535;
   color: #fff;
 }
 
@@ -250,7 +296,7 @@ textarea {
     transform: none;
     transition: none;
     box-shadow: none;
-    border-right: 1px solid #1e293b;
+    border-right: 1px solid #353535;
   }
 }
 
@@ -277,22 +323,28 @@ textarea {
 
 .sidebar .sub {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: #797979;
   margin-bottom: 1.25rem;
 }
 
 .sidebar nav a {
   display: block;
   padding: 0.55rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
-  color: #cbd5e1;
+  color: #b9b9b9;
   margin-bottom: 0.25rem;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
 }
 
-.sidebar nav a:hover,
+.sidebar nav a:hover {
+  background: #353535;
+  color: #fff;
+}
+
+/* Item aktif — filled primary (pola sanity) */
 .sidebar nav a.active {
-  background: #1e293b;
+  background: var(--primary);
   color: #fff;
 }
 
@@ -304,13 +356,25 @@ textarea {
     padding: 1.25rem 1.5rem 2.5rem;
   }
 }
+/* Konten dibatasi 1280px & di tengah (pola layout clean-slate Page) */
+.main > * {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   padding: 1rem 1.1rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow 0.2s var(--ease);
+}
+
+a.card:hover,
+.card.clickable:hover {
+  box-shadow: var(--shadow-lg);
 }
 
 /* Konten kartu: teks/kode panjang wrap rapi (mis. link REF) */
@@ -318,7 +382,7 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-/* Kartu KPI & grid umum: kolom mengecil mengikuti lebar layar */
+/* Grid umum: kolom mengecil mengikuti lebar layar */
 .grid {
   display: grid;
   gap: 0.75rem;
@@ -328,15 +392,78 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
+/* Kartu KPI — wireframe experiment-dashboard: value 30px bold, label 14px */
+.kpi {
+  border-top: none;
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 100px;
+}
+
 .kpi .label {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
   color: var(--muted);
 }
 
 .kpi .value {
-  font-size: clamp(1.05rem, 4vw, 1.35rem);
+  font-family: var(--font-heading);
+  font-size: 1.875rem;
   font-weight: 700;
-  margin-top: 0.2rem;
+  margin-top: 4px;
+}
+
+/* Panel utama — wireframe main-card: radius 16, header + body */
+.card.panel {
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.panel-body {
+  padding: 8px 24px 16px;
+}
+
+.panel-body table th,
+.panel-body table td {
+  padding: 14px 16px;
+}
+
+/* Tab/filter pill — wireframe filter-tabs */
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.tab-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 table {
@@ -365,12 +492,24 @@ th {
   justify-content: center;
   gap: 0.35rem;
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-pill); /* button-primary: pill, height 44px */
+  min-height: 44px;
+  padding: 8px 16px;
   background: var(--primary);
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+/* Spek sanity button-primary-hover: coral → biru (secondary) */
+.btn:hover {
+  background: var(--primary-hover);
+}
+
+.btn:active {
+  background: var(--primary-active);
 }
 
 .btn:disabled {
@@ -382,10 +521,22 @@ th {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md); /* button-ghost: rounded.sm */
+  padding: 8px 12px;
+}
+
+.btn.ghost:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .btn.danger {
   background: var(--danger);
+}
+
+.btn.danger:hover {
+  background: #b80000;
 }
 
 .input {
@@ -404,13 +555,12 @@ th {
 
 .badge {
   display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
   background: var(--badge-bg);
   color: var(--badge-text);
-  text-transform: uppercase;
 }
 
 .badge.ok {
@@ -432,6 +582,45 @@ th {
 
 .login-card {
   width: min(400px, 100%);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 28px 24px;
+}
+
+/* Login — wireframe login-form: brand header + tombol sosial + footer */
+.login-brand {
+  text-align: center;
+}
+
+.login-brand .brand-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 12px;
+}
+
+.login-brand h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.login-sub {
+  margin: 4px 0 0;
+}
+
+.login-google {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.login-foot {
+  text-align: center;
+  font-size: 0.75rem;
+  margin: 0;
 }
 
 .stack {
@@ -585,9 +774,9 @@ th {
     min-width: 1.25rem;
   }
 
-  /* Touch target lebih besar */
+  /* Touch target 44px (sanity button height) */
   .btn {
-    min-height: 2.6rem;
+    min-height: 2.75rem;
   }
   .sidebar nav a {
     padding: 0.75rem;

@@ -17,25 +17,27 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <div className="card login-card stack">
-        <div>
-          <div className="row" style={{ gap: 10, marginBottom: 8, justifyContent: 'center' }}>
-            <img src="/profitku-lockup.png" alt="Profitku" className="brand-logo" style={{ width: 40, height: 40, borderRadius: '50%', background: '#fff', objectFit: 'cover' }} />
-            <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Profitku Admin</h1>
-          </div>
+        {/* Brand header (wireframe login-form: logo + judul + subtitle) */}
+        <div className="login-brand">
+          <img
+            src="/profitku-lockup.png"
+            alt="Profitku"
+            className="brand-logo"
+          />
+          <h1>Profitku Admin</h1>
+          <p className="muted login-sub">Masuk untuk mengelola platform</p>
         </div>
 
         {!supabaseReady && (
           <p className="err">Set VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di admin/.env</p>
         )}
-        {!googleReady && (
-          <p className="err">Set VITE_GOOGLE_CLIENT_ID di admin/.env</p>
-        )}
+        {!googleReady && <p className="err">Set VITE_GOOGLE_CLIENT_ID di admin/.env</p>}
 
         {error && <p className="err">{error}</p>}
 
         {supabaseReady && googleReady && GOOGLE_CLIENT_ID && (
           <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="login-google">
               <GoogleLogin
                 onSuccess={async (res) => {
                   if (!res.credential) return;
@@ -51,6 +53,8 @@ export default function LoginPage() {
             </div>
           </GoogleOAuthProvider>
         )}
+
+        <p className="muted login-foot">Khusus staff admin Profitku</p>
       </div>
     </div>
   );
