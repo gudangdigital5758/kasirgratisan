@@ -14,6 +14,13 @@
   <meta name="author" content="Profitku" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0067FD" />
+  <script>
+    try {
+      var t = localStorage.getItem('profitku-theme');
+      var dark = t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+    } catch (e) {}
+  </script>
   
   <!-- Canonical URL -->
   <link rel="canonical" href="https://profitku.my.id" />

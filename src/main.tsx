@@ -4,7 +4,7 @@ import "./index.css";
 import "./i18n";
 import { initErrorReporting } from "./lib/error-report";
 import { db } from "./lib/db";
-import { applyDarkMode } from "./hooks/use-dark-mode";
+import { applyDarkMode, syncThemePref } from "./hooks/use-dark-mode";
 
 // Global handlers for errors that React's ErrorBoundary cannot catch:
 //  - unhandled promise rejections (async code)
@@ -32,7 +32,10 @@ if (typeof window !== "undefined") {
 db.storeSettings
   .toCollection()
   .first()
-  .then((s) => applyDarkMode(s?.darkMode ?? null))
+  .then((s) => {
+    applyDarkMode(s?.darkMode ?? null);
+    syncThemePref(s?.darkMode ?? null);
+  })
   .catch(() => applyDarkMode(null));
 
 createRoot(document.getElementById("root")!).render(<App />);

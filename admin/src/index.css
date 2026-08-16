@@ -580,6 +580,14 @@ th {
   padding: 1.5rem;
 }
 
+/* Toggle tema di halaman login — pojok kanan atas */
+.login-theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  color: var(--text);
+}
+
 .login-card {
   width: min(400px, 100%);
   border-radius: var(--radius-xl);

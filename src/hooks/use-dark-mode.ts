@@ -5,6 +5,9 @@ import { db } from '@/lib/db';
 /** null = ikuti preferensi sistem; true = gelap; false = terang. */
 export type DarkMode = boolean | null;
 
+/** Key localStorage untuk inline script pre-paint di index.html (anti-flash saat load). */
+const STORAGE_KEY = 'profitku-theme';
+
 function systemPrefersDark(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
 }
@@ -14,6 +17,15 @@ export function applyDarkMode(darkMode: DarkMode): void {
   if (typeof document === 'undefined') return;
   const dark = darkMode ?? systemPrefersDark();
   document.documentElement.classList.toggle('dark', dark);
+}
+
+/** Mirror preferensi ke localStorage agar inline script pre-paint di index.html konsisten. */
+export function syncThemePref(darkMode: DarkMode): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, darkMode === null || darkMode === undefined ? '' : darkMode ? 'dark' : 'light');
+  } catch {
+    /* private mode — abaikan */
+  }
 }
 
 /** Hook dark mode POS: baca preferensi dari storeSettings, terapkan + simpan. */
@@ -43,6 +55,7 @@ export function useDarkMode(): {
       await db.storeSettings.update(settings.id, { darkMode: value });
     }
     applyDarkMode(value);
+    syncThemePref(value);
   };
 
   return { darkMode, setDarkMode };

@@ -1,10 +1,14 @@
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  // Baca mode aktif dari class <html> (POS memakai use-dark-mode, bukan next-themes).
+  // Toast Sonner mount per-panggilan, jadi baca di render cukup akurat.
+  const theme =
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
 
   return (
     <Sonner

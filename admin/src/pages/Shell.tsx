@@ -21,7 +21,7 @@ const links = [
 
 export default function Shell() {
   const { me, logout } = useAdminAuth();
-  const { dark, toggle } = useAdminTheme();
+  const { mode, cycle } = useAdminTheme();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   // Jumlah affiliator dengan komisi pending (badge di nav Komisi Affiliate).
@@ -74,6 +74,11 @@ export default function Shell() {
 
   const close = () => setOpen(false);
 
+  // Toggle 3 mode: dark → light → system → dark. Label/ikon = mode berikutnya.
+  const nextLabel =
+    mode === 'dark' ? 'Mode terang' : mode === 'light' ? 'Mode sistem' : 'Mode gelap';
+  const nextIcon = mode === 'dark' ? '☀️' : mode === 'light' ? '🖥️' : '🌙';
+
   return (
     <div className="layout">
       {/* Topbar mobile — brand + hamburger kanan atas */}
@@ -83,11 +88,11 @@ export default function Shell() {
         <button
           type="button"
           className="theme-toggle"
-          onClick={toggle}
-          aria-label={dark ? 'Mode terang' : 'Mode gelap'}
-          title={dark ? 'Mode terang' : 'Mode gelap'}
+          onClick={cycle}
+          aria-label={nextLabel}
+          title={nextLabel}
         >
-          {dark ? '☀️' : '🌙'}
+          {nextIcon}
         </button>
         <button
           type="button"
@@ -122,8 +127,8 @@ export default function Shell() {
             {me?.role}
           </span>
         </p>
-        <button type="button" className="btn ghost theme-toggle-side" onClick={toggle}>
-          {dark ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
+        <button type="button" className="btn ghost theme-toggle-side" onClick={cycle}>
+          {mode === 'dark' ? '☀️ Mode Terang' : mode === 'light' ? '🖥️ Mode Sistem' : '🌙 Mode Gelap'}
         </button>
         <nav>
           {links.map((l) => (

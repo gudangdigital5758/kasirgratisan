@@ -2,11 +2,13 @@ import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { useAdminAuth } from '../lib/auth';
+import { useAdminTheme } from '../lib/theme';
 import { GOOGLE_CLIENT_ID } from '../lib/config';
 
 export default function LoginPage() {
   const { session, me, loading, loginWithGoogleIdToken, error, supabaseReady, googleReady } =
     useAdminAuth();
+  const { mode, cycle } = useAdminTheme();
 
   useEffect(() => {
     document.title = 'Login · Profitku Admin';
@@ -14,8 +16,20 @@ export default function LoginPage() {
 
   if (!loading && session && me) return <Navigate to="/" replace />;
 
+  const nextLabel =
+    mode === 'dark' ? 'Mode terang' : mode === 'light' ? 'Mode sistem' : 'Mode gelap';
+
   return (
     <div className="login-wrap">
+      <button
+        type="button"
+        className="theme-toggle login-theme-toggle"
+        onClick={cycle}
+        aria-label={nextLabel}
+        title={nextLabel}
+      >
+        {mode === 'dark' ? '☀️' : mode === 'light' ? '🖥️' : '🌙'}
+      </button>
       <div className="card login-card stack">
         {/* Brand header (wireframe login-form: logo + judul + subtitle) */}
         <div className="login-brand">
