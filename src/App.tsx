@@ -74,10 +74,10 @@ function RootOrReferral() {
   return <Dashboard />;
 }
 
-/** Route legacy: dashboard affiliate pindah penuh ke portal affiliate.profitku.my.id/dashboard. */
+/** Route legacy: dashboard Mitra pindah penuh ke Cloud Dashboard /affiliate (konsolidasi 2026-08-16). */
 function AffiliateRedirect() {
   useEffect(() => {
-    window.location.replace(`${BRAND.affiliateOrigin}/dashboard`);
+    window.location.replace(`${BRAND.cloudOrigin}/affiliate`);
   }, []);
   return null;
 }

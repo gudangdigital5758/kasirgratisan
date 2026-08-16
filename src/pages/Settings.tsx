@@ -488,10 +488,10 @@ export default function Pengaturan() {
         )}
       </div>
 
-      {/* 2b. Affiliate — portal canonical di affiliate.profitku.my.id */}
+      {/* 2b. Affiliate — dashboard Mitra di Cloud Dashboard (konsolidasi 2026-08-16) */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sections.affiliate')}</h2>
-        <a href={`${BRAND.affiliateOrigin}/dashboard`} className="block">
+        <a href={`${BRAND.cloudOrigin}/affiliate`} className="block">
           <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
             <CardContent className="p-3 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400">

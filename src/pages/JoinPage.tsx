@@ -89,9 +89,9 @@ export default function JoinPage() {
       await new Promise((r) => setTimeout(r, 500));
     }
     setMe(result);
-    // Flow invite: setelah jadi affiliator → langsung ke dashboard portal.
+    // Flow invite: setelah jadi affiliator → langsung ke dashboard Mitra (Cloud Dashboard).
     if (result?.registered) {
-      window.location.replace(`${BRAND.affiliateOrigin}/dashboard`);
+      window.location.replace(`${BRAND.cloudOrigin}/affiliate`);
     }
   };
 
@@ -190,7 +190,7 @@ export default function JoinPage() {
                     {t('join.startApp')} <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
-                <a href={`${BRAND.affiliateOrigin}/dashboard`} className="block">
+                <a href={`${BRAND.cloudOrigin}/affiliate`} className="block">
                   <Button variant="outline" className="w-full h-10 gap-1.5">
                     <Share2 className="w-4 h-4" /> {t('join.openAffiliate')}
                   </Button>

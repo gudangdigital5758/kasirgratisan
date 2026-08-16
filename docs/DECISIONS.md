@@ -897,3 +897,36 @@ Menuntaskan rencana `docs/IMPLEMENTATION-PLAN-ADMIN-SYNC.md` (5 fase):
 - `ponytail:` tersisa: durasi server-side (C3), Realtime (C1), payout Level 2,
   e-Bupot otomatis, threshold per-mitra, i18n portal.
 
+---
+
+## 2026-08-16 — Dashboard Mitra konsolidasi ke cloud.profitku.my.id/affiliate
+
+**Status:** Accepted
+
+Dashboard affiliator (kode REF, link/QR, jaringan, komisi, payout) pindah penuh
+ke Cloud Dashboard `cloud.profitku.my.id/affiliate` (repo `profitku-cloud`,
+`apps/cloud`, route `/affiliate/*`, menu "Program Mitra" — sudah ada sejak F1
+merge). Subdomain `affiliate.profitku.my.id` menjadi **landing publik (SEO)
+saja** + redirect untuk semua jalur dashboard lama.
+
+**Decision:**
+1. `affiliate.profitku.my.id/` = landing program (publik, SEO) — tidak berubah;
+   CTA "Masuk Dashboard" → `https://cloud.profitku.my.id/affiliate`.
+2. Semua jalur dashboard lama (`/dashboard*`, `/link`, `/jaringan`, `/komisi`,
+   `/pengaturan`) → 302 ke `https://cloud.profitku.my.id/affiliate`
+   (edge `public/_redirects` + SPA fallback di `apps/affiliate`).
+3. POS (repo kasirgratisan): redirect pasca-join (`JoinPage`), tombol "Buka
+   dashboard affiliate", kartu Affiliate di Settings, route legacy `/affiliate`
+   (`App.tsx` + `public/_redirects`) → `BRAND.cloudOrigin + '/affiliate'`.
+   `BRAND.affiliateOrigin` hanya untuk link landing.
+4. `apps/affiliate` dashboard code dihapus (superseded oleh apps/cloud);
+   `src/lib/api.ts` + `src/lib/supabase.ts` tetap (dipakai landing & client API).
+
+**Implications:**
+- Mitra login Google di `cloud.profitku.my.id` — sesi Supabase satu origin untuk
+  semua area cloud (langganan, backup, toko online, tim, Mitra). Sesi POS tetap
+  cross-origin (tidak berubah).
+- Redirect 302 selama transisi; naikkan ke 301 setelah stabil.
+- `ponytail:` landing publik pindah ke cloud origin bila ingin satu domain penuh
+  (butuh route publik di `apps/cloud` — keputusan terpisah).
+

@@ -1,9 +1,9 @@
-# Redirect legacy affiliate → portal (edge, tanpa menunggu React/PWA).
+# Redirect legacy affiliate → Cloud Dashboard (edge, tanpa menunggu React/PWA).
 # Urutan penting: rule spesifik dulu, fallback SPA terakhir.
 # /join → / di edge: shell PWA lama tidak mengenal route /join (404 SPA).
 # Query string ?ref= dipertahankan otomatis oleh Cloudflare Pages.
-/affiliate   https://affiliate.profitku.my.id/dashboard   302
-/affiliate/  https://affiliate.profitku.my.id/dashboard   302
+/affiliate   https://cloud.profitku.my.id/affiliate   302
+/affiliate/  https://cloud.profitku.my.id/affiliate   302
 /join        /                                            302
 /join/       /                                            302
 /*           /index.html                                  200
