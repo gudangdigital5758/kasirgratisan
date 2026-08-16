@@ -1,16 +1,27 @@
 # Test Coverage — Profitku
 
-Status: **BASELINE RECORDED** (diukur 2026-08-17: `npm test` → 26 file / 132 test PASS)
+Status: **BASELINE + WORKER TESTS** (2026-08-17: root 26 file/132 test PASS · workers/api 4 file/22 test PASS)
+
+## Worker API (baru 2026-08-17 — TST-001/002)
+
+Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock.
+
+| File | Test | Cakupan |
+|---|---|---|
+| `tests/pin.test.ts` | 5 | PBKDF2 roundtrip, PIN/member salah, salt acak, legacy sha256 + needsRehash, format rusak |
+| `tests/webhooks.test.ts` | 7 | Midtrans: signature valid + replay idempotent (alreadyDone), amount mismatch → 400 tanpa fulfill, signature invalid → 401, order tak dikenal → skipped; SumoPod: Svix valid → COMPLETED, invalid → 401, event test ack |
+| `tests/team-login.test.ts` | 4 | Legacy hash → login + auto-upgrade ke pbkdf2$, PIN pbkdf2 langsung, PIN salah 401, rate limit 10/menit → 429 |
+| `tests/admin-rbac.test.ts` | 6 | resolveAdmin (tabel vs ADMIN_EMAILS vs bukan staff), /admin/api/me 200/403/401 |
 
 ## Baseline
 
 | Item | Hasil |
 |---|---|
 | Framework | Vitest 4 (jsdom), globals, setup `src/test/setup.ts`, include `src/**` + `tests/**` |
-| Jumlah test | 132 pass, 0 fail, 0 skip |
+| Jumlah test (root) | 132 pass, 0 fail, 0 skip |
 | Lint | `npm run lint` 0 error / 26 warning (react-refresh) + guard-links OK |
-| Typecheck worker | `npx tsc --noEmit` clean |
-| CI | web: lint+typecheck+test+build · api: tsc · deploy main-only + smoke curl |
+| Typecheck worker | `npx tsc --noEmit` clean (src + tests) |
+| CI | web: lint+typecheck+test+build · api: tsc + test · deploy main-only + smoke curl |
 
 ## Yang sudah dicover (VERIFIED)
 
@@ -29,9 +40,9 @@ Status: **BASELINE RECORDED** (diukur 2026-08-17: `npm test` → 26 file / 132 t
 
 ## Gap kritis (P1 — wajib ditutup sebelum billing/AI Phase 1)
 
-- [ ] **Worker API tests** — 0 test untuk seluruh `workers/api/src` (auth middleware, guards, checkout, verify, history, stores, sync routes, backups, team, admin).
-- [ ] **Billing fulfillment** — idempotency `fulfill_cloud_payment(_batch)` (replay webhook, double-call), concurrency (2 webhook paralel), amount mismatch, owner mismatch, provider mismatch, legacy-repair path.
-- [ ] **Webhook signature** — Midtrans SHA512 valid/invalid, SumoPod Svix HMAC + token fallback, replay.
+- [x] **Worker API tests** — 4 file / 22 test (2026-08-17): webhook billing, team login/PIN, admin RBAC. `routes` lainnya (stores, sync, backups, finance, master-data) masih tanpa test.
+- [~] **Billing fulfillment** — replay webhook idempotent dites di level Worker (alreadyDone); **concurrency RPC SQL** (`fulfill_cloud_payment` paralel) masih butuh integration test DB.
+- [ ] **Webhook signature** — Midtrans SHA512 valid/invalid + replay OK; SumoPod HMAC valid/invalid + token fallback belum dites.
 - [ ] **Voucher server** — validasi (first_time_only, max per user, expired), redemption idempotent, efek free_days/lifetime/percent.
 - [ ] **Affiliate** — komisi per tier idempotent, atribusi window, payout run idempotent + atomik (BILL-004), PPh 23.
 - [ ] **RBAC admin** — requireAdmin, canWrite/canMutateBilling per role, admin_users CRUD superadmin-only, audit log ditulis.

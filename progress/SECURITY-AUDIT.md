@@ -27,7 +27,7 @@ Status: **FINDINGS RECORDED** (audit 2026-08-17, berbasis source code/migrations
 
 | ID | Severity | Component | Current state | Evidence | Risk | Recommended action | Affected files | Confidence |
 |---|---|---|---|---|---|---|---|---|
-| SEC-001 | P1 | Team login PIN | VERIFIED | `routes/team.ts:226-229` `sha256Hex(pin:member.id)` — SHA-256 tanpa KDF; PIN 4–6 digit (ruang 10⁴–10⁶); compare string non-timing-safe | Jika DB bocor, PIN di-brute-force offline dalam hitungan detik; kredensial tim cloud + POS | PBKDF2 (WebCrypto) + salt random per member + iterasi tinggi; timing-safe compare; migrasi hash bertahap | `workers/api/src/routes/team.ts`, migrasi baru | HIGH |
+| SEC-001 | P1 | Team login PIN | RESOLVED (2026-08-17) | Dulu: `routes/team.ts` `sha256Hex(pin:member.id)` — SHA-256 tanpa KDF; PIN 4–6 digit; compare non-timing-safe. Fix: `src/lib/pin.ts` PBKDF2-SHA256 210k iterasi + salt acak 16B + timing-safe; legacy hash auto-upgrade saat login sukses | Jika DB bocor, PIN di-brute-force offline dalam hitungan detik; kredensial tim cloud + POS | (SELESAI) PBKDF2 via WebCrypto; upgrade bertahap saat login | `workers/api/src/lib/pin.ts`, `routes/team.ts` (10 call-site), `tests/pin.test.ts` + `tests/team-login.test.ts` | HIGH |
 | SEC-002 | P2 | Rate limiting | VERIFIED | `lib/rate-limit.ts` Map in-memory per-isolate (dictatat penulis: "pindah ke KV/DO") | Bypass limit saat Worker multi-isolate; abuse login/checkout/webhook | Cloudflare KV / Durable Object counter | `workers/api/src/lib/rate-limit.ts`, `wrangler.toml` | HIGH |
 | SEC-003 | P2 | Dev endpoints | VERIFIED | `routes/dev.ts` `/dev/notify-test` tanpa auth; gate hanya `PAYMENT_PROVIDER=mock` | Di env mock/staging siapa pun bisa spam email/WA/push (cost, phishing dari domain resmi) | Mount hanya saat env dev eksplisit; atau require admin; atau hapus | `workers/api/src/routes/dev.ts`, `index.ts:250` | HIGH |
 | SEC-004 | P2 | RLS stores | VERIFIED | `init_profitku.sql:296-298` `stores_public_read` = seluruh kolom store (termasuk alamat, `qris_id`); komentar "subset via RPC later" tidak ada implementasinya | PII toko & QRIS publik saat `is_public=true` | View/RPC subset kolom untuk katalog publik | `init_profitku.sql` + migrasi baru | HIGH |
@@ -42,6 +42,7 @@ Status: **FINDINGS RECORDED** (audit 2026-08-17, berbasis source code/migrations
 
 ## Catatan tambahan
 
+- **SEC-001 RESOLVED 2026-08-17**: PIN tim cloud kini PBKDF2-SHA256 (210.000 iterasi, salt acak 16 byte, compare timing-safe) di `workers/api/src/lib/pin.ts`; semua call-site `routes/team.ts` memakai `hashPin`/`verifyPin`; hash legacy SHA-256 otomatis di-upgrade saat login sukses (tanpa invalidasi massal). Test: `tests/pin.test.ts` + `tests/team-login.test.ts`.
 - `stores_public_read` + `qris_id` (migrasi `20260816230000_store_qris.sql`) saling terkait — QRIS statis toko terekspos publik jika toko `is_public`.
 - Provider webhook: SumoPod aktif di `wrangler.toml` (`PAYMENT_PROVIDER=sumopod`) — verifikasi secret `SUMOPOD_WEBHOOK_SECRET` ter-set di prod, bukan hanya token fallback.
 - Rate limit global `/api/*` = 120/menit/user-IP per isolate — lihat SEC-002.

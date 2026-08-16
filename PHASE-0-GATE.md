@@ -52,6 +52,12 @@ only when the audit contains evidence from source code/configuration/tests/migra
   2. Penutupan item PARTIALLY VERIFIED/UNVERIFIED (`progress/PHASE-0-AUDIT.md` §12),
   3. Approval manual di bawah.
 
+## Waiver parsial (2026-08-17)
+Gate **dilewati eksplisit oleh user** untuk scope Phase 1 terbatas:
+- **SEC-001** — PIN tim cloud → PBKDF2-SHA256 (lib/pin.ts + routes/team.ts + test). SELESAI.
+- **TST-001/002** — test worker billing (22 test) + vitest infra + CI. SELESAI.
+Risiko & scope yang masih terkunci: `progress/PHASE-0-AUDIT.md` §13. Status gate tetap NOT_COMPLETE untuk scope lain.
+
 Approved by: __________
 Date: __________
 

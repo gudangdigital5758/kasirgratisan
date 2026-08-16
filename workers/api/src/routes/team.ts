@@ -17,6 +17,7 @@ import {
 } from './helpers';
 import { rateLimit } from '../lib/rate-limit';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
+import { hashPin, verifyPin } from '../lib/pin';
 
 const teamRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -223,11 +224,6 @@ teamRoutes.delete('/stores/:id/team/:memberId', async (c: AppContext) => {
 
 const PIN_RE = /^\d{4,6}$/;
 
-async function sha256Hex(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 /** Set / ganti username + PIN login cloud (owner atau admin). */
 teamRoutes.post('/stores/:id/team/:memberId/credentials', async (c: AppContext) => {
   const userId = requireUser(c);
@@ -250,7 +246,7 @@ teamRoutes.post('/stores/:id/team/:memberId/credentials', async (c: AppContext) 
       `cloud_team_members?store_id=eq.${storeId}&username=eq.${encodeURIComponent(username)}&id=neq.${memberId}&select=id&limit=1`,
     );
     if (dup && dup.length > 0) return c.json({ error: 'Username sudah dipakai anggota lain' }, 409);
-    const hash = await sha256Hex(`${pin}:${memberId}`);
+    const hash = await hashPin(pin, memberId);
     const rows = await sbPatch<MemberRow[]>(
       c.env,
       `cloud_team_members?id=eq.${memberId}&store_id=eq.${storeId}` ,
@@ -289,8 +285,13 @@ teamRoutes.post('/stores/:id/team/verify', async (c: AppContext) => {
     const member = rows?.[0] ?? null;
     if (!member || !member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
 
-    const hash = await sha256Hex(`${pin}:${member.id}`);
-    if (hash !== member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
+    const verified = await verifyPin(pin, member.id, member.pin_hash);
+    if (!verified.ok) return c.json({ error: 'Username atau PIN salah' }, 401);
+    if (verified.needsRehash) {
+      await sbPatch(c.env, `cloud_team_members?id=eq.${member.id}`, {
+        pin_hash: await hashPin(pin, member.id),
+      }).catch(() => undefined);
+    }
 
     const prof = member.user_id
       ? (await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${member.user_id}&select=name,picture&limit=1`))[0] ?? null
@@ -343,10 +344,14 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
     );
     const members = rows ?? [];
     const matches: MemberRow[] = [];
+    const rehash: MemberRow[] = [];
     for (const m of members) {
       if (!m.pin_hash) continue;
-      const hash = await sha256Hex(`${pin}:${m.id}`);
-      if (hash === m.pin_hash) matches.push(m);
+      const v = await verifyPin(pin, m.id, m.pin_hash);
+      if (v.ok) {
+        matches.push(m);
+        if (v.needsRehash) rehash.push(m);
+      }
     }
     if (matches.length === 0) return c.json({ error: 'Username atau PIN salah' }, 401);
 
@@ -366,6 +371,12 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
       role: m.role,
       username,
     }));
+
+    for (const m of rehash) {
+      await sbPatch(c.env, `cloud_team_members?id=eq.${m.id}`, {
+        pin_hash: await hashPin(pin, m.id),
+      }).catch(() => undefined);
+    }
 
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -572,7 +583,7 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
       if (row) {
         const patch: Record<string, unknown> = { role: a.role };
         if (username) patch['username'] = username;
-        if (pin) patch['pin_hash'] = await sha256Hex(`${pin}:${row.id}`);
+        if (pin) patch['pin_hash'] = await hashPin(pin, row.id);
         if (name) patch['name'] = name;
         await sbPatch(c.env, `cloud_team_members?id=eq.${row.id}`, patch);
       } else {
@@ -594,7 +605,7 @@ teamRoutes.post('/team/members', async (c: AppContext) => {
           pin_hash: null,
         });
         if (pin) {
-          await sbPatch(c.env, `cloud_team_members?id=eq.${inserted[0].id}`, { pin_hash: await sha256Hex(`${pin}:${inserted[0].id}`) });
+          await sbPatch(c.env, `cloud_team_members?id=eq.${inserted[0].id}`, { pin_hash: await hashPin(pin, inserted[0].id) });
         }
       }
     }
@@ -636,7 +647,7 @@ teamRoutes.post('/team/credentials', async (c: AppContext) => {
         return c.json({ error: `Username sudah dipakai anggota lain di salah satu toko` }, 409);
       }
       const patch: Record<string, unknown> = { username: targetUsername };
-      if (pin) patch['pin_hash'] = await sha256Hex(`${pin}:${m.id}`);
+      if (pin) patch['pin_hash'] = await hashPin(pin, m.id);
       if (name !== undefined) patch['name'] = name;
       await sbPatch(c.env, `cloud_team_members?id=eq.${m.id}`, patch);
     }
@@ -700,8 +711,13 @@ teamRoutes.post('/team/verify', async (c: AppContext) => {
     );
     const member = rows?.[0] ?? null;
     if (!member || !member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
-    const hash = await sha256Hex(`${pin}:${member.id}`);
-    if (hash !== member.pin_hash) return c.json({ error: 'Username atau PIN salah' }, 401);
+    const verified = await verifyPin(pin, member.id, member.pin_hash);
+    if (!verified.ok) return c.json({ error: 'Username atau PIN salah' }, 401);
+    if (verified.needsRehash) {
+      await sbPatch(c.env, `cloud_team_members?id=eq.${member.id}`, {
+        pin_hash: await hashPin(pin, member.id),
+      }).catch(() => undefined);
+    }
     const prof = member.user_id
       ? (await sbGet<ProfileRow[]>(c.env, `profiles?id=eq.${member.user_id}&select=name,picture&limit=1`))[0] ?? null
       : null;

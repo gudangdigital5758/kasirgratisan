@@ -52,6 +52,7 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npx tsc --noEmit
+      - run: npm test
 
   deploy:
     name: Deploy production (main only)

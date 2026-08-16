@@ -131,3 +131,15 @@ R2 — backup JSON per user/store + quota reservation
 - Konfigurasi deployment aktual Supabase/Cloudflare di luar repo (secrets, custom domain, Access).
 - Endpoint export/hapus data user (UU PDP) — tidak ditemukan (UNVERIFIED).
 
+## 13. WAIVER Phase 1 (2026-08-17) + catatan risiko
+
+User secara eksplisit melewati gate untuk scope Phase 1 **terbatas**:
+1. **SEC-001** — PIN cloud team SHA-256 → PBKDF2-SHA256 (`lib/pin.ts`, 10 call-site `routes/team.ts`, auto-upgrade hash legacy saat login).
+2. **TST-001/002** — test worker billing: `tests/pin|webhooks|team-login|admin-rbac.test.ts` (22 test, hijau) + vitest infra + CI api job.
+
+**Risiko yang dicatat** (scope lain tetap terkunci gate):
+- Concurrency `fulfill_cloud_payment` di level DB belum di-integration-test (hanya replay idempotency level Worker) — TST-002 sebagian.
+- Voucher server, affiliate payout atomik (BILL-004), webhook token-fallback, dan routes lain belum dites.
+- Keputusan manusia §11 (PIN invalidasi vs migrasi — dipilih **migrasi otomatis saat login**; provider pembayaran; credit ledger; role support; Cloudflare Access; deploy gate; commit) masih terbuka untuk item 2-7.
+- Perubahan PIN tidak invalidasi sesi tim yang sudah aktif (token sesi 24 jam tidak berubah).
+
