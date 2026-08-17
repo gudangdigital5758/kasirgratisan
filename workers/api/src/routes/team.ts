@@ -266,7 +266,7 @@ teamRoutes.post('/stores/:id/team/verify', async (c: AppContext) => {
   const storeId = c.req.param('id') ?? '';
   if (!UUID_RE.test(storeId)) return c.json({ error: 'storeId tidak valid' }, 400);
 
-  const { allowed, retryAfterSeconds } = rateLimit(`team-verify:${storeId}:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(`team-verify:${storeId}:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }
@@ -315,7 +315,7 @@ teamRoutes.post('/stores/:id/team/verify', async (c: AppContext) => {
 // === Login tim (dashboard): username + PIN global -> sesi token ===
 
 teamRoutes.post('/team/login', async (c: AppContext) => {
-  const { allowed, retryAfterSeconds } = rateLimit(`team-login:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(`team-login:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }
@@ -685,7 +685,7 @@ teamRoutes.delete('/team/members/:key', async (c: AppContext) => {
 
 /** Verifikasi login tim via ID Toko (store_code) � POS, tanpa sesi. */
 teamRoutes.post('/team/verify', async (c: AppContext) => {
-  const { allowed, retryAfterSeconds } = rateLimit(`team-verify:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(`team-verify:${c.req.header('cf-connecting-ip') ?? '?'}`, 10, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }

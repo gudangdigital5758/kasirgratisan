@@ -1,10 +1,10 @@
 # Test Coverage — Profitku
 
-Status: **BASELINE + WORKER TESTS** (2026-08-17: root 26 file/132 test PASS · workers/api 6 file/31 test PASS)
+Status: **BASELINE + WORKER TESTS + INTEGRATION** (2026-08-17: root 26 file/132 test PASS · workers/api 8 file/55 test PASS · DB integration script untuk CI)
 
-## Worker API (2026-08-17 — TST-001/002 + env guards + payout)
+## Worker API (2026-08-17 — TST-001/002 + env guards + payout + rate limit + voucher)
 
-Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock. Total: 6 file / 31 test.
+Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock. Total: 8 file / 55 test.
 
 | File | Test | Cakupan |
 |---|---|---|
@@ -14,6 +14,18 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 | `tests/admin-rbac.test.ts` | 6 | resolveAdmin (tabel vs ADMIN_EMAILS vs bukan staff), /admin/api/me 200/403/401 |
 | `tests/env-guards.test.ts` | 6 | SEC-003: dev route 403 tanpa flag / 200 dengan flag; BILL-006: checkout/checkout-batch/verify mock+production → 503 tanpa payment dibuat; cron tanpa secret di production → 403 |
 | `tests/affiliate-payout.test.ts` | 3 | BILL-004: RPC `fn_affiliate_payout_create` dipanggil dengan semua komisi & tanpa insert langsung; periode existing → skipped; RPC skipped → tidak dihitung |
+| `tests/rate-limit.test.ts` | 4 | SEC-002: KV fixed-window (blokir setelah max, bucket reset, key terpisah), fallback in-memory |
+| `tests/vouchers.test.ts` | 20 | computeEffect (percent/free_days/lifetime, clamp), periode (extend dari period_end, lifetime, duration), validateVoucherForUser (nonaktif, window waktu, plan mismatch, kuota, max_per_user, first_time_only, valid), recordRedemption payload |
+
+## DB integration (TST-002 — concurrency RPC SQL)
+
+`tests/integration/fulfill-concurrency.mjs` — butuh Postgres 15 (service postgres di CI; lokal via docker). Menjalankan migrasi inti (init + per_store_subscription + cloud_billing_atomic + seed) lalu:
+- A: 5 fulfill CONCURRENT payment sama → tepat 1 pemenang, 1 subscription aktif.
+- B: replay → alreadyDone tanpa grant ganda.
+- C: owner mismatch ditolak.
+- D: payment kedua toko sama → extend, bukan duplikat.
+
+CI: job `db-integration` (postgres:15 service) — belum bisa diverifikasi lokal (tidak ada docker di mesin); syntax sudah di-`node --check`.
 
 ## Baseline
 

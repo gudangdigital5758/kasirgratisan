@@ -95,7 +95,7 @@ const mapCommission = (c: CommissionRow) => ({
 // --- Lookup (publik, tanpa auth) ---
 // Dipakai client saat user membuka link ?ref=KODE untuk memvalidasi + menampilkan nama affiliator.
 affiliateRoutes.get('/lookup', async (c) => {
-  const { allowed, retryAfterSeconds } = rateLimit(`affiliate-lookup:${c.req.header('cf-connecting-ip') ?? '?'}`, 60, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(`affiliate-lookup:${c.req.header('cf-connecting-ip') ?? '?'}`, 60, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ valid: false, error: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429);
   }
@@ -157,7 +157,7 @@ affiliateRoutes.get('/settings', async (c) => {
 affiliateRoutes.post('/claim', async (c) => {
   const userId = requireUser(c);
   if (userId instanceof Response) return userId;
-  const { allowed, retryAfterSeconds } = rateLimit(`affiliate-claim:${userId}`, 10, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(`affiliate-claim:${userId}`, 10, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.` }, 429);
   }

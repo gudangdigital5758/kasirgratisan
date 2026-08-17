@@ -135,7 +135,12 @@ R2 — backup JSON per user/store + quota reservation
 
 User secara eksplisit melewati gate untuk scope Phase 1 **terbatas**:
 1. **SEC-001** — PIN cloud team SHA-256 → PBKDF2-SHA256 (`lib/pin.ts`, 10 call-site `routes/team.ts`, auto-upgrade hash legacy saat login).
-2. **TST-001/002** — test worker billing: `tests/pin|webhooks|team-login|admin-rbac.test.ts` (22 test, hijau) + vitest infra + CI api job.
+2. **TST-001/002** — test worker billing: 8 file / 55 test (pin, webhook, team-login, admin-rbac, env-guards, affiliate-payout, rate-limit, vouchers) + vitest infra + CI api job.
+3. **SEC-003 / BILL-006** — dev routes butuh flag; mock dilarang di production; cron wajib secret.
+4. **SEC-004** — RLS subset `public_stores` (migrasi ter-push ke prod).
+5. **BILL-004** — payout atomik via `fn_affiliate_payout_create` (migrasi ter-push ke prod).
+6. **SEC-002** — rate limit lintas-isolate via Cloudflare KV (binding `RATE_LIMIT_KV`).
+7. **TST-002 lanjutan** — integration test concurrency `fulfill_cloud_payment` (`tests/integration/fulfill-concurrency.mjs`, CI job `db-integration`).
 
 **Risiko yang dicatat** (scope lain tetap terkunci gate):
 - Concurrency `fulfill_cloud_payment` di level DB belum di-integration-test (hanya replay idempotency level Worker) — TST-002 sebagian.

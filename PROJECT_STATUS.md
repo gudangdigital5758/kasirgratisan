@@ -44,10 +44,11 @@ Evidence: `progress/PHASE-0-AUDIT.md` . `progress/SECURITY-AUDIT.md` . `progress
 Item di atas ditandai hanya dengan evidence source code/migrations/tests/config. Dokumentasi tidak dianggap implementasi.
 
 ## Prioritas berikut (Phase 1, setelah gate)
-1. ~~SEC-001 PIN ke PBKDF2~~ **SELESAI 2026-08-17** (waiver parsial; lib/pin.ts + 10 call-site + test).
-2. Test worker billing - **SELESAI 2026-08-17**: 22 test (webhook idempotency, signature, RBAC admin, team login/PIN) + CI api job. Sisa: concurrency RPC SQL (integration test DB), voucher server, affiliate payout atomik.
-3. Tutup dev routes & mock guard prod (SEC-003 / BILL-006).
-4. RLS subset stores_public_read (SEC-004).
-5. Payout affiliate atomik (BILL-004).
-6. Keputusan credit ledger (DEBT-002).
-7. Dokumentasi provider pembayaran aktual (DEBT-003).
+1. ~~SEC-001 PIN → PBKDF2~~ **SELESAI 2026-08-17** (waiver parsial; lib/pin.ts + 10 call-site + test).
+2. Test worker billing — **SELESAI 2026-08-17**: 55 test (webhook idempotency, signature, RBAC admin, team login/PIN, env guards, payout atomik, rate limit KV, voucher server) + CI api job. Integration concurrency `fulfill_cloud_payment` via CI job `db-integration` (menunggu verifikasi di GitHub).
+3. ~~Tutup dev routes & mock guard prod~~ **SELESAI** (SEC-003 / BILL-006, live di prod).
+4. ~~RLS subset `stores_public_read`~~ **SELESAI** (SEC-004, migrasi ter-push).
+5. ~~Payout affiliate atomik~~ **SELESAI** (BILL-004, migrasi ter-push).
+6. ~~Rate limit KV~~ **SELESAI** (SEC-002, binding RATE_LIMIT_KV).
+7. Keputusan credit ledger (DEBT-002) — masih terbuka.
+8. Dokumentasi provider pembayaran aktual (DEBT-003) — masih terbuka.

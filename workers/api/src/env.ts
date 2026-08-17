@@ -35,6 +35,8 @@ export interface Env {
   ENVIRONMENT?: string;
   /** "true" → aktifkan /api/dev/* (SEC-003; default nonaktif). */
   ENABLE_DEV_ROUTES?: string;
+  /** Binding KV untuk rate limit lintas-isolate (SEC-002). */
+  RATE_LIMIT_KV?: KVNamespace;
   /** OneSignal — App ID (boleh sama dengan VITE_ONESIGNAL_APP_ID di client) */
   ONESIGNAL_APP_ID?: string;
   /** OneSignal REST API Key (server only — jangan expose ke VITE_*) */

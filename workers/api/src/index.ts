@@ -30,7 +30,7 @@ import { r2Configured, cleanupExpiredBackups, cleanupQuotaReservations } from '.
 import { runDunningCron } from './lib/lifecycle';
 import { resolveAdmin, writeEvent } from './lib/admin';
 import { isMaintenanceMode } from './lib/platform-settings';
-import { rateLimit, rateLimitKey } from './lib/rate-limit';
+import { rateLimit, rateLimitKey, type RateLimitKv } from './lib/rate-limit';
 import {
   isFailureStatus,
   isPaidStatus,
@@ -207,12 +207,13 @@ app.use('/admin/api/*', maintenanceMiddleware);
 
 /** Rate limit per user/IP untuk route terautentikasi (membatasi penyalahgunaan ringan). */
 async function rateLimitMiddleware(c: {
+  env: { RATE_LIMIT_KV?: RateLimitKv | null };
   get: (k: 'userId') => string | null;
   req: { header: (n: string) => string | undefined };
   json: (b: unknown, s?: number, h?: Record<string, string>) => Response;
 }, next: () => Promise<void>) {
   const key = rateLimitKey(c.get('userId'), c);
-  const { allowed, retryAfterSeconds } = rateLimit(key, 120, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(key, 120, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Terlalu banyak permintaan. Coba lagi sebentar lagi.' }, 429, {
       'Retry-After': String(retryAfterSeconds),
@@ -273,7 +274,7 @@ app.get('/webhook/latest-version', (c) => {
 });
 
 app.post('/webhook/issue-report', async (c) => {
-  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 10, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(rateLimitKey(null, c), 10, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Terlalu banyak laporan. Coba lagi nanti.' }, 429, {
       'Retry-After': String(retryAfterSeconds),
@@ -306,7 +307,7 @@ app.post('/webhook/issue-report', async (c) => {
 });
 
 app.post('/webhook/user-type', async (c) => {
-  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 20, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(rateLimitKey(null, c), 20, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429, {
       'Retry-After': String(retryAfterSeconds),
@@ -322,7 +323,7 @@ app.post('/webhook/user-type', async (c) => {
 
 /** Auto-report error client (PWA) → platform_events untuk dilihat admin. */
 app.post('/webhook/client-error', async (c) => {
-  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 20, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(rateLimitKey(null, c), 20, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Too many' }, 429, { 'Retry-After': String(retryAfterSeconds) });
   }
@@ -360,7 +361,7 @@ app.post('/webhook/client-error', async (c) => {
  */
 app.post('/webhook/payment', async (c) => {
   // Batas generous (60/menit/IP) — Midtrans bisa kirim retry, tapi tetap dibatasi.
-  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 60, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(rateLimitKey(null, c), 60, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Terlalu banyak permintaan' }, 429, {
       'Retry-After': String(retryAfterSeconds),
@@ -475,7 +476,7 @@ app.post('/webhook/payment', async (c) => {
  * `data.order_id` = payment UUID internal Profitku.
  */
 app.post('/webhook/sumopod', async (c) => {
-  const { allowed, retryAfterSeconds } = rateLimit(rateLimitKey(null, c), 60, 60_000);
+  const { allowed, retryAfterSeconds } = await rateLimit(rateLimitKey(null, c), 60, 60_000, c.env.RATE_LIMIT_KV);
   if (!allowed) {
     return c.json({ error: 'Terlalu banyak permintaan' }, 429, {
       'Retry-After': String(retryAfterSeconds),

@@ -15,6 +15,11 @@ PAYMENT_PROVIDER = "sumopod"
 ENVIRONMENT = "production"
 # Dev routes (notify test) — jangan true di production.
 ENABLE_DEV_ROUTES = "false"
+
+# Rate limit lintas-isolate (SEC-002) — dibuat via `wrangler kv namespace create RATE_LIMIT_KV`
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "f7efc1b43bcb43a697fae8febd916811"
 # Fase release sync (M4): set "false" untuk menonaktifkan push/pull sementara.
 SYNC_ENABLED = "true"
 # Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY

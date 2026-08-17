@@ -60,6 +60,9 @@ Gate **dilewati eksplisit oleh user** untuk scope Phase 1 terbatas:
 - **BILL-006** — `PAYMENT_PROVIDER=mock` diblokir saat `ENVIRONMENT=production` (checkout, checkout-batch, verify); cron wajib secret di production. SELESAI.
 - **SEC-004** — policy `stores_public_read` dibuang; view subset `public_stores` (kolom aman, tanpa user_id/alamat/telepon/store_code). SELESAI (migrasi `20260817000000_store_public_subset.sql`).
 - **BILL-004** — payout affiliate atomik via RPC `fn_affiliate_payout_create` (insert + kunci komisi satu transaksi). SELESAI (migrasi `20260817010000_affiliate_payout_atomic.sql`).
+- **BILL-004** — payout affiliate atomik via RPC `fn_affiliate_payout_create` (insert + kunci komisi satu transaksi). SELESAI (migrasi `20260817010000_affiliate_payout_atomic.sql`, sudah di-push ke prod).
+- **SEC-002** — rate limit lintas-isolate via Cloudflare KV (`RATE_LIMIT_KV`). SELESAI.
+- **TST-002 (lanjutan)** — test voucher server (20 test) + integration test concurrency `fulfill_cloud_payment` (`tests/integration/fulfill-concurrency.mjs`, jalan di CI job `db-integration`). SELESAI (integration belum tervalidasi lokal — tidak ada docker).
 Risiko & scope yang masih terkunci: `progress/PHASE-0-AUDIT.md` §13. Status gate tetap NOT_COMPLETE untuk scope lain.
 
 Approved by: __________
