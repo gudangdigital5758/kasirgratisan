@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rateLimit, type RateLimitKv } from '../src/lib/rate-limit';
 
 /** KV in-memory mock — minimal get/put + TTL (SEC-002). */
@@ -32,10 +32,19 @@ describe('rateLimit — Cloudflare KV (SEC-002)', () => {
   });
 
   it('window baru (bucket berbeda) → counter reset', async () => {
-    const kv = new MemoryKv();
-    for (let i = 0; i < 3; i++) await rateLimit('kv-2', 3, 10, kv);
-    await new Promise((r) => setTimeout(r, 15));
-    expect((await rateLimit('kv-2', 3, 10, kv)).allowed).toBe(true);
+    // FUL-002: gunakan fake timers agar deterministik (tidak bergantung sleep nyata).
+    vi.useFakeTimers();
+    try {
+      const kv = new MemoryKv();
+      for (let i = 0; i < 3; i++) {
+        expect((await rateLimit('kv-2', 3, 10_000, kv)).allowed).toBe(true);
+      }
+      expect((await rateLimit('kv-2', 3, 10_000, kv)).allowed).toBe(false);
+      vi.advanceTimersByTime(10_001);
+      expect((await rateLimit('kv-2', 3, 10_000, kv)).allowed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('key berbeda tidak saling memengaruhi', async () => {

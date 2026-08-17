@@ -22,6 +22,7 @@ const MIGRATIONS = [
   '20260724180000_vouchers.sql',
   '20260808150000_per_store_subscription.sql',
   '20260811110000_cloud_billing_atomic.sql',
+  '20260817020000_fix_fulfill_cloud_payment_raw.sql',
 ];
 
 const url = process.env.POSTGRES_TEST_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
