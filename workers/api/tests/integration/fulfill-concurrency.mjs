@@ -46,10 +46,10 @@ async function main() {
   try {
     await pool.query(AUTH_STUB);
     for (const m of MIGRATIONS) {
-      const sql = readFileSync(path.join(DIR, '../../../supabase/migrations', m), 'utf8');
+      const sql = readFileSync(path.join(DIR, '../../../../supabase/migrations', m), 'utf8');
       await pool.query(sql);
     }
-    await pool.query(readFileSync(path.join(DIR, '../../../supabase/seed.sql'), 'utf8'));
+    await pool.query(readFileSync(path.join(DIR, '../../../../supabase/seed.sql'), 'utf8'));
     console.log('setup: auth stub + migrations + seed applied');
 
     const user = (
