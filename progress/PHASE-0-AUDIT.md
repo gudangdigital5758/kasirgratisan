@@ -167,7 +167,32 @@ R2 — backup JSON per user/store + quota reservation
 | FUL-004 | P3 | Deploy tooling | VERIFIED | Deploy `npm run release` tidak menjalankan migrasi supabase; 2 migrasi baru sempat menunggu push manual | Dokumentasi sudah ada di §13; pertimbangkan script `release` + `supabase db push` berurutan |
 | FUL-005 | P2 | Secret hygiene | VERIFIED | PAT `sbp_...` sempat dipakai di sesi (chat + command history) | Sudah dirotasi user; catat: jangan tempel token di chat |
 | FUL-006 | P2 | Monitoring | UNVERIFIED | Tidak ada alerting otomatis untuk kegagalan fulfillment/webhook (platform_events hanya dicatat) | Dashboard admin events + notifikasi internal bila payment COMPLETED tanpa subscription |
-| FUL-007 | P1 | fulfill_cloud_payment_batch | VERIFIED (OPEN) | `20260812150000_batch_checkout.sql` line 189 `raw = raw,` di UPDATE payments — pola ambiguity sama dengan FUL-001 | Migrasi fix serupa (rename variabel) — butuh approval, di luar scope FUL-001 |
+| FUL-007 | P1 | fulfill_cloud_payment_batch | REPOSITORY FIXED / PRODUCTION UNVERIFIED (2026-08-17) | `20260812150000_batch_checkout.sql` line 189 `raw = raw,` di UPDATE payments — ambiguity identik FUL-001. Fix: migrasi `20260817030000_fix_batch_fulfillment_raw.sql` (rename `raw`→`raw_json`). CI GREEN (run 31998685184) dengan test batch E-H: normal+replay idempotent, 5 concurrent, owner mismatch, item alien dilewati | Push migrasi ke prod menyusul (BLOCKED — tanpa kredensial) |
+
+### Ambiguity sweep billing (2026-08-17, FUL-007 task) — hasil klasifikasi
+
+Semua 32 definisi function di migrasi diperiksa untuk kolisi variabel/parameter vs kolom (payments, subscriptions, stores, plans, sync_records, credit_*, backups, affiliate_*, vouchers, topup_pending).
+
+| Function | File | Finding | Severity | Action | Status |
+|---|---|---|---|---|---|
+| fulfill_cloud_payment | 20260811110000_cloud_billing_atomic.sql | CONFIRMED BUG: var `raw` vs kolom payments.raw di `SET raw = raw \|\| ...` | P1 (FUL-001) | Fix migrasi 20260817020000 (rename `raw_json`) | FIXED / PROD UNVERIFIED |
+| fulfill_cloud_payment_batch | 20260812150000_batch_checkout.sql | CONFIRMED BUG: var `raw` vs kolom payments.raw di `SET raw = raw, ...` (line 189) | P1 (FUL-007) | Fix migrasi 20260817030000 (rename `raw_json`) | FIXED / PROD UNVERIFIED |
+| sync_upsert_batch | 20260811180000_sync_winner_ack.sql | SAFE — kolom data/deleted/client_updated_at unqualified tanpa variabel senama; excluded./sync_records. qualified | — | — | SAFE |
+| sync_register_device | 20260805120000_sync.sql | SAFE — tanpa variabel lokal | — | — | SAFE |
+| reserve_backup_quota | 20260811170000 | SAFE — v_* / existing_status tanpa kolom senama | — | — | SAFE |
+| claim_legacy_subscription | 20260811140000 | SAFE — rowtype + plan_limit_mb dll tanpa kolisi | — | — | SAFE |
+| fn_credit_topup/charge/adjust | 20260806000000 + 20260806140000 | SAFE — v_* prefix, tidak ada kolom senama | — | — | SAFE |
+| fn_online_checkout | 20260816120000 | SAFE — v_*; `data` unqualified = kolom (tanpa variabel) | — | — | SAFE |
+| fn_online_debt_payment | 20260816180000 | SAFE — v_debt rowtype + qualified | — | — | SAFE |
+| fn_online_stock_move | 20260816180000 | SAFE — v_*; `data` di SET = kolom | — | — | SAFE |
+| fn_online_close_shift / fn_online_pnl | 20260816200000 | SAFE — v_* | — | — | SAFE |
+| fn_report_summary/detail/selfcheck | 20260813130000 + 13150000 | SAFE — v_*; `data`/`deleted` = kolom tanpa shadowing | — | — | SAFE |
+| reset_test_data | 20260810150000 | SAFE — keep_id/n/r tanpa kolom senama | — | — | SAFE |
+| handle_new_user / set_updated_at / update_app_settings_updated_at | init + app_settings | SAFE — trigger NEW.* qualified | — | — | SAFE |
+| create_store_with_limit | 20260808150000 | SAFE — p_* + rowtype | — | — | SAFE |
+| fn_affiliate_payout_create | 20260817010000 | SAFE — v_payout/v_bound | — | — | SAFE |
+
+**Kesimpulan sweep**: hanya 2 kolisi confirmed (FUL-001, FUL-007 — keduanya fixed di repo). Tidak ada POTENTIAL AMBIGUITY tersisa yang membutuhkan tindakan.
 
 ### Hasil pengukuran pass 2
 

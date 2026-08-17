@@ -68,3 +68,12 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 - Production remediation: **BLOCKED** - migrasi fix belum di-push ke prod.
 - End-to-end fulfillment (prod): **BLOCKED** - butuh kredensial + akun test. Level DB e2e sudah dibuktikan integration test.
 - FUL-007 (P1, OPEN): fulfill_cloud_payment_batch punya pola ambiguity sama (batch_checkout.sql:189) - butuh migrasi fix terpisah + approval.
+
+## FUL-007 EXECUTION (2026-08-17)
+- Root cause: **PASS** - variabel plpgsql raw vs kolom payments.raw di SET raw = raw (batch_checkout.sql:189), identik FUL-001.
+- Repository fix: **PASS** - migrasi 20260817030000_fix_batch_fulfillment_raw.sql (rename raw->raw_json), commit 034b999.
+- Integration: **PASS** - CI GREEN (run 31998685184), test batch E-H (normal+replay, 5 concurrent, owner mismatch, item alien).
+- Concurrency: **PASS** (5 parallel, payment baru).
+- Production: **UNVERIFIED / BLOCKED** (tanpa kredensial).
+- Ambiguity sweep: **SELESAI** - 32 function billing diperiksa; hanya FUL-001 + FUL-007 confirmed (keduanya fixed di repo); sisanya SAFE.
+- Worker tests: 55/55 x3, typecheck clean, secret scan bersih.

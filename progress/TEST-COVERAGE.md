@@ -19,13 +19,17 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 
 ## DB integration (TST-002 — concurrency RPC SQL)
 
-`tests/integration/fulfill-concurrency.mjs` — butuh Postgres 15 (service postgres di CI; lokal via docker). Menjalankan migrasi inti (init + vouchers + per_store_subscription + cloud_billing_atomic + seed) lalu:
+`tests/integration/fulfill-concurrency.mjs` — butuh Postgres 15 (service postgres di CI; lokal via docker). Menjalankan migrasi inti (init + vouchers + per_store_subscription + cloud_billing_atomic + fix FUL-001 + fix FUL-007 + seed) lalu:
 - A: 5 fulfill CONCURRENT payment sama → tepat 1 pemenang, 1 subscription aktif.
 - B: replay → alreadyDone tanpa grant ganda.
 - C: owner mismatch ditolak.
 - D: payment kedua toko sama → extend, bukan duplikat.
+- E: batch fulfillment 2 toko + replay idempotent (FUL-007).
+- F: batch CONCURRENT (5 paralel, payment baru) → 1 pemenang.
+- G: batch owner mismatch ditolak.
+- H: batch dengan item toko alien → dilewati (fulfilledCount=1).
 
-CI: job `db-integration` (postgres:15 service). Status pass 2: **GREEN setelah fix FUL-001** (run 31997936793, commit `f0b4e76`). Riwayat: harness melewati 6 iterasi fix harness (path, role anon/authenticated/service_role, dependency migrasi vouchers, kolom `raw_user_meta_data`, trigger-driven profiles, parameter pg `$1/$2/$3`) lalu menemukan bug migrasi asli: `fulfill_cloud_payment` error `column reference "raw" is ambiguous` di PG15 — variabel plpgsql `raw` bentrok dengan kolom `payments.raw` pada `SET raw = raw || ...`. Fix: migrasi `20260817020000_fix_fulfill_cloud_payment_raw.sql` (rename `raw`→`raw_json`). **Prod: UNVERIFIED / remediation BLOCKED** (tanpa kredensial Supabase). FUL-002 (test bucket rate-limit) diperbaiki dengan fake timers — 3× run 55/55.
+CI: **GREEN** — run 31997936793 (FUL-001 fix) dan 31998685184 (FUL-007 fix + test batch E-H). Prod: UNVERIFIED / remediation BLOCKED (tanpa kredensial Supabase). FUL-002 (test bucket rate-limit) diperbaiki dengan fake timers — 3× run 55/55.
 
 ## Baseline
 
