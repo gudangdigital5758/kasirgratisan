@@ -31,3 +31,9 @@ ONESIGNAL_REST_API_KEY=
 # APP_ORIGIN sudah di wrangler.toml [vars] untuk prod;
 # override lokal jika perlu:
 # APP_ORIGIN=http://localhost:8080
+
+# --- Env guards (SEC-003 / BILL-006) ---
+# "true" untuk mengaktifkan /api/dev/* saat development lokal.
+ENABLE_DEV_ROUTES=true
+# JANGAN set "production" di dev. wrangler.toml [vars] yang menetapkannya.
+# ENVIRONMENT=production

@@ -15,7 +15,7 @@ cronRoutes.post('/cron/dunning', async (c: AppContext) => {
   if (secret) {
     const hdr = c.req.header('x-cron-secret') || c.req.header('x-webhook-secret');
     if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
-  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
+  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock' || c.env.ENVIRONMENT === 'production') {
     return c.json({ error: 'WEBHOOK_SECRET wajib di production' }, 403);
   }
   const result = await runDunningCron(c.env);
@@ -28,7 +28,7 @@ cronRoutes.post('/cron/cleanup-backups', async (c: AppContext) => {
   if (secret) {
     const hdr = c.req.header('x-cron-secret') || c.req.header('x-webhook-secret');
     if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
-  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
+  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock' || c.env.ENVIRONMENT === 'production') {
     return c.json({ error: 'WEBHOOK_SECRET wajib di production' }, 403);
   }
   const result = await cleanupExpiredBackups(c.env, 30);

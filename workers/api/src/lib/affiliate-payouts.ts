@@ -124,30 +124,30 @@ export async function runMonthlyPayouts(env: Env, period?: string): Promise<Payo
       const net = e.total - tax;
 
       try {
-        const ins = await sbPost<AffiliatePayoutRow[]>(env, 'affiliate_payouts', {
-          affiliate_id: aff.id,
-          period: target,
-          gross_idr: e.total,
-          tax_rate_percent: rate,
-          tax_idr: tax,
-          net_idr: net,
-          bank_name: aff.bank_name,
-          bank_account_no: aff.bank_account_no,
-          bank_account_name: aff.bank_account_name,
-          status: 'generated',
-          commission_ids: e.ids,
-        });
-        const payout = ins[0];
-        if (!payout) {
-          errors.push(`${aff.id}:no_row`);
+        // BILL-004: insert payout + kunci komisi dalam SATU transaksi (RPC).
+        // Idempotent via unique (affiliate_id, period) + filter payout_id is null.
+        const res = await sbPost<{ ok?: boolean; skipped?: boolean; payoutId?: string; bound?: number }>(
+          env,
+          'rpc/fn_affiliate_payout_create',
+          {
+            p_affiliate_id: aff.id,
+            p_period: target,
+            p_gross_idr: e.total,
+            p_tax_rate_percent: rate,
+            p_tax_idr: tax,
+            p_net_idr: net,
+            p_bank: {
+              bank_name: aff.bank_name,
+              bank_account_no: aff.bank_account_no,
+              bank_account_name: aff.bank_account_name,
+            },
+            p_commission_ids: e.ids,
+          },
+        );
+        if (!res.ok || !res.payoutId) {
+          errors.push(`${aff.id}:${res.skipped ? 'skipped' : 'no_payout'}`);
           continue;
         }
-        // Kunci komisi ke payout ini (filter ulang: hanya yang belum terikat).
-        await sbPatch(
-          env,
-          `affiliate_commissions?payout_id=is.null&status=eq.earned&id=in.(${e.ids.join(',')})`,
-          { payout_id: payout.id },
-        );
         created += 1;
 
         // Notif best-effort (email/WA bila profil tersedia).

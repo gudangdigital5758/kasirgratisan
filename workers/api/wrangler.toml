@@ -10,6 +10,11 @@ workers_dev = true
 APP_ORIGIN = "https://profitku.my.id"
 # Gateway pembayaran aktif: sumopod | midtrans | mock
 PAYMENT_PROVIDER = "sumopod"
+# Sinyal environment: "production" memblokir PAYMENT_PROVIDER=mock (BILL-006),
+# /api/dev/* tanpa flag (SEC-003), dan cron tanpa WEBHOOK_SECRET.
+ENVIRONMENT = "production"
+# Dev routes (notify test) — jangan true di production.
+ENABLE_DEV_ROUTES = "false"
 # Fase release sync (M4): set "false" untuk menonaktifkan push/pull sementara.
 SYNC_ENABLED = "true"
 # Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY

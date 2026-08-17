@@ -52,10 +52,14 @@ only when the audit contains evidence from source code/configuration/tests/migra
   2. Penutupan item PARTIALLY VERIFIED/UNVERIFIED (`progress/PHASE-0-AUDIT.md` §12),
   3. Approval manual di bawah.
 
-## Waiver parsial (2026-08-17)
+## Waiver parsial (2026-08-17, diperluas)
 Gate **dilewati eksplisit oleh user** untuk scope Phase 1 terbatas:
 - **SEC-001** — PIN tim cloud → PBKDF2-SHA256 (lib/pin.ts + routes/team.ts + test). SELESAI.
 - **TST-001/002** — test worker billing (22 test) + vitest infra + CI. SELESAI.
+- **SEC-003** — dev routes butuh `ENABLE_DEV_ROUTES=true` (403 default). SELESAI.
+- **BILL-006** — `PAYMENT_PROVIDER=mock` diblokir saat `ENVIRONMENT=production` (checkout, checkout-batch, verify); cron wajib secret di production. SELESAI.
+- **SEC-004** — policy `stores_public_read` dibuang; view subset `public_stores` (kolom aman, tanpa user_id/alamat/telepon/store_code). SELESAI (migrasi `20260817000000_store_public_subset.sql`).
+- **BILL-004** — payout affiliate atomik via RPC `fn_affiliate_payout_create` (insert + kunci komisi satu transaksi). SELESAI (migrasi `20260817010000_affiliate_payout_atomic.sql`).
 Risiko & scope yang masih terkunci: `progress/PHASE-0-AUDIT.md` §13. Status gate tetap NOT_COMPLETE untuk scope lain.
 
 Approved by: __________

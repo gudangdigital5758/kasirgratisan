@@ -288,6 +288,10 @@ paymentsRoutes.post('/payments/checkout', async (c: AppContext) => {
   if (provider === 'sumopod' && !sumopodConfigured(c.env)) {
     return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
   }
+  // BILL-006: mock = entitlement gratis via /payments/verify — dilarang di production.
+  if (provider === 'mock' && c.env.ENVIRONMENT === 'production') {
+    return c.json({ error: 'Payment provider mock tidak diizinkan di production' }, 503);
+  }
 
   const basePaymentRaw = {
     mobile: body.mobile ?? null,
@@ -644,6 +648,10 @@ paymentsRoutes.post('/payments/checkout-batch', async (c: AppContext) => {
   if (provider === 'sumopod' && !sumopodConfigured(c.env)) {
     return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
   }
+  // BILL-006: mock = entitlement gratis via /payments/verify — dilarang di production.
+  if (provider === 'mock' && c.env.ENVIRONMENT === 'production') {
+    return c.json({ error: 'Payment provider mock tidak diizinkan di production' }, 503);
+  }
 
   // Persist payment sebelum panggil gateway (anti transaksi yatim).
   try {
@@ -744,6 +752,10 @@ paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
   if (userId instanceof Response) return userId;
   const id = c.req.param('id') ?? '';
   const provider = (c.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+  // BILL-006: mock auto-complete = entitlement gratis — dilarang di production.
+  if (provider === 'mock' && c.env.ENVIRONMENT === 'production') {
+    return c.json({ error: 'Payment provider mock tidak diizinkan di production' }, 503);
+  }
 
   try {
     if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY) {

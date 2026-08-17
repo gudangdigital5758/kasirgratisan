@@ -31,6 +31,10 @@ export interface Env {
   MIDTRANS_CLIENT_KEY?: string;
   XENDIT_SECRET_KEY?: string;
   WEBHOOK_SECRET?: string;
+  /** "production" → blokir PAYMENT_PROVIDER=mock & cron tanpa secret (BILL-006/SEC-003). */
+  ENVIRONMENT?: string;
+  /** "true" → aktifkan /api/dev/* (SEC-003; default nonaktif). */
+  ENABLE_DEV_ROUTES?: string;
   /** OneSignal — App ID (boleh sama dengan VITE_ONESIGNAL_APP_ID di client) */
   ONESIGNAL_APP_ID?: string;
   /** OneSignal REST API Key (server only — jangan expose ke VITE_*) */

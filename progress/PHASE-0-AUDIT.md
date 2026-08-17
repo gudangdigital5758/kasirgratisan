@@ -139,7 +139,8 @@ User secara eksplisit melewati gate untuk scope Phase 1 **terbatas**:
 
 **Risiko yang dicatat** (scope lain tetap terkunci gate):
 - Concurrency `fulfill_cloud_payment` di level DB belum di-integration-test (hanya replay idempotency level Worker) — TST-002 sebagian.
-- Voucher server, affiliate payout atomik (BILL-004), webhook token-fallback, dan routes lain belum dites.
-- Keputusan manusia §11 (PIN invalidasi vs migrasi — dipilih **migrasi otomatis saat login**; provider pembayaran; credit ledger; role support; Cloudflare Access; deploy gate; commit) masih terbuka untuk item 2-7.
+- **MIGRASI WAJIB DI-PUSH MANUAL** (`supabase db push`): `20260817000000_store_public_subset.sql` + `20260817010000_affiliate_payout_atomic.sql` — deploy Worker via `npm run release` TIDAK menjalankan migrasi. Sampai migrasi terpasang: payout run mencatat error `function not found` (tidak ada duit hilang, tidak crash) dan `stores_public_read` lama masih aktif.
+- Voucher server, webhook token-fallback, dan routes lain (stores/sync/backups/finance/master-data) belum dites.
+- Keputusan manusia §11 (provider pembayaran; credit ledger; role support; Cloudflare Access; deploy gate; commit baseline) masih terbuka untuk item 2-7.
 - Perubahan PIN tidak invalidasi sesi tim yang sudah aktif (token sesi 24 jam tidak berubah).
 

@@ -7,8 +7,11 @@ import { sendEmail, sendPush, sendWhatsApp } from '../lib/notify';
 
 const devRoutes = new Hono<AppEnv>();
 
-// Test notify (lindungi di production)
+// Test notify (lindungi di production: butuh ENABLE_DEV_ROUTES=true + provider mock)
 devRoutes.post('/dev/notify-test', async (c: AppContext) => {
+  if (c.env.ENABLE_DEV_ROUTES !== 'true') {
+    return c.json({ error: 'Dev routes dinonaktifkan' }, 403);
+  }
   if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock') {
     return c.json({ error: 'Hanya tersedia di mode mock' }, 403);
   }

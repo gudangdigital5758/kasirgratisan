@@ -1,10 +1,10 @@
 # Test Coverage — Profitku
 
-Status: **BASELINE + WORKER TESTS** (2026-08-17: root 26 file/132 test PASS · workers/api 4 file/22 test PASS)
+Status: **BASELINE + WORKER TESTS** (2026-08-17: root 26 file/132 test PASS · workers/api 6 file/31 test PASS)
 
-## Worker API (baru 2026-08-17 — TST-001/002)
+## Worker API (2026-08-17 — TST-001/002 + env guards + payout)
 
-Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock.
+Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock. Total: 6 file / 31 test.
 
 | File | Test | Cakupan |
 |---|---|---|
@@ -12,6 +12,8 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 | `tests/webhooks.test.ts` | 7 | Midtrans: signature valid + replay idempotent (alreadyDone), amount mismatch → 400 tanpa fulfill, signature invalid → 401, order tak dikenal → skipped; SumoPod: Svix valid → COMPLETED, invalid → 401, event test ack |
 | `tests/team-login.test.ts` | 4 | Legacy hash → login + auto-upgrade ke pbkdf2$, PIN pbkdf2 langsung, PIN salah 401, rate limit 10/menit → 429 |
 | `tests/admin-rbac.test.ts` | 6 | resolveAdmin (tabel vs ADMIN_EMAILS vs bukan staff), /admin/api/me 200/403/401 |
+| `tests/env-guards.test.ts` | 6 | SEC-003: dev route 403 tanpa flag / 200 dengan flag; BILL-006: checkout/checkout-batch/verify mock+production → 503 tanpa payment dibuat; cron tanpa secret di production → 403 |
+| `tests/affiliate-payout.test.ts` | 3 | BILL-004: RPC `fn_affiliate_payout_create` dipanggil dengan semua komisi & tanpa insert langsung; periode existing → skipped; RPC skipped → tidak dihitung |
 
 ## Baseline
 
