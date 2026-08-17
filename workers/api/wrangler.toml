@@ -15,11 +15,6 @@ PAYMENT_PROVIDER = "sumopod"
 ENVIRONMENT = "production"
 # Dev routes (notify test) — jangan true di production.
 ENABLE_DEV_ROUTES = "false"
-
-# Rate limit lintas-isolate (SEC-002) — dibuat via `wrangler kv namespace create RATE_LIMIT_KV`
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "f7efc1b43bcb43a697fae8febd916811"
 # Fase release sync (M4): set "false" untuk menonaktifkan push/pull sementara.
 SYNC_ENABLED = "true"
 # Secrets: wrangler secret put SUPABASE_URL | SUPABASE_SERVICE_ROLE_KEY | SUPABASE_ANON_KEY
@@ -27,6 +22,11 @@ SYNC_ENABLED = "true"
 #          ONESIGNAL_APP_ID | ONESIGNAL_REST_API_KEY | ADMIN_EMAILS | ADMIN_ORIGIN
 #          PAYMENT_PROVIDER | MIDTRANS_SERVER_KEY | MIDTRANS_IS_PRODUCTION
 #          SUMOPOD_API_KEY | SUMOPOD_WEBHOOK_SECRET | SUMOPOD_WEBHOOK_TOKEN
+
+# Rate limit lintas-isolate (SEC-002) — dibuat via `wrangler kv namespace create RATE_LIMIT_KV`
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "f7efc1b43bcb43a697fae8febd916811"
 
 # R2 backup (bucket dibuat: profitku-backups)
 [[r2_buckets]]
