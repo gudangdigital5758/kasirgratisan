@@ -62,7 +62,7 @@ async function main() {
     const user = (
       await pool.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'it@test.local') returning id`)
     ).rows[0].id;
-    await pool.query(`insert into public.profiles (id, email) values ($1, 'it@test.local')`, [user]);
+    // profiles dibuat otomatis oleh trigger on_auth_user_created (init migration).
 
     // === Test A: 5 fulfill CONCURRENT untuk payment yang sama ===
     console.log('Test A: concurrency (5 parallel fulfill, satu payment)');
