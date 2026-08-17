@@ -78,7 +78,7 @@ async function main() {
 
     const results = await Promise.all(
       Array.from({ length: 5 }, () =>
-        pool.query(`select public.fulfill_cloud_payment($1, $2, 'test', $1::text) as r`, [payA, user]),
+        pool.query(`select public.fulfill_cloud_payment($1::uuid, $2::uuid, 'test', $3::text) as r`, [payA, user, payA]),
       ),
     );
     const parsed = results.map((r) => r.rows[0].r);
@@ -101,7 +101,7 @@ async function main() {
     // === Test B: replay sequential → alreadyDone, tanpa sub baru ===
     console.log('Test B: replay webhook (fulfill ulang payment sama)');
     const rB = (
-      await pool.query(`select public.fulfill_cloud_payment($1, $2, 'test', $1::text) as r`, [payA, user])
+      await pool.query(`select public.fulfill_cloud_payment($1::uuid, $2::uuid, 'test', $3::text) as r`, [payA, user, payA])
     ).rows[0].r;
     check('B1: replay → alreadyDone=true', rB.alreadyDone === true);
     const subCountB = (
@@ -119,7 +119,7 @@ async function main() {
     ).rows[0].id;
     let ownerErr = '';
     try {
-      await pool.query(`select public.fulfill_cloud_payment($1, $2, 'test', 'x')`, [payA, user2]);
+      await pool.query(`select public.fulfill_cloud_payment($1::uuid, $2::uuid, 'test', 'x')`, [payA, user2]);
     } catch (e) {
       ownerErr = String(e.message);
     }
@@ -133,7 +133,7 @@ async function main() {
         [user, storeA],
       )
     ).rows[0].id;
-    await pool.query(`select public.fulfill_cloud_payment($1, $2, 'test', $1::text)`, [payD, user]);
+    await pool.query(`select public.fulfill_cloud_payment($1::uuid, $2::uuid, 'test', $3::text)`, [payD, user, payD]);
     const subCountD = (
       await pool.query(
         `select count(*)::int c from public.subscriptions where store_id = $1 and status = 'active'`,
