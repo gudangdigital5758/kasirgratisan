@@ -28,7 +28,7 @@ const url = process.env.POSTGRES_TEST_URL || 'postgresql://postgres:postgres@127
 
 const AUTH_STUB = `
 create schema if not exists auth;
-create table if not exists auth.users (id uuid primary key, email text);
+create table if not exists auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb);
 create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
 do $$
 begin
