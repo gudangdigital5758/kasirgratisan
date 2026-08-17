@@ -19,6 +19,7 @@ import pg from 'pg';
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = [
   '20260723000000_init_profitku.sql',
+  '20260724180000_vouchers.sql',
   '20260808150000_per_store_subscription.sql',
   '20260811110000_cloud_billing_atomic.sql',
 ];
