@@ -19,13 +19,13 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 
 ## DB integration (TST-002 — concurrency RPC SQL)
 
-`tests/integration/fulfill-concurrency.mjs` — butuh Postgres 15 (service postgres di CI; lokal via docker). Menjalankan migrasi inti (init + per_store_subscription + cloud_billing_atomic + seed) lalu:
+`tests/integration/fulfill-concurrency.mjs` — butuh Postgres 15 (service postgres di CI; lokal via docker). Menjalankan migrasi inti (init + vouchers + per_store_subscription + cloud_billing_atomic + seed) lalu:
 - A: 5 fulfill CONCURRENT payment sama → tepat 1 pemenang, 1 subscription aktif.
 - B: replay → alreadyDone tanpa grant ganda.
 - C: owner mismatch ditolak.
 - D: payment kedua toko sama → extend, bukan duplikat.
 
-CI: job `db-integration` (postgres:15 service) — belum bisa diverifikasi lokal (tidak ada docker di mesin); syntax sudah di-`node --check`.
+CI: job `db-integration` (postgres:15 service). Status pass 2 (2026-08-17): **RED — FUL-001**: `fulfill_cloud_payment` (migrasi `20260811110000_cloud_billing_atomic.sql`) error `column reference "raw" is ambiguous` di PG15 — variabel plpgsql `raw` bentrok dengan kolom `payments.raw` pada `SET raw = raw || ...`. Ini bug migrasi yang sah (bukan bug harness): harness sudah melalui 6 iterasi fix (path, role anon/authenticated/service_role, dependency migrasi vouchers, kolom `raw_user_meta_data`, trigger-driven profiles, parameter pg `$1/$2/$3`). Fix migrasi butuh approval (rename variabel → `raw_json`) — detail: `progress/PHASE-0-AUDIT.md` §14 FUL-001.
 
 ## Baseline
 

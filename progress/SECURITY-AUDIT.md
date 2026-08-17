@@ -44,6 +44,7 @@ Status: **FINDINGS RECORDED** (audit 2026-08-17, berbasis source code/migrations
 
 - **SEC-001 RESOLVED 2026-08-17**: PIN tim cloud kini PBKDF2-SHA256 (210.000 iterasi, salt acak 16 byte, compare timing-safe) di `workers/api/src/lib/pin.ts`; semua call-site `routes/team.ts` memakai `hashPin`/`verifyPin`; hash legacy SHA-256 otomatis di-upgrade saat login sukses (tanpa invalidasi massal). Test: `tests/pin.test.ts` + `tests/team-login.test.ts`.
 - **SEC-002 RESOLVED 2026-08-17**: rate limit fixed-window di Cloudflare KV (`RATE_LIMIT_KV`), fallback in-memory untuk dev/test. Test: `tests/rate-limit.test.ts` (KV mock + fallback).
+- **CI db-integration (pass 2)**: menangkap **FUL-001** — `fulfill_cloud_payment` di migrasi `20260811110000_cloud_billing_atomic.sql` error `column reference "raw" is ambiguous` di PG15 (variabel plpgsql `raw` vs kolom `payments.raw` di `SET raw = raw || ...`). Status prod UNVERIFIED (PAT dicabut). Fix butuh approval (rename variabel → `raw_json` + re-push migrasi). Detail: `progress/PHASE-0-AUDIT.md` §14.
 - `stores_public_read` + `qris_id` (migrasi `20260816230000_store_qris.sql`) saling terkait — QRIS statis toko terekspos publik jika toko `is_public`.
 - Provider webhook: SumoPod aktif di `wrangler.toml` (`PAYMENT_PROVIDER=sumopod`) — verifikasi secret `SUMOPOD_WEBHOOK_SECRET` ter-set di prod, bukan hanya token fallback.
 - Rate limit global `/api/*` = 120/menit/user-IP per isolate — lihat SEC-002.

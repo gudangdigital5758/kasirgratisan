@@ -1,12 +1,12 @@
 # Phase 0 Repository Audit — Profitku
 
-Status: **AUDIT DILAKSANAKAN — GATE MENUNGGU APPROVAL**
+Status: **AUDIT DILAKSANAKAN (2 PASS) — GATE MENUNGGU APPROVAL**
 
 > Audit berbasis evidence (source code, migrations, tests, CI, config). Tidak ada perubahan production code.
 > Phase 0 dinyatakan COMPLETE hanya setelah approval manual di `PHASE-0-GATE.md`.
 
-Tanggal audit: 2026-08-17
-Branch: `main` @ `f17720c`
+Tanggal audit: 2026-08-17 (pass 1) · 2026-08-17 (pass 2 / re-audit setelah Phase 1)
+Branch: `main` @ `6741316`
 
 ---
 
@@ -130,6 +130,55 @@ R2 — backup JSON per user/store + quota reservation
 - RLS `cloud_team_members` (detail policy select untuk non-owner).
 - Konfigurasi deployment aktual Supabase/Cloudflare di luar repo (secrets, custom domain, Access).
 - Endpoint export/hapus data user (UU PDP) — tidak ditemukan (UNVERIFIED).
+
+## 14. RE-AUDIT PASS 2 (2026-08-17) — delta setelah Phase 1 + temuan baru
+
+### Status CI (diverifikasi via `gh run list` di `gudangdigital5758/profitku`)
+
+| Commit | Web | API | db-integration | Deploy | Catatan |
+|---|---|---|---|---|---|
+| 033ea53 (Phase 1 PIN+test) | ✅ | ✅ | — | ✅ | Sebelum job integration ada |
+| 29d8c9c (SEC-003/004, BILL-004/006) | ✅ | ✅ | — | ✅ | |
+| e2df01a (SEC-002 + voucher + integration) | ✅ | ✅ | ❌ | ✅ | Path script: `../../../` vs `../../../../` |
+| 49cce5f (wrangler.toml fix) | ✅ | ✅ | ❌ | ✅ | sama (blm fix) |
+| c122ffd (fix path) | ✅ | ✅ | ❌ | ✅ | role `anon` tidak ada di postgres vanilla |
+| 8d5aa8c (fix roles) | ✅ | ✅ | ❌ | ✅ | `is_lifetime` butuh migrasi vouchers |
+| 9a70c8d (fix deps migrasi) | ✅ | ✅ | ❌ | ✅ | `raw_user_meta_data` di trigger init |
+| b442384 (fix stub auth.users) | ✅ | ✅ | ❌ | ✅ | profiles dibuat trigger → insert manual duplikat |
+| 503c9cf (fix profiles) | ✅ | ✅ | ❌ | ✅ | `$1` dipakai uuid+text → inconsistent types |
+| 6741316 (fix pg params) | ✅ | ✅ | ❌ | ✅ | **FUL-001**: `raw` ambigu di RPC |
+
+### FUL-001 (P1) — referensi `raw` ambigu di `fulfill_cloud_payment` (VERIFIED, prod UNVERIFIED)
+
+- **Component**: Billing fulfillment RPC (`supabase/migrations/20260811110000_cloud_billing_atomic.sql`).
+- **Evidence**: CI `db-integration` (PG 15 vanilla, migrasi dari repo) — 5 fulfill paralel gagal deterministik:
+  `ERROR: column reference "raw" is ambiguous` · `DETAIL: It could refer to either a PL/pgSQL variable or a table column.` · `QUERY: update public.payments ... raw = raw || jsonb_build_object(...)` · `CONTEXT: PL/pgSQL function fulfill_cloud_payment line 137`.
+- **Akar masalah**: variabel plpgsql `raw jsonb` + kolom `payments.raw`; di `SET raw = raw || ...` (RHS) nama bentrok → PG15 raise ambiguity saat eksekusi. Artinya **semua fulfillment error** di environment yang dibangun dari migrasi repo ini.
+- **Status prod**: UNVERIFIED — PAT `sbp_...` sudah dicabut/rotasi ("Unauthorized"), definisi fungsi prod tidak bisa dibandingkan. Dua kemungkinan: (a) fungsi prod dibuat dari teks berbeda (file migrasi di-apply dari working tree sebelum commit 5da1040) → prod aman tapi repo punya bom laten; (b) prod sama-sama error → fulfillment produksi rusak (perlu verifikasi segera dengan token baru).
+- **Risk**: double-grant tidak terjadi (RPC gagal total = tidak ada entitlement), tapi pembayaran tidak ter-fulfill; uang masuk, langganan tidak aktif → komplain user + revenue leak.
+- **Recommended action** (BUTUH APPROVAL — perubahan production DB): rename variabel `raw` → `raw_json` di fungsi (2 baris deklarasi + referensi), lalu `supabase db push` ulang migrasi itu (create or replace). Setelah fix, CI db-integration harus hijau.
+- **Affected files**: `supabase/migrations/20260811110000_cloud_billing_atomic.sql` (+ re-run di prod).
+- **Confidence**: HIGH (error deterministik, 5 koneksi paralel, QUERY eksplisit di log).
+
+### Temuan lain pass 2
+
+| ID | Sev | Komponen | State | Evidence | Aksi |
+|---|---|---|---|---|---|
+| FUL-002 | P3 | Test flaky | VERIFIED | 1 run 54/55 (11:00) tanpa reproducible di 3 run berikut (55/55); kandidat: test window 10ms/15ms di `tests/rate-limit.test.ts` | Naikkan window test ke 50ms/80ms atau gunakan fake timer |
+| FUL-003 | P3 | Infra test | VERIFIED | `gh` CLI di mesin ter-auth ke repo lain (`jipraks/kasirgratisan`) — perlu `-R gudangdigital5758/profitku` | Konfigurasi default repo gh |
+| FUL-004 | P3 | Deploy tooling | VERIFIED | Deploy `npm run release` tidak menjalankan migrasi supabase; 2 migrasi baru sempat menunggu push manual | Dokumentasi sudah ada di §13; pertimbangkan script `release` + `supabase db push` berurutan |
+| FUL-005 | P2 | Secret hygiene | VERIFIED | PAT `sbp_...` sempat dipakai di sesi (chat + command history) | Sudah dirotasi user; catat: jangan tempel token di chat |
+| FUL-006 | P2 | Monitoring | UNVERIFIED | Tidak ada alerting otomatis untuk kegagalan fulfillment/webhook (platform_events hanya dicatat) | Dashboard admin events + notifikasi internal bila payment COMPLETED tanpa subscription |
+
+### Hasil pengukuran pass 2
+
+- `npm test` worker: 55/55 (8 file) — rate-limit KV (4), voucher server (20), pin (5), webhook (7), team-login (4), admin-rbac (6), env-guards (6), affiliate-payout (3).
+- `npx tsc --noEmit` worker: clean. Root (pass 1): 132 test PASS, lint 0 error.
+- Migrasi: 56 file di repo; 2 migrasi baru ter-push ke prod (store_public_subset, affiliate_payout_atomic) + diverifikasi (fn/view ada, policy lama hilang).
+- Deployment live: Worker profitku-api (KV binding RATE_LIMIT_KV terverifikasi), POS, Admin.
+- CI: Web ✅ API ✅ Deploy ✅ di semua commit terakhir; db-integration ❌ (FUL-001).
+
+---
 
 ## 13. WAIVER Phase 1 (2026-08-17) + catatan risiko
 

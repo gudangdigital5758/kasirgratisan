@@ -3,7 +3,7 @@
 > Diperbarui dari evidence repository (audit 2026-08-17 + Phase 1 terbatas 2026-08-17). Phase 0 gate tetap NOT_COMPLETE untuk scope lain.
 
 ## Current state
-Status: **PHASE 0 AUDIT DILAKSANAKAN - WAIVER PARSIAL (SEC-001 + TST-001/002) - GATE MENUNGGU APPROVAL PENUH**
+Status: **PHASE 0 AUDIT (2 PASS) - WAIVER FASE 1 SELESAI - GATE MENUNGGU APPROVAL - FUL-001 TERBUKA (P1)**
 Last verified: 2026-08-17
 Evidence: `progress/PHASE-0-AUDIT.md` . `progress/SECURITY-AUDIT.md` . `progress/TEST-COVERAGE.md`
 
@@ -52,3 +52,9 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 6. ~~Rate limit KV~~ **SELESAI** (SEC-002, binding RATE_LIMIT_KV).
 7. Keputusan credit ledger (DEBT-002) — masih terbuka.
 8. Dokumentasi provider pembayaran aktual (DEBT-003) — masih terbuka.
+
+## Pass 2 (re-audit 2026-08-17)
+- CI: Web/API/Deploy hijau di semua commit; job baru db-integration RED -> **FUL-001 (P1)**: fulfill_cloud_payment (migrasi 20260811110000_cloud_billing_atomic.sql) error 'column reference raw is ambiguous' di PG15 (variabel plpgsql raw vs kolom payments.raw). Prod UNVERIFIED (PAT dicabut). Fix butuh approval: rename variabel ke raw_json + re-push migrasi.
+- Worker tests: 55/55 (8 file). Integration harness: 6 iterasi fix (path, roles, deps migrasi, auth stub, trigger profiles, pg params).
+- Sekuritas tersisa: SEC-005..012 (P3), SEC-010 UNVERIFIED. Billing: BILL-001/002/003/005 terbuka (P2/P3).
+- Keputusan §11 tersisa: credit ledger, provider pembayaran, role support, Cloudflare Access, deploy gate.
