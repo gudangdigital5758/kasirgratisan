@@ -58,3 +58,13 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 - Worker tests: 55/55 (8 file). Integration harness: 6 iterasi fix (path, roles, deps migrasi, auth stub, trigger profiles, pg params).
 - Sekuritas tersisa: SEC-005..012 (P3), SEC-010 UNVERIFIED. Billing: BILL-001/002/003/005 terbuka (P2/P3).
 - Keputusan §11 tersisa: credit ledger, provider pembayaran, role support, Cloudflare Access, deploy gate.
+
+## FUL-001 EXECUTION (2026-08-17)
+- Repository fix: **PASS** - migrasi 20260817020000_fix_fulfill_cloud_payment_raw.sql (rename raw->raw_json di fulfill_cloud_payment), commit f0b4e76.
+- Integration test: **PASS** - CI db-integration GREEN (run 31997936793); 5 koneksi paralel, replay idempotent, owner mismatch, extend.
+- Concurrency: **PASS** (5 concurrent connections, harness existing).
+- Worker tests: **PASS** 55/55 x3 (FUL-002 fixed via fake timers). Lint/typecheck clean.
+- Production function: **BLOCKED** - tidak ada kredensial Supabase (env + file token kosong); definisi prod tidak dapat dibaca.
+- Production remediation: **BLOCKED** - migrasi fix belum di-push ke prod.
+- End-to-end fulfillment (prod): **BLOCKED** - butuh kredensial + akun test. Level DB e2e sudah dibuktikan integration test.
+- FUL-007 (P1, OPEN): fulfill_cloud_payment_batch punya pola ambiguity sama (batch_checkout.sql:189) - butuh migrasi fix terpisah + approval.

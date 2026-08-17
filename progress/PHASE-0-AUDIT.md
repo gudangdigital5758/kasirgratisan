@@ -148,35 +148,34 @@ R2 — backup JSON per user/store + quota reservation
 | 503c9cf (fix profiles) | ✅ | ✅ | ❌ | ✅ | `$1` dipakai uuid+text → inconsistent types |
 | 6741316 (fix pg params) | ✅ | ✅ | ❌ | ✅ | **FUL-001**: `raw` ambigu di RPC |
 
-### FUL-001 (P1) — referensi `raw` ambigu di `fulfill_cloud_payment` (VERIFIED, prod UNVERIFIED)
+### FUL-001 (P1) — referensi `raw` ambigu di `fulfill_cloud_payment` (REPOSITORY FIXED, PRODUCTION UNVERIFIED)
 
 - **Component**: Billing fulfillment RPC (`supabase/migrations/20260811110000_cloud_billing_atomic.sql`).
-- **Evidence**: CI `db-integration` (PG 15 vanilla, migrasi dari repo) — 5 fulfill paralel gagal deterministik:
-  `ERROR: column reference "raw" is ambiguous` · `DETAIL: It could refer to either a PL/pgSQL variable or a table column.` · `QUERY: update public.payments ... raw = raw || jsonb_build_object(...)` · `CONTEXT: PL/pgSQL function fulfill_cloud_payment line 137`.
-- **Akar masalah**: variabel plpgsql `raw jsonb` + kolom `payments.raw`; di `SET raw = raw || ...` (RHS) nama bentrok → PG15 raise ambiguity saat eksekusi. Artinya **semua fulfillment error** di environment yang dibangun dari migrasi repo ini.
-- **Status prod**: UNVERIFIED — PAT `sbp_...` sudah dicabut/rotasi ("Unauthorized"), definisi fungsi prod tidak bisa dibandingkan. Dua kemungkinan: (a) fungsi prod dibuat dari teks berbeda (file migrasi di-apply dari working tree sebelum commit 5da1040) → prod aman tapi repo punya bom laten; (b) prod sama-sama error → fulfillment produksi rusak (perlu verifikasi segera dengan token baru).
-- **Risk**: double-grant tidak terjadi (RPC gagal total = tidak ada entitlement), tapi pembayaran tidak ter-fulfill; uang masuk, langganan tidak aktif → komplain user + revenue leak.
-- **Recommended action** (BUTUH APPROVAL — perubahan production DB): rename variabel `raw` → `raw_json` di fungsi (2 baris deklarasi + referensi), lalu `supabase db push` ulang migrasi itu (create or replace). Setelah fix, CI db-integration harus hijau.
-- **Affected files**: `supabase/migrations/20260811110000_cloud_billing_atomic.sql` (+ re-run di prod).
-- **Confidence**: HIGH (error deterministik, 5 koneksi paralel, QUERY eksplisit di log).
+- **Root cause (terkonfirmasi)**: variabel plpgsql `raw jsonb` + kolom `payments.raw`; di `update public.payments ... set raw = raw || jsonb_build_object(...)` (RHS `raw`) PG15 raise `column reference "raw" is ambiguous` saat eksekusi — semua fulfillment error di environment dari migrasi repo.
+- **Fix (commit `f0b4e76`)**: migrasi baru `20260817020000_fix_fulfill_cloud_payment_raw.sql` — `create or replace` dengan rename variabel `raw` → `raw_json` (semua referensi internal; LHS UPDATE tetap kolom `raw`, RHS jadi variabel — unambiguous). Behavior identik; grant/revoke/comment dipertahankan; idempotent.
+- **Integration test**: harness `fulfill-concurrency.mjs` + migrasi fix → **CI db-integration GREEN** (run `31997936793`, 2026-08-17T05:26:58Z). 5 koneksi paralel: tepat 1 pemenang, 4 alreadyDone, 1 subscription aktif, replay idempotent, owner mismatch ditolak, extend bukan duplikat.
+- **Status prod**: **PRODUCTION VERIFICATION BLOCKED** — tidak ada kredensial Supabase (env `SUPABASE_ACCESS_TOKEN` kosong, `~/.supabase/access-token` tidak ada). Definisi fungsi prod tidak bisa dibaca/dibandingkan; remediation prod tidak bisa dijalankan. Jangan dianggap aman.
+- **FUL-007 (baru, P1, OPEN)**: `fulfill_cloud_payment_batch` (`20260812150000_batch_checkout.sql` line 189: `raw = raw,` di UPDATE payments) punya pola ambiguity yang sama. Di luar scope FUL-001 — butuh migrasi fix serupa (rename variabel) + approval.
+- **Confidence**: HIGH (error deterministik, CI log QUERY eksplisit, GREEN setelah fix).
 
 ### Temuan lain pass 2
 
 | ID | Sev | Komponen | State | Evidence | Aksi |
 |---|---|---|---|---|---|
-| FUL-002 | P3 | Test flaky | VERIFIED | 1 run 54/55 (11:00) tanpa reproducible di 3 run berikut (55/55); kandidat: test window 10ms/15ms di `tests/rate-limit.test.ts` | Naikkan window test ke 50ms/80ms atau gunakan fake timer |
+| FUL-002 | P3 | Test flaky | RESOLVED (2026-08-17) | Test bucket rate-limit pakai sleep nyata (10ms/15ms) → flaky. Fix: fake timers (`vi.useFakeTimers` + `advanceTimersByTime(10_001)`), window 10s; test juga kini assert blocked sebelum rollover (lebih ketat). 3× run 55/55 | — |
 | FUL-003 | P3 | Infra test | VERIFIED | `gh` CLI di mesin ter-auth ke repo lain (`jipraks/kasirgratisan`) — perlu `-R gudangdigital5758/profitku` | Konfigurasi default repo gh |
 | FUL-004 | P3 | Deploy tooling | VERIFIED | Deploy `npm run release` tidak menjalankan migrasi supabase; 2 migrasi baru sempat menunggu push manual | Dokumentasi sudah ada di §13; pertimbangkan script `release` + `supabase db push` berurutan |
 | FUL-005 | P2 | Secret hygiene | VERIFIED | PAT `sbp_...` sempat dipakai di sesi (chat + command history) | Sudah dirotasi user; catat: jangan tempel token di chat |
 | FUL-006 | P2 | Monitoring | UNVERIFIED | Tidak ada alerting otomatis untuk kegagalan fulfillment/webhook (platform_events hanya dicatat) | Dashboard admin events + notifikasi internal bila payment COMPLETED tanpa subscription |
+| FUL-007 | P1 | fulfill_cloud_payment_batch | VERIFIED (OPEN) | `20260812150000_batch_checkout.sql` line 189 `raw = raw,` di UPDATE payments — pola ambiguity sama dengan FUL-001 | Migrasi fix serupa (rename variabel) — butuh approval, di luar scope FUL-001 |
 
 ### Hasil pengukuran pass 2
 
 - `npm test` worker: 55/55 (8 file) — rate-limit KV (4), voucher server (20), pin (5), webhook (7), team-login (4), admin-rbac (6), env-guards (6), affiliate-payout (3).
 - `npx tsc --noEmit` worker: clean. Root (pass 1): 132 test PASS, lint 0 error.
-- Migrasi: 56 file di repo; 2 migrasi baru ter-push ke prod (store_public_subset, affiliate_payout_atomic) + diverifikasi (fn/view ada, policy lama hilang).
+- Migrasi: 57 file di repo (fix FUL-001 = 20260817020000); 2 migrasi sebelumnya ter-push ke prod + diverifikasi; **migrasi fix FUL-001 belum di-push ke prod (BLOCKED — tanpa kredensial)**.
 - Deployment live: Worker profitku-api (KV binding RATE_LIMIT_KV terverifikasi), POS, Admin.
-- CI: Web ✅ API ✅ Deploy ✅ di semua commit terakhir; db-integration ❌ (FUL-001).
+- CI: **semua hijau di `f0b4e76`** — Web ✅ API ✅ db-integration ✅ Deploy ✅ (run 31997936793).
 
 ---
 

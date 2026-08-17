@@ -25,7 +25,7 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 - C: owner mismatch ditolak.
 - D: payment kedua toko sama → extend, bukan duplikat.
 
-CI: job `db-integration` (postgres:15 service). Status pass 2 (2026-08-17): **RED — FUL-001**: `fulfill_cloud_payment` (migrasi `20260811110000_cloud_billing_atomic.sql`) error `column reference "raw" is ambiguous` di PG15 — variabel plpgsql `raw` bentrok dengan kolom `payments.raw` pada `SET raw = raw || ...`. Ini bug migrasi yang sah (bukan bug harness): harness sudah melalui 6 iterasi fix (path, role anon/authenticated/service_role, dependency migrasi vouchers, kolom `raw_user_meta_data`, trigger-driven profiles, parameter pg `$1/$2/$3`). Fix migrasi butuh approval (rename variabel → `raw_json`) — detail: `progress/PHASE-0-AUDIT.md` §14 FUL-001.
+CI: job `db-integration` (postgres:15 service). Status pass 2: **GREEN setelah fix FUL-001** (run 31997936793, commit `f0b4e76`). Riwayat: harness melewati 6 iterasi fix harness (path, role anon/authenticated/service_role, dependency migrasi vouchers, kolom `raw_user_meta_data`, trigger-driven profiles, parameter pg `$1/$2/$3`) lalu menemukan bug migrasi asli: `fulfill_cloud_payment` error `column reference "raw" is ambiguous` di PG15 — variabel plpgsql `raw` bentrok dengan kolom `payments.raw` pada `SET raw = raw || ...`. Fix: migrasi `20260817020000_fix_fulfill_cloud_payment_raw.sql` (rename `raw`→`raw_json`). **Prod: UNVERIFIED / remediation BLOCKED** (tanpa kredensial Supabase). FUL-002 (test bucket rate-limit) diperbaiki dengan fake timers — 3× run 55/55.
 
 ## Baseline
 
