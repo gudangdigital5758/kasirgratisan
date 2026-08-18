@@ -197,6 +197,7 @@ Semua 32 definisi function di migrasi diperiksa untuk kolisi variabel/parameter 
 ### Hasil pengukuran pass 2
 
 - `npm test` worker: 55/55 (8 file) — rate-limit KV (4), voucher server (20), pin (5), webhook (7), team-login (4), admin-rbac (6), env-guards (6), affiliate-payout (3).
+- 2026-08-18 (verifikasi lanjutan FUL-007): harness DB 3x PASS lokal (embedded Postgres UTF8, tanpa docker) + `scripts/verify-raw-rename.mjs` membuktikan fix FUL-001/FUL-007 = pure rename variabel (behavior-identical).
 - `npx tsc --noEmit` worker: clean. Root (pass 1): 132 test PASS, lint 0 error.
 - Migrasi: 57 file di repo (fix FUL-001 = 20260817020000); 2 migrasi sebelumnya ter-push ke prod + diverifikasi; **migrasi fix FUL-001 belum di-push ke prod (BLOCKED — tanpa kredensial)**.
 - Deployment live: Worker profitku-api (KV binding RATE_LIMIT_KV terverifikasi), POS, Admin.

@@ -77,3 +77,4 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 - Production: **UNVERIFIED / BLOCKED** (tanpa kredensial).
 - Ambiguity sweep: **SELESAI** - 32 function billing diperiksa; hanya FUL-001 + FUL-007 confirmed (keduanya fixed di repo); sisanya SAFE.
 - Worker tests: 55/55 x3, typecheck clean, secret scan bersih.
+- Local verification (2026-08-18): harness DB 3x PASS (embedded Postgres 18/UTF8; 21 asersi A-H, 0 FAIL; 1 run tanpa output = artefak tooling lokal port-5432, bukan repo). Fix dibuktikan pure rename via `scripts/verify-raw-rename.mjs`. Worker 55/55 x3, typecheck clean, lint 0 error.

@@ -31,6 +31,10 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 
 CI: **GREEN** — run 31997936793 (FUL-001 fix) dan 31998685184 (FUL-007 fix + test batch E-H). Prod: UNVERIFIED / remediation BLOCKED (tanpa kredensial Supabase). FUL-002 (test bucket rate-limit) diperbaiki dengan fake timers — 3× run 55/55.
 
+Lokal (2026-08-18): harness dijalankan 3× terhadap embedded Postgres 18 (UTF8, tanpa docker) — **ALL INTEGRATION TESTS PASSED 3×**, 0 FAIL (21 asersi A–H per run). Catatan 1 run tanpa output: artefak tooling lokal (postgres sisa memegang port 5432), bukan kegagalan harness/repo. Fix FUL-001 + FUL-007 dibuktikan behavior-identical via `scripts/verify-raw-rename.mjs` (reverse-rename body function → identik dengan migrasi asli). Worker suite 55/55 3× (2026-08-18).
+
+**Bukti fail-on-buggy (2026-08-18)**: migrasi asli `20260812150000_batch_checkout.sql` dijalankan terhadap Postgres kosong → pemanggilan `fulfill_cloud_payment_batch` gagal dengan `ERROR: column reference "raw" is ambiguous` (context: `UPDATE public.payments ... raw = raw`). Dengan migrasi fix `20260817030000` → seluruh test E–H PASS. Artinya test memang gagal di versi buggy dan pass di versi fixed.
+
 ## Baseline
 
 | Item | Hasil |
