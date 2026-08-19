@@ -38,7 +38,7 @@ Status: **FINDINGS RECORDED** (audit 2026-08-17, berbasis source code/migrations
 | SEC-009 | P3 | Timing compare PIN | VERIFIED | `team.ts:293,349,704` perbandingan string | Timing side-channel (teoritis via network) | `crypto.subtle` timing-safe / bandingkan digest penuh | `routes/team.ts` | LOW |
 | SEC-010 | P2 | Account lifecycle | UNVERIFIED | Tidak ditemukan endpoint export/hapus data user di Worker | Kepatuhan UU PDP (hak akses/hapus) | Verifikasi + tambah endpoint delete/export + dokumentasi retensi | worker routes | MEDIUM |
 | SEC-011 | P2 | Cron manual | VERIFIED | `routes/cron.ts` guard `WEBHOOK_SECRET` header (bukan signature) | Secret statis di header; replay/leak → trigger cron | Pindah ke signature HMAC per-request atau panggil via `scheduled()` saja | `routes/cron.ts` | MEDIUM |
-| SEC-012 | P3 | Webhook fallback token | VERIFIED | `sumopod.ts:127-130` `X-Webhook-Token` sebagai alternatif verifikasi (nilai statis) | Token statis bocor → forge webhook | Wajibkan Svix HMAC; nonaktifkan fallback token | `lib/sumopod.ts`, `index.ts:514-524` | MEDIUM |
+| SEC-012 | P3 | Webhook fallback token | **PARTIALLY RESOLVED (2026-08-19)** | `sumopod.ts:127-130` `X-Webhook-Token` alternatif verifikasi. **Kini di-gate**: `SUMOPOD_ALLOW_TOKEN_FALLBACK` (default allow + warn saat dipakai; `"false"` → tolak, 401). Prod masih default (allow) — flip `false` setelah Svix delivery terverifikasi di dashboard | Token statis bocor → forge webhook | Set `SUMOPOD_ALLOW_TOKEN_FALLBACK=false` di prod setelah verifikasi Svix (gate sudah siap) | `lib/sumopod.ts`, `index.ts` webhook handler | MEDIUM |
 
 ## Catatan tambahan
 
@@ -48,4 +48,7 @@ Status: **FINDINGS RECORDED** (audit 2026-08-17, berbasis source code/migrations
 - `stores_public_read` + `qris_id` (migrasi `20260816230000_store_qris.sql`) saling terkait — QRIS statis toko terekspos publik jika toko `is_public`.
 - Provider webhook: SumoPod aktif di `wrangler.toml` (`PAYMENT_PROVIDER=sumopod`) — verifikasi secret `SUMOPOD_WEBHOOK_SECRET` ter-set di prod, bukan hanya token fallback.
 - Rate limit global `/api/*` = 120/menit/user-IP per isolate — lihat SEC-002.
+- **FUL-010 (2026-08-19)**: SumoPod **tidak punya endpoint status** (docs resmi Quick Start: hanya POST /api/v1/payments + webhook). Polling `getSumopodPaymentStatus` dihapus (commit 837444c); verify SumoPod → PENDING tanpa panggilan provider. Webhook SumoPod kini: amount wajib (fail-closed), dedupe event via `request_id`, audit trail `webhook.sumopod` ke platform_events (commit c206293).
+- **FUL-008/009 CLOSED (2026-08-19)**: 9 PENDING terbukti unpaid di provider (7 expired + 2 cancelled via dashboard). Reconciliation: 9 → FAILED dengan audit trail `payment.stale_pending` (AUTO_FAIL_STALE_PENDING=true). Exposure final **Rp0**.
+- **FUL-001/007 (2026-08-18)**: fungsi produksi TERVERIFIKASI (`raw_json` di prosrc; migrasi fix ter-push; local integration 3× + CI).
 
