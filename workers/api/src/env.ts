@@ -31,6 +31,8 @@ export interface Env {
   MIDTRANS_CLIENT_KEY?: string;
   XENDIT_SECRET_KEY?: string;
   WEBHOOK_SECRET?: string;
+  /** HMAC key khusus manual /api/cron/* (timestamp + method + path). */
+  CRON_HMAC_SECRET?: string;
   /** "production" → blokir PAYMENT_PROVIDER=mock & cron tanpa secret (BILL-006/SEC-003). */
   ENVIRONMENT?: string;
   /** "true" → aktifkan /api/dev/* (SEC-003; default nonaktif). */
