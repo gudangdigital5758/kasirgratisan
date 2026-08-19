@@ -30,22 +30,21 @@ function stubSupabase(routes: (url: string) => Response) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('POST /api/payments/verify/:id (SumoPod — FUL-010 hardening)', () => {
+describe('POST /api/payments/verify/:id (SumoPod — FUL-010: tanpa endpoint status)', () => {
   const env = makeEnv({ PAYMENT_PROVIDER: 'sumopod', SUMOPOD_API_KEY: 'sp-key' });
 
-  it('status lookup gagal → tetap PENDING + platform_events tercatat (tidak ditelan diam-diam)', async () => {
-    const posts: string[] = [];
+  it('verify SumoPod → PENDING tanpa panggilan provider (status hanya via webhook)', async () => {
+    const providerCalls: string[] = [];
     const fn = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/auth/v1/user')) return json({ id: 'u1', email: 'a@b.c', user_metadata: {} });
       if (url.includes('/rest/v1/payments?id=eq.verify1')) {
         return json([{ id: 'verify1', plan_id: 'cloud_monthly', status: 'PENDING', user_id: 'u1', amount: 25000 }]);
       }
-      if (url.includes('/rest/v1/platform_events')) {
-        posts.push(url);
-        return json([]);
+      if (url.includes('api-pay.sumopod.com')) {
+        providerCalls.push(url);
+        return json({}, 500);
       }
-      if (url.includes('api-pay.sumopod.com')) return json({ error: 'boom' }, 500);
       if (url.includes('/rest/v1/app_settings')) return json([]);
       return json([]);
     });
@@ -59,8 +58,11 @@ describe('POST /api/payments/verify/:id (SumoPod — FUL-010 hardening)', () => 
       env,
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ message: 'Menunggu pembayaran', transaction: { id: 'verify1', status: 'PENDING' } });
-    // Event error tercatat ke platform_events (POST), bukan hilang.
-    expect(posts.some((u) => u.includes('/rest/v1/platform_events'))).toBe(true);
+    expect(await res.json()).toMatchObject({
+      message: 'Menunggu konfirmasi webhook pembayaran',
+      transaction: { id: 'verify1', status: 'PENDING' },
+    });
+    // FUL-010: tidak boleh ada pemanggilan ke provider sama sekali.
+    expect(providerCalls).toHaveLength(0);
   });
 });

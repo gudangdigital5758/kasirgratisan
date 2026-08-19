@@ -79,9 +79,9 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 - Worker tests: 55/55 x3, typecheck clean, secret scan bersih.
 - Local verification (2026-08-18): harness DB 3x PASS (embedded Postgres 18/UTF8; 21 asersi A-H, 0 FAIL; 1 run tanpa output = artefak tooling lokal port-5432, bukan repo). Fix dibuktikan pure rename via `scripts/verify-raw-rename.mjs`. Worker 55/55 x3, typecheck clean, lint 0 error.
 
-## FUL-010 — SUMOPOD STATUS ENDPOINT INVALID (2026-08-18)
-- Root cause: `getSumopodPaymentStatus` memanggil `GET /api-pay.sumopod.com/api/v1/payments/{orderId}` yang **tidak terdaftar** (404 `page not found` dengan key valid; hanya `POST /api/v1/payments` terbukti). Akibat: polling verify SumoPod tidak pernah sukses; error ditelan → PENDING menggantung tanpa jalur pulih; kontributor pola 9 PENDING (FUL-008).
-- Status repository hardening: **DONE (repo)** — webhook amount wajib + dedupe event + audit trail platform_events + gate token fallback (SEC-012) + verifikasi error tercatat + cron stale-pending alert (default non-destruktif). Test worker 63/63 x3 (2026-08-18).
-- Status endpoint fix: **BLOCKED** — butuh dokumentasi endpoint status dari dashboard merchant SumoPod (satu-satunya sumber otoritatif); tidak ada docs publik. Tanpa itu, tidak ada path yang benar untuk diverifikasi.
-- FUL-009 (status 2 payment): tetap **BLOCKED** sampai endpoint benar + SUMOPOD_API_KEY tersedia lokal.
-- Worker tests: 63/63 x3, typecheck clean, lint 0 error (2026-08-18). Production function tidak diubah.
+## FUL-010 — SUMOPOD STATUS ENDPOINT INVALID (2026-08-18 → 08-19)
+- Root cause: `getSumopodPaymentStatus` memanggil `GET /api-pay.sumopod.com/api/v1/payments/{orderId}` yang **tidak terdaftar** (404 dengan key valid). Dokumentasi resmi dashboard (Quick Start Managed Payment, 2026-08-19) mengonfirmasi: **TIDAK ADA endpoint status** — API hanya `POST /api/v1/payments` (create) + webhook events (`payment.completed/failed/expired/test`, verifikasi Svix + X-Webhook-Token). Status final hanya via webhook (bisa di-resend dari dashboard → Settings → Webhooks) atau tab Payments dashboard.
+- Fix (2026-08-19, repo): **hapus jalur polling status SumoPod** — `getSumopodPaymentStatus`/`isSumopodPaidStatus`/`isSumopodFailedStatus` dihapus dari `lib/sumopod.ts`; `verifyPayment` SumoPod kini langsung balas PENDING ("menunggu konfirmasi webhook") tanpa panggilan provider. Test diperbarui (tanpa pemanggilan provider). Typecheck clean, worker 63/63 PASS.
+- Hardening sebelumnya (commit c206293, 2026-08-18): webhook amount wajib + dedupe event + audit trail platform_events + gate token fallback (SEC-012) + cron stale-pending (alert-only default).
+- FUL-009 (status 2 payment `00121cc8`, `9c02932e`): **BLOCKED** — tidak ada API status; verifikasi read-only hanya via tab Payments dashboard (butuh sesi login; sesi patchright tidak persisten) atau webhook resend (bukan read-only). Rekomendasi: cek manual tab Payments (Live/Sandbox) oleh owner.
+- Production function tidak diubah.

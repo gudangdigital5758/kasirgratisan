@@ -4,6 +4,10 @@
  *  - POST /api/v1/payments  (X-Api-Key) → payment_link_url
  *  - Webhook events: payment.completed | payment.failed | payment.expired | payment.test
  *  - Verifikasi: Svix-style HMAC (svix-id.svix-timestamp.body) ATAU X-Webhook-Token.
+ *
+ * FUL-010 (2026-08-19): TIDAK ada endpoint status/check yang terdokumentasi —
+ * dokumentasi resmi hanya create + webhook. Status payment final hanya datang
+ * via webhook (bisa di-resend dari dashboard → Settings → Webhooks).
  */
 import type { Env } from '../env';
 
@@ -134,53 +138,8 @@ export function verifySumopodToken(env: Env, token?: string | null): boolean {
   return Boolean(expected && token && token === expected);
 }
 
-export type SumopodStatusResult = {
-  orderId: string;
-  paymentId?: string;
-  status: string;
-  raw: Record<string, unknown>;
-};
-
-const PAID_SUMOPOD_STATUSES = new Set(['completed', 'paid', 'success', 'settled', 'captured']);
-const FAILED_SUMOPOD_STATUSES = new Set(['failed', 'expired', 'cancelled', 'canceled', 'denied']);
-
-/**
- * Cek status payment SumoPod (dipakai polling verifyPayment).
- * Status dianggap "paid" bila stringnya berisi salah satu dari PAID_SUMOPOD_STATUSES.
- * Throws bila API tidak bisa dihubungi — pemanggil harus toleran (anggap PENDING).
- */
-export async function getSumopodPaymentStatus(
-  env: Env,
-  orderId: string,
-): Promise<SumopodStatusResult> {
-  const apiKey = env.SUMOPOD_API_KEY;
-  if (!apiKey) throw new Error('SUMOPOD_API_KEY belum di-set');
-  const res = await fetch(`${API_BASE}/api/v1/payments/${encodeURIComponent(orderId)}`, {
-    headers: { Accept: 'application/json', 'X-Api-Key': apiKey },
-  });
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) {
-    throw new Error(
-      String(data.error || data.message || '') || `SumoPod status HTTP ${res.status}`,
-    );
-  }
-  return {
-    orderId: String(data.order_id || orderId),
-    paymentId: data.payment_id ? String(data.payment_id) : undefined,
-    status: String(data.status || 'pending'),
-    raw: data,
-  };
-}
-
-export function isSumopodPaidStatus(status: string): boolean {
-  const s = status.toLowerCase();
-  return PAID_SUMOPOD_STATUSES.has(s) || [...PAID_SUMOPOD_STATUSES].some((k) => s.includes(k));
-}
-
-export function isSumopodFailedStatus(status: string): boolean {
-  const s = status.toLowerCase();
-  return FAILED_SUMOPOD_STATUSES.has(s) || [...FAILED_SUMOPOD_STATUSES].some((k) => s.includes(k));
-}
+// FUL-010 (2026-08-19): endpoint status SumoPod TIDAK ADA — getSumopodPaymentStatus
+// dihapus. Status final hanya via webhook events (payment.completed/failed/expired).
 
 export function isSumopodPaidEvent(eventType?: string): boolean {
   return eventType === 'payment.completed';

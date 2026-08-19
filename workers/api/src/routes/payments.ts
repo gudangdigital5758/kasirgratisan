@@ -6,7 +6,6 @@ import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireUser, resolveOwnedStoreId } from './helpers';
 import { sbGet, sbPost, sbPatch } from '../lib/supabase';
-import { writeEvent } from '../lib/admin';
 import { notifySubscriptionActivated } from '../lib/lifecycle';
 import { fulfillCompletedPayment } from '../lib/payments';
 import {
@@ -25,9 +24,6 @@ import {
 } from '../lib/midtrans';
 import {
   createSumopodPayment,
-  getSumopodPaymentStatus,
-  isSumopodFailedStatus,
-  isSumopodPaidStatus,
   sumopodConfigured,
 } from '../lib/sumopod';
 import { normalizeVoucherCode, resolveListPrice, validateVoucherForUser } from '../lib/vouchers';
@@ -840,59 +836,14 @@ paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
     }
 
     if (provider === 'sumopod') {
-      if (!sumopodConfigured(c.env)) {
-        return c.json({ error: 'SUMOPOD_API_KEY belum dikonfigurasi' }, 503);
-      }
-      let st;
-      try {
-        st = await getSumopodPaymentStatus(c.env, id);
-      } catch (err) {
-        // FUL-010: endpoint status SumoPod belum tersedia/dikenal — jangan gagalkan
-        // polling (tetap PENDING), TAPI catat ke platform_events agar tidak hilang
-        // diam-diam (gap FUL-008).
-        console.warn('[verify sumopod] status lookup', err);
-        await writeEvent(c.env, {
-          level: 'warn',
-          type: 'payment.verify_sumopod_error',
-          source: 'api',
-          subjectUserId: userId,
-          payload: { paymentId: id, error: err instanceof Error ? err.message : 'status_lookup_failed' },
-        });
-        return c.json({
-          message: 'Menunggu pembayaran',
-          transaction: { id, status: 'PENDING' },
-        });
-      }
-      if (isSumopodPaidStatus(st.status)) {
-        await fulfillCompletedPayment(c.env, {
-          paymentId: id,
-          userId: String(userId),
-          userEmail: c.get('userEmail'),
-          provider: 'sumopod',
-          providerRef: st.paymentId || st.orderId,
-          sumopodRaw: st.raw,
-        });
-        return c.json({
-          message: 'Pembayaran terverifikasi',
-          transaction: { id, status: 'COMPLETED' },
-          sumopodStatus: st.status,
-        });
-      }
-      if (isSumopodFailedStatus(st.status)) {
-        await sbPatch(c.env, `payments?id=eq.${id}`, {
-          status: 'FAILED',
-          raw: { sumopod: st.raw },
-        });
-        return c.json({
-          message: 'Pembayaran gagal / dibatalkan',
-          transaction: { id, status: 'FAILED' },
-          sumopodStatus: st.status,
-        });
-      }
+      // FUL-010 (2026-08-19): SumoPod Managed Payment TIDAK menyediakan endpoint
+      // status (dokumentasi resmi Quick Start: hanya POST /api/v1/payments +
+      // webhook events payment.completed/failed/expired/test). Polling tidak
+      // mungkin dilakukan — payment tetap PENDING sampai webhook tiba (atau
+      // webhook di-resend dari dashboard SumoPod → Settings → Webhooks).
       return c.json({
-        message: 'Menunggu pembayaran',
+        message: 'Menunggu konfirmasi webhook pembayaran',
         transaction: { id, status: 'PENDING' },
-        sumopodStatus: st.status,
       });
     }
 
