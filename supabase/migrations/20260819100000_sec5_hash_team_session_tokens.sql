@@ -3,13 +3,13 @@
 --   reverse), unique index.
 -- - revoke DML anon/authenticated (defense-in-depth; RLS sudah aktif deny-all).
 -- - Kolom token plaintext DIHAPUS di migration B setelah kode live (lookup hash).
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 alter table public.cloud_team_sessions
   add column if not exists token_hash text;
 
 update public.cloud_team_sessions
-   set token_hash = encode(digest(token, 'sha256'), 'hex')
+   set token_hash = encode(extensions.digest(token, 'sha256'), 'hex')
  where token_hash is null
    and token is not null;
 
