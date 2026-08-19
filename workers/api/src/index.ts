@@ -110,8 +110,10 @@ app.use('*', async (c, next) => {
         'capacitor://localhost',
         'http://localhost',
       ];
-      // Pages preview subdomain dashboard (sebelum custom domain terpasang).
-      if (/^https:\/\/[\w-]*\.?profitku-cloud-dashboard\.pages\.dev$/.test(o)) return o;
+      // Pages preview admin — scoped ke project resmi `profitku-admin` (SEC-007).
+      // Izinkan https://profitku-admin.pages.dev dan <hash>.profitku-admin.pages.dev
+      // (preview per PR); TIDAK mengizinkan subdomain project lain/attacker.
+      if (/^https:\/\/(?:[\w-]+\.)*profitku-admin\.pages\.dev$/.test(o)) return o;
       return allow.includes(o) ? o : origin;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
