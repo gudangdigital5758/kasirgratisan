@@ -126,7 +126,7 @@ R2 — backup JSON per user/store + quota reservation
 
 ## 12. Status item yang masih PARTIALLY VERIFIED / UNVERIFIED
 
-- Handler `POST /admin/api/members/:id/extend-subscription` (logika atomik & audit belum dibaca penuh).
+- Handler `POST /admin/api/members/:id/extend-subscription` (logika atomik & audit **SUDAH DIBACA PENUH 2026-08-19**): RBAC `canMutateBilling` (403 non-billing), clamp days 1–365, extend dari `max(now, current_period_end)` (tidak memotong periode), provider='manual', `writeAudit` + `writeEvent`. Catatan P3: hanya extend sub terbaru per user (bukan per store) + tidak validasi UUID param; insert tanpa store_id (legacy account-level).
 - RLS `cloud_team_members` (detail policy select untuk non-owner).
 - Konfigurasi deployment aktual Supabase/Cloudflare di luar repo (secrets, custom domain, Access).
 - Endpoint export/hapus data user (UU PDP) — tidak ditemukan (UNVERIFIED).
@@ -163,8 +163,8 @@ R2 — backup JSON per user/store + quota reservation
 | ID | Sev | Komponen | State | Evidence | Aksi |
 |---|---|---|---|---|---|
 | FUL-002 | P3 | Test flaky | RESOLVED (2026-08-17) | Test bucket rate-limit pakai sleep nyata (10ms/15ms) → flaky. Fix: fake timers (`vi.useFakeTimers` + `advanceTimersByTime(10_001)`), window 10s; test juga kini assert blocked sebelum rollover (lebih ketat). 3× run 55/55 | — |
-| FUL-003 | P3 | Infra test | VERIFIED | `gh` CLI di mesin ter-auth ke repo lain (`jipraks/kasirgratisan`) — perlu `-R gudangdigital5758/profitku` | Konfigurasi default repo gh |
-| FUL-004 | P3 | Deploy tooling | VERIFIED | Deploy `npm run release` tidak menjalankan migrasi supabase; 2 migrasi baru sempat menunggu push manual | Dokumentasi sudah ada di §13; pertimbangkan script `release` + `supabase db push` berurutan |
+| FUL-003 | P3 | Infra test | **RESOLVED (2026-08-19)** | `gh repo set-default gudangdigital5758/kasirgratisan` (repo GitHub sebenarnya; nama display "profitku") | Konfigurasi default repo gh | — | — |
+| FUL-004 | P3 | Deploy tooling | **RESOLVED-BY-DOC (2026-08-19)** | `npm run release` tidak menjalankan migrasi; keputusan: push manual (`supabase db push` → `npm run release`), pengingat ditambahkan di `docs/PRODUCTION-STABILIZE.md` | Migrasi terlewat saat release | — | — |
 | FUL-005 | P2 | Secret hygiene | VERIFIED | PAT `sbp_...` sempat dipakai di sesi (chat + command history) | Sudah dirotasi user; catat: jangan tempel token di chat |
 | FUL-006 | P2 | Monitoring | UNVERIFIED | Tidak ada alerting otomatis untuk kegagalan fulfillment/webhook (platform_events hanya dicatat) | Dashboard admin events + notifikasi internal bila payment COMPLETED tanpa subscription |
 | FUL-007 | P1 | fulfill_cloud_payment_batch | REPOSITORY FIXED / PRODUCTION UNVERIFIED (2026-08-17) | `20260812150000_batch_checkout.sql` line 189 `raw = raw,` di UPDATE payments — ambiguity identik FUL-001. Fix: migrasi `20260817030000_fix_batch_fulfillment_raw.sql` (rename `raw`→`raw_json`). CI GREEN (run 31998685184) dengan test batch E-H: normal+replay idempotent, 5 concurrent, owner mismatch, item alien dilewati | Push migrasi ke prod menyusul (BLOCKED — tanpa kredensial) |

@@ -5,6 +5,8 @@ Jalankan berurutan; centang manual di sini atau di issue.
 
 **Terakhir dicek otomatis (API):** `https://api.profitku.my.id/health?full=1`  
 Harapan minimum: `ok`, `supabase`, `r2`, `onesignal` = true (Resend/Fonnte opsional).
+> **PENTING (FUL-004)**: `npm run release` TIDAK menjalankan migrasi Supabase. Sebelum deploy fitur yang menyentuh DB, jalankan `supabase db push` manual lebih dulu, lalu `npm run release`. Migrasi terbaru: lihat `supabase/migrations/` (urutkan by timestamp).
+
 > SEC-006 (2026-08-19): `/health` publik di production = subset aman; detail penuh hanya via `?full=1`.
 
 ---
