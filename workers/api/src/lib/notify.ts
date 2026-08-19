@@ -94,13 +94,14 @@ export async function sendPush(
 /** Kirim email via Resend (opsional — no-op jika key kosong). */
 export async function sendEmail(
   env: Env,
-  opts: { to: string; subject: string; html: string },
+  opts: { to: string | string[]; subject: string; html: string },
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
   if (!env.RESEND_API_KEY) {
-    console.log('[notify] RESEND_API_KEY kosong — skip email', opts.to, opts.subject);
+    console.log('[notify] RESEND_API_KEY kosong — skip email', opts.subject);
     return { ok: false, error: 'resend_not_configured' };
   }
   const from = env.RESEND_FROM || 'Profitku <noreply@profitku.my.id>';
+  const recipients = Array.isArray(opts.to) ? opts.to : [opts.to];
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -109,7 +110,7 @@ export async function sendEmail(
     },
     body: JSON.stringify({
       from,
-      to: [opts.to],
+      to: recipients,
       subject: opts.subject,
       html: opts.html,
     }),

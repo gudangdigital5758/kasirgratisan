@@ -25,22 +25,38 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-async function trigger(fetchStub: (url: string) => Response): Promise<Response> {
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => fetchStub(String(input))));
-  return worker.fetch(
+async function trigger(fetchStub: (url: string) => Response, envOverrides: Partial<Env> = {}): Promise<{ res: Response; resendCalls: number }> {
+  let resendCalls = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api.resend.com')) {
+        resendCalls++;
+        return json({ id: 'email-1' });
+      }
+      return fetchStub(url);
+    }),
+  );
+  const res = await worker.fetch(
     new Request('https://api.profitku.my.id/api/cron/billing-health', {
       method: 'POST',
       headers: { 'x-cron-secret': 'sekret' },
     }),
-    makeEnv(),
+    makeEnv({
+      RESEND_API_KEY: 're-test',
+      ADMIN_EMAILS: 'ops@profitku.my.id',
+      ...envOverrides,
+    }),
   );
+  return { res, resendCalls };
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('POST /api/cron/billing-health (FUL-006 + SEC-008 lanjutan)', () => {
-  it('COMPLETED tanpa subscription_id (24 jam) → alert billing.payment_completed_without_subscription', async () => {
-    const res = await trigger((url) => {
+  it('COMPLETED tanpa subscription_id (24 jam) → alert + email admin', async () => {
+    const { res, resendCalls } = await trigger((url) => {
       if (url.includes('/rest/v1/payments?status=eq.COMPLETED')) {
         return json([{ id: 'pay-x', user_id: 'u1', amount: 25000 }]);
       }
@@ -50,10 +66,11 @@ describe('POST /api/cron/billing-health (FUL-006 + SEC-008 lanjutan)', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, checkedCompleted: 1, legacyPins: 0, alerts: 1 });
+    expect(resendCalls).toBe(1);
   });
 
-  it('member dengan pin_hash legacy SHA-256 → alert billing.legacy_pin_hash', async () => {
-    const res = await trigger((url) => {
+  it('member dengan pin_hash legacy SHA-256 → alert + email admin', async () => {
+    const { res, resendCalls } = await trigger((url) => {
       if (url.includes('/rest/v1/payments?status=eq.COMPLETED')) return json([]);
       if (url.includes('/rest/v1/cloud_team_members')) {
         return json([
@@ -66,10 +83,11 @@ describe('POST /api/cron/billing-health (FUL-006 + SEC-008 lanjutan)', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, checkedCompleted: 0, legacyPins: 1, alerts: 1 });
+    expect(resendCalls).toBe(1);
   });
 
-  it('bersih → tidak ada alert', async () => {
-    const res = await trigger((url) => {
+  it('bersih → tidak ada alert & tidak ada email', async () => {
+    const { res, resendCalls } = await trigger((url) => {
       if (url.includes('/rest/v1/payments?status=eq.COMPLETED')) return json([]);
       if (url.includes('/rest/v1/cloud_team_members')) return json([]);
       if (url.includes('/rest/v1/platform_events')) return json([]);
@@ -77,5 +95,6 @@ describe('POST /api/cron/billing-health (FUL-006 + SEC-008 lanjutan)', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, checkedCompleted: 0, legacyPins: 0, alerts: 0 });
+    expect(resendCalls).toBe(0);
   });
 });

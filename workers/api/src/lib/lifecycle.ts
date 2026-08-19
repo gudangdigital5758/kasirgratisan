@@ -431,5 +431,24 @@ export async function flagBillingAnomalies(
     result.alerts += 1;
   }
 
+  // FUL-006: email ringkasan ke admin bila ada anomali (no-op tanpa RESEND_API_KEY).
+  if (result.alerts > 0 && env.ADMIN_EMAILS) {
+    const items: string[] = [];
+    if (result.checkedCompleted > 0) {
+      items.push(`${result.checkedCompleted} payment COMPLETED tanpa subscription_id (24 jam terakhir)`);
+    }
+    if (result.legacyPins > 0) {
+      items.push(`${result.legacyPins} member dengan pin_hash legacy SHA-256 (belum login ulang)`);
+    }
+    await sendEmail(env, {
+      to: env.ADMIN_EMAILS.split(/[,;\s]+/).filter(Boolean),
+      subject: `[Profitku] Billing alert: ${result.alerts} anomali`,
+      html:
+        '<p>Anomali billing terdeteksi (cron billing-health):</p><ul>' +
+        items.map((i) => `<li>${i}</li>`).join('') +
+        '</ul><p>Detail: platform_events tipe billing.* (source=cron).</p>',
+    }).catch(() => undefined);
+  }
+
   return result;
 }
