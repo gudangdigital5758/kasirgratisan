@@ -5,4 +5,5 @@
 -- NOTE: RLS SELECT sudah membatasi member ke baris sendiri; hardening kolom ini
 -- menghapus pin_hash dari response client secara defensif depth-in-depth.
 
-revoke insert, update, select on public.cloud_team_members(pin_hash) from anon, authenticated;
+revoke select (pin_hash), insert (pin_hash), update (pin_hash), references (pin_hash)
+  on public.cloud_team_members from anon, authenticated;
