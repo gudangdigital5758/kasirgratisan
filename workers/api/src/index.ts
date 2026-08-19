@@ -25,6 +25,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './env';
 import { getUserFromJwt, sbGet, sbPatch } from './lib/supabase';
+import { sha256Hex } from './lib/session';
 import { sendEmail } from './lib/notify';
 import { r2Configured, cleanupExpiredBackups, cleanupQuotaReservations } from './lib/backups';
 import { runDunningCron, flagStalePendingPayments } from './lib/lifecycle';
@@ -146,10 +147,11 @@ async function bearerAuth(c: {
     }
   }
   // Login tim cloud: Bearer team:<token> (sesi dari POST /api/team/login).
+  // SEC-005: lookup via token_hash (plaintext tidak disimpan).
   if (!userId && token?.startsWith('team:') && c.env.SUPABASE_URL && c.env.SUPABASE_SERVICE_ROLE_KEY) {
     const sessions = await sbGet<{ member_id: string }[]>(
       c.env,
-      `cloud_team_sessions?token=eq.${token.slice(5)}&expires_at=gt.now&select=member_id&limit=1` ,
+      `cloud_team_sessions?token_hash=eq.${await sha256Hex(token.slice(5))}&expires_at=gt.now&select=member_id&limit=1`,
     ).catch(() => [] as { member_id: string }[]);
     const memberId = sessions[0]?.member_id;
     if (memberId) {

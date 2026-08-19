@@ -18,6 +18,7 @@ import {
 import { rateLimit } from '../lib/rate-limit';
 import { sbGet, sbPost, sbPatch, sbDelete, SupabaseError } from '../lib/supabase';
 import { hashPin, verifyPin } from '../lib/pin';
+import { sha256Hex } from '../lib/session';
 
 const teamRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -380,9 +381,12 @@ teamRoutes.post('/team/login', async (c: AppContext) => {
 
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    // SEC-005: simpan HASH token saja; cleanup eager sesi expired member.
+    const tokenHash = await sha256Hex(token);
+    await sbDelete(c.env, `cloud_team_sessions?member_id=eq.${matches[0].id}&expires_at=lte.now`).catch(() => undefined);
     await sbPost(c.env, 'cloud_team_sessions', {
       member_id: matches[0].id,
-      token,
+      token_hash: tokenHash,
       expires_at: expiresAt,
     });
     return c.json({ ok: true, token, expiresAt, memberships });
@@ -902,6 +906,21 @@ teamRoutes.delete('/team/roles/:key', async (c: AppContext) => {
     if (err instanceof SupabaseError) return c.json({ error: String(err.message) }, 400);
     console.error('[roles delete]', err);
     return c.json({ error: 'Gagal menghapus role' }, 500);
+  }
+});
+
+/** Logout tim: hapus sesi aktif (SEC-005 revoke). Bearer team:<token>. */
+teamRoutes.post('/team/logout', async (c: AppContext) => {
+  const auth = c.req.header('Authorization') || '';
+  const token = auth.startsWith('Bearer team:') ? auth.slice('Bearer team:'.length).trim() : null;
+  if (!token) return c.json({ error: 'Belum login' }, 401);
+  try {
+    const tokenHash = await sha256Hex(token);
+    await sbDelete(c.env, `cloud_team_sessions?token_hash=eq.${tokenHash}`).catch(() => undefined);
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[team logout]', err);
+    return c.json({ error: 'Gagal logout' }, 500);
   }
 });
 

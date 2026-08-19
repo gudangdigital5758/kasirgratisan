@@ -104,7 +104,8 @@ describe('POST /api/team/login (PIN PBKDF2 — SEC-001)', () => {
       if (url.includes('/rest/v1/store_entitlements')) return json([{ store_id: STORE_ID, has_sync: true }]);
       if (url.includes('/rest/v1/stores')) return json([{ id: STORE_ID, name: 'Toko Uji', store_code: 'ABCD1234' }]);
       if (url.includes('/rest/v1/cloud_team_sessions')) {
-        sessionPosts++;
+        // SEC-005: login kini juga DELETE sesi expired member; hitung POST saja.
+        if (init?.method === 'POST') sessionPosts++;
         return json([{}]);
       }
       if (url.includes('/rest/v1/app_settings')) return json([]);
@@ -123,7 +124,8 @@ describe('POST /api/team/login (PIN PBKDF2 — SEC-001)', () => {
     stubSupabase((url, init) => {
       if (url.includes('/rest/v1/cloud_team_members')) return json([memberRow(pbkdf2Hash)]);
       if (url.includes('/rest/v1/cloud_team_sessions')) {
-        sessionPosts++;
+        // SEC-005: hitung POST sesi saja (login gagal → tidak boleh POST).
+        if (init?.method === 'POST') sessionPosts++;
         return json([{}]);
       }
       if (url.includes('/rest/v1/app_settings')) return json([]);
