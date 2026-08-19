@@ -20,6 +20,7 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 | `tests/cron-stale.test.ts` | 3 | 2026-08-18 `POST /api/cron/stale-pending`: default alert-only non-destruktif, `AUTO_FAIL_STALE_PENDING=true` → FAILED, production tanpa secret → 403 |
 | `tests/cors.test.ts` | 5 | 2026-08-19 SEC-007: ACAO `profitku-admin.pages.dev` + preview ✓; project tak terpakai/attacker ✗ (ACAO default); custom domain admin ✓ |
 | `tests/cron-hmac.test.ts` | 4 | 2026-08-19 SEC-011: HMAC valid jalan, legacy header ditolak setelah HMAC aktif, replay >5 menit ditolak, signature lintas-path ditolak |
+| `tests/health.test.ts` | 3 | 2026-08-19 SEC-006: production default subset aman (tanpa provider/config), `?full=1` detail penuh, non-production detail penuh |
 
 **Hardening FUL-010 (2026-08-18, repo):** webhook SumoPod kini (a) wajib `amount` pada event paid (fail-closed 400), (b) dedupe event via `request_id` (svix-id/body.id) sebelum fulfill, (c) audit trail `webhook.sumopod` ke `platform_events` (menutup gap FUL-008), (d) gate SEC-012 `SUMOPOD_ALLOW_TOKEN_FALLBACK=false` (default backward-compat + warn), dan (e) verifyPayment SumoPod mencatat error status-lookup ke platform_events. Cron `flagStalePendingPayments` (deteksi PENDING >48 jam, alert-only default). Test `team-login` rate-limit diberi timeout 30s (flake FUL-002: 11× PBKDF2 >5s default vitest pada mesin lambat).
 

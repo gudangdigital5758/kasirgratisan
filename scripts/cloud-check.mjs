@@ -94,7 +94,8 @@ const apiBase = (
 console.log(`\nAPI health: GET ${apiBase}/health`);
 let healthOk = false;
 try {
-  const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(8000) });
+  // SEC-006: detail hanya via ?full=1 (subset aman untuk publik).
+  const res = await fetch(`${apiBase}/health?full=1`, { signal: AbortSignal.timeout(8000) });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     console.log(`  [FAIL] HTTP ${res.status}`);

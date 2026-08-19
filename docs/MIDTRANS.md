@@ -55,9 +55,10 @@ npm run api:deploy
 Cek:
 
 ```bash
-curl https://api.profitku.my.id/health
+curl https://api.profitku.my.id/health?full=1
 # "paymentProvider":"midtrans", "midtrans":true
 ```
+> SEC-006 (2026-08-19): `/health` publik di production hanya mengekspos subset aman; detail provider/konfigurasi tersedia via `?full=1` (dipakai tooling internal).
 
 ---
 

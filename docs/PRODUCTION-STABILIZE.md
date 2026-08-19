@@ -3,8 +3,9 @@
 Fase **stabilisasi + deploy**, bukan fitur baru.  
 Jalankan berurutan; centang manual di sini atau di issue.
 
-**Terakhir dicek otomatis (API):** `https://api.profitku.my.id/health`  
+**Terakhir dicek otomatis (API):** `https://api.profitku.my.id/health?full=1`  
 Harapan minimum: `ok`, `supabase`, `r2`, `onesignal` = true (Resend/Fonnte opsional).
+> SEC-006 (2026-08-19): `/health` publik di production = subset aman; detail penuh hanya via `?full=1`.
 
 ---
 

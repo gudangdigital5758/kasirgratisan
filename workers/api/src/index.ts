@@ -252,8 +252,20 @@ app.route('/api', backupsRoutes); // /backups, /backups/:id/...
 app.route('/api', cronRoutes); // /cron/dunning, /cron/cleanup-backups
 app.route('/api', devRoutes); // /dev/notify-test (mock only)
 
-app.get('/health', (c) =>
-  c.json({
+app.get('/health', (c) => {
+  // SEC-006: endpoint publik hanya mengekspos subset aman di production;
+  // detail provider/konfigurasi hanya untuk ?full=1 (tooling/monitoring internal).
+  const isProduction = c.env.ENVIRONMENT === 'production';
+  const full = c.req.query('full') === '1' || !isProduction;
+  if (!full) {
+    return c.json({
+      ok: true,
+      service: 'profitku-api',
+      domain: 'api.profitku.my.id',
+      time: new Date().toISOString(),
+    });
+  }
+  return c.json({
     ok: true,
     service: 'profitku-api',
     domain: 'api.profitku.my.id',
@@ -266,8 +278,8 @@ app.get('/health', (c) =>
     midtrans: midtransConfigured(c.env),
     sumopod: sumopodConfigured(c.env),
     time: new Date().toISOString(),
-  }),
-);
+  });
+});
 
 // Webhooks internal
 app.get('/webhook/latest-version', (c) => {
