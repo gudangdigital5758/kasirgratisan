@@ -22,6 +22,7 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 | `tests/cron-hmac.test.ts` | 4 | 2026-08-19 SEC-011: HMAC valid jalan, legacy header ditolak setelah HMAC aktif, replay >5 menit ditolak, signature lintas-path ditolak |
 | `tests/health.test.ts` | 3 | 2026-08-19 SEC-006: production default subset aman (tanpa provider/config), `?full=1` detail penuh, non-production detail penuh |
 | `tests/team-session.test.ts` | 3 | 2026-08-19 SEC-005: login simpan token_hash (bukan plaintext) + DELETE expired; logout revoke via token_hash; logout tanpa token 401 |
+| `tests/billing-health.test.ts` | 3 | 2026-08-19 FUL-006/SEC-008: COMPLETED tanpa subscription → alert; pin_hash legacy → alert; bersih → 0 alert |
 
 **Hardening FUL-010 (2026-08-18, repo):** webhook SumoPod kini (a) wajib `amount` pada event paid (fail-closed 400), (b) dedupe event via `request_id` (svix-id/body.id) sebelum fulfill, (c) audit trail `webhook.sumopod` ke `platform_events` (menutup gap FUL-008), (d) gate SEC-012 `SUMOPOD_ALLOW_TOKEN_FALLBACK=false` (default backward-compat + warn), dan (e) verifyPayment SumoPod mencatat error status-lookup ke platform_events. Cron `flagStalePendingPayments` (deteksi PENDING >48 jam, alert-only default). Test `team-login` rate-limit diberi timeout 30s (flake FUL-002: 11× PBKDF2 >5s default vitest pada mesin lambat).
 

@@ -4,7 +4,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { runDunningCron, flagStalePendingPayments } from '../lib/lifecycle';
+import { runDunningCron, flagStalePendingPayments, flagBillingAnomalies } from '../lib/lifecycle';
 import { cleanupExpiredBackups } from '../lib/backups';
 import { verifyCronHmac } from '../lib/cron-auth';
 
@@ -57,6 +57,14 @@ cronRoutes.post('/cron/stale-pending', async (c: AppContext) => {
   const denied = await authorizeCron(c);
   if (denied) return denied;
   const result = await flagStalePendingPayments(c.env);
+  return c.json({ ok: true, ...result });
+});
+
+/** Cron manual / admin: scan anomali billing (FUL-006 + legacy pin_hash) */
+cronRoutes.post('/cron/billing-health', async (c: AppContext) => {
+  const denied = await authorizeCron(c);
+  if (denied) return denied;
+  const result = await flagBillingAnomalies(c.env);
   return c.json({ ok: true, ...result });
 });
 

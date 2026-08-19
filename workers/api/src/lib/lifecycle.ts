@@ -375,3 +375,61 @@ export async function flagStalePendingPayments(
 
   return result;
 }
+
+const LEGACY_PIN_HASH_RE = /^[0-9a-f]{64}$/;
+
+/**
+ * Cron harian: scan anomali billing (FUL-006 + SEC-008 lanjutan). Non-destruktif —
+ * hanya menulis alert ke platform_events.
+ * 1) Payment COMPLETED tanpa subscription_id (24 jam terakhir) → indikasi fulfill
+ *    tidak lengkap.
+ * 2) Member cloud_team_members dengan pin_hash legacy SHA-256 (64 hex) — belum
+ *    pernah login ulang pasca SEC-001; hash TIDAK bisa dimigrasi (butuh PIN),
+ *    hanya bisa di-upgrade saat login — alert agar ops tahu.
+ */
+export async function flagBillingAnomalies(
+  env: Env,
+): Promise<{ checkedCompleted: number; legacyPins: number; alerts: number }> {
+  const result = { checkedCompleted: 0, legacyPins: 0, alerts: 0 };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('[billing-anomalies] Supabase belum dikonfigurasi — skip');
+    return result;
+  }
+
+  const since = new Date(Date.now() - 24 * 3600 * 1000);
+  type CompletedPay = { id: string; user_id: string; amount: number };
+  const completed = await sbGet<CompletedPay[]>(
+    env,
+    `payments?status=eq.COMPLETED&subscription_id=is.null&updated_at=gte.${since.toISOString()}&select=id,user_id,amount&limit=50`,
+  ).catch(() => [] as CompletedPay[]);
+  result.checkedCompleted = completed.length;
+  for (const p of completed) {
+    await writeEvent(env, {
+      level: 'warn',
+      type: 'billing.payment_completed_without_subscription',
+      source: 'cron',
+      subjectUserId: p.user_id,
+      payload: { paymentId: p.id, amount: p.amount },
+    });
+    result.alerts += 1;
+  }
+
+  type MemberRow = { id: string; store_id: string; username: string | null; pin_hash: string | null };
+  const members = await sbGet<MemberRow[]>(
+    env,
+    `cloud_team_members?pin_hash=not.is.null&select=id,store_id,username,pin_hash&limit=200`,
+  ).catch(() => [] as MemberRow[]);
+  const legacy = members.filter((m) => m.pin_hash && LEGACY_PIN_HASH_RE.test(m.pin_hash));
+  result.legacyPins = legacy.length;
+  for (const m of legacy) {
+    await writeEvent(env, {
+      level: 'warn',
+      type: 'billing.legacy_pin_hash',
+      source: 'cron',
+      payload: { memberId: m.id, storeId: m.store_id, username: m.username },
+    });
+    result.alerts += 1;
+  }
+
+  return result;
+}

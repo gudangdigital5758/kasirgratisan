@@ -695,6 +695,19 @@ tanpa migrasi legacy.
 
 ---
 
+## 2026-08-19 — Provider pembayaran aktual (DEBT-003) + temuan SumoPod
+
+**Status:** Accepted
+
+**Decision:**
+1. **Provider aktif di production = SumoPod** (`PAYMENT_PROVIDER=sumopod`). Midtrans tetap didukung kode (dual-support, `MIDTRANS_SERVER_KEY` + `MIDTRANS_IS_PRODUCTION`) tetapi **tidak aktif** saat ini.
+2. **SumoPod tidak menyediakan endpoint status payment** (dokumentasi resmi Quick Start: hanya `POST /api/v1/payments` + webhook `payment.completed/failed/expired/test`; verifikasi Svix HMAC atau `X-Webhook-Token`). Jalur polling status dihapus (FUL-010); status final hanya via webhook (bisa di-resend dari dashboard → Settings → Webhooks) atau tab Payments dashboard.
+3. **`X-Webhook-Token` fallback** tetap diizinkan sementara (gate `SUMOPOD_ALLOW_TOKEN_FALLBACK`, SEC-012) — akan dimatikan setelah pengiriman webhook Svix terverifikasi.
+4. Webhook gagal terkirim → payment PENDING >48 jam → cron alert `payment.stale_pending` (auto-FAIL nonaktif sementara; diaktifkan setelah E2E webhook terverifikasi).
+
+**Implications:** webhook adalah satu-satunya jalur fulfillment SumoPod; verifikasi E2E webhook riil dijadwalkan (minggu depan) sebelum menutup SEC-011/012 enforcement dan mengaktifkan auto-FAIL.
+
+
 ## 2026-08-13 — Fase B: Laporan & Grafik di dashboard (keputusan merge + batasan data)
 
 **Status:** Accepted (progres: `docs/CLOUD-DASHBOARD-PLAN.md`)

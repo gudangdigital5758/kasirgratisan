@@ -28,7 +28,7 @@ import { getUserFromJwt, sbGet, sbPatch } from './lib/supabase';
 import { sha256Hex } from './lib/session';
 import { sendEmail } from './lib/notify';
 import { r2Configured, cleanupExpiredBackups, cleanupQuotaReservations } from './lib/backups';
-import { runDunningCron, flagStalePendingPayments } from './lib/lifecycle';
+import { runDunningCron, flagStalePendingPayments, flagBillingAnomalies } from './lib/lifecycle';
 import { resolveAdmin, writeEvent } from './lib/admin';
 import { isMaintenanceMode } from './lib/platform-settings';
 import { rateLimit, rateLimitKey, type RateLimitKv } from './lib/rate-limit';
@@ -729,6 +729,10 @@ export default {
         // Deteksi payment PENDING menggantung (>48 jam) — alert, bukan auto-repair.
         flagStalePendingPayments(env).then((r) => {
           console.log('[cron stale-pending]', r);
+        }),
+        // Anomali billing: COMPLETED tanpa subscription + pin_hash legacy (FUL-006).
+        flagBillingAnomalies(env).then((r) => {
+          console.log('[cron billing-health]', r);
         }),
       ]),
     );
