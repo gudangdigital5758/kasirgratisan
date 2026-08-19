@@ -73,7 +73,7 @@ function billingMock(rpc: () => unknown, pay: unknown = PAY) {
     if (url.includes('/rest/v1/payments')) return json([pay]);
     if (url.includes('/rest/v1/plans')) return json([{ name: 'Profitku Cloud' }]);
     if (url.includes('/rest/v1/profiles')) return json([{ phone: null }]);
-    if (url.includes('/rest/v1/platform_events')) return json([{}]);
+    if (url.includes('/rest/v1/platform_events')) return json([]);
     if (url.includes('/rest/v1/app_settings')) return json([]);
     return json([]);
   });
@@ -242,6 +242,97 @@ describe('POST /webhook/sumopod (Svix HMAC)', () => {
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, status: 'test' });
+  });
+
+  it('payment.completed tanpa amount → 400 payment amount missing (fail-closed)', async () => {
+    let rpcCalls = 0;
+    billingMock(() => (rpcCalls++, { alreadyDone: false }), SUMOPOD_PAY);
+    const rawBody = JSON.stringify({ type: 'payment.completed', data: { order_id: ORDER_ID, payment_id: 'SP-2' } });
+    const res = await worker.fetch(
+      new Request('https://api.profitku.my.id/webhook/sumopod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await svixHeaders(rawBody)) },
+        body: rawBody,
+      }),
+      env,
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'payment amount missing' });
+    expect(rpcCalls).toBe(0);
+  });
+
+  it('event id sama sudah diproses (platform_events) → dedupe tanpa fulfill kedua', async () => {
+    let rpcCalls = 0;
+    stubSupabase((url) => {
+      if (url.includes('/rpc/fulfill_cloud_payment')) {
+        rpcCalls++;
+        return json({ alreadyDone: false, subscriptionId: 's1', periodEnd: '2099-12-31T23:59:59.000Z', isLifetime: false });
+      }
+      if (url.includes('/rest/v1/payments')) return json([SUMOPOD_PAY]);
+      if (url.includes('/rest/v1/platform_events')) return json([{ id: 'evt-existing' }]);
+      if (url.includes('/rest/v1/profiles')) return json([{ phone: null }]);
+      if (url.includes('/rest/v1/plans')) return json([{ name: 'Profitku Cloud' }]);
+      if (url.includes('/rest/v1/app_settings')) return json([]);
+      return json([]);
+    });
+    const rawBody = JSON.stringify({
+      id: 'evt_dup1',
+      type: 'payment.completed',
+      data: { order_id: ORDER_ID, payment_id: 'SP-3', amount: 25000 },
+    });
+    const res = await worker.fetch(
+      new Request('https://api.profitku.my.id/webhook/sumopod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await svixHeaders(rawBody)) },
+        body: rawBody,
+      }),
+      env,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, skipped: 'duplicate_event' });
+    expect(rpcCalls).toBe(0);
+  });
+
+  it('token fallback dipakai secara default (backward-compat) → COMPLETED', async () => {
+    let rpcCalls = 0;
+    billingMock(
+      () => (rpcCalls++, { alreadyDone: false, subscriptionId: 's1', periodEnd: '2099-12-31T23:59:59.000Z', isLifetime: false }),
+      SUMOPOD_PAY,
+    );
+    const envTok = makeEnv({
+      PAYMENT_PROVIDER: 'sumopod',
+      SUMOPOD_WEBHOOK_TOKEN: 'wh_tok_test',
+    });
+    const rawBody = JSON.stringify({ type: 'payment.completed', data: { order_id: ORDER_ID, payment_id: 'SP-4', amount: 25000 } });
+    const res = await worker.fetch(
+      new Request('https://api.profitku.my.id/webhook/sumopod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-webhook-token': 'wh_tok_test' },
+        body: rawBody,
+      }),
+      envTok,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, status: 'COMPLETED' });
+    expect(rpcCalls).toBe(1);
+  });
+
+  it('token fallback ditolak saat SUMOPOD_ALLOW_TOKEN_FALLBACK=false (SEC-012) → 401', async () => {
+    const envDeny = makeEnv({
+      PAYMENT_PROVIDER: 'sumopod',
+      SUMOPOD_WEBHOOK_TOKEN: 'wh_tok_test',
+      SUMOPOD_ALLOW_TOKEN_FALLBACK: 'false',
+    });
+    const rawBody = JSON.stringify({ type: 'payment.completed', data: { order_id: ORDER_ID, amount: 25000 } });
+    const res = await worker.fetch(
+      new Request('https://api.profitku.my.id/webhook/sumopod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-webhook-token': 'wh_tok_test' },
+        body: rawBody,
+      }),
+      envDeny,
+    );
+    expect(res.status).toBe(401);
   });
 });
 

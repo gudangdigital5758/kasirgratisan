@@ -4,7 +4,7 @@
  */
 import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
-import { runDunningCron } from '../lib/lifecycle';
+import { runDunningCron, flagStalePendingPayments } from '../lib/lifecycle';
 import { cleanupExpiredBackups } from '../lib/backups';
 
 const cronRoutes = new Hono<AppEnv>();
@@ -32,6 +32,19 @@ cronRoutes.post('/cron/cleanup-backups', async (c: AppContext) => {
     return c.json({ error: 'WEBHOOK_SECRET wajib di production' }, 403);
   }
   const result = await cleanupExpiredBackups(c.env, 30);
+  return c.json({ ok: true, ...result });
+});
+
+/** Cron manual / admin: deteksi payment PENDING menggantung (> 48 jam) */
+cronRoutes.post('/cron/stale-pending', async (c: AppContext) => {
+  const secret = c.env.WEBHOOK_SECRET;
+  if (secret) {
+    const hdr = c.req.header('x-cron-secret') || c.req.header('x-webhook-secret');
+    if (hdr !== secret) return c.json({ error: 'Unauthorized' }, 401);
+  } else if ((c.env.PAYMENT_PROVIDER || 'mock') !== 'mock' || c.env.ENVIRONMENT === 'production') {
+    return c.json({ error: 'WEBHOOK_SECRET wajib di production' }, 403);
+  }
+  const result = await flagStalePendingPayments(c.env);
   return c.json({ ok: true, ...result });
 });
 

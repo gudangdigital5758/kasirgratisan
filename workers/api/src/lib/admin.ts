@@ -116,6 +116,7 @@ export async function writeEvent(
     message?: string;
     actorUserId?: string | null;
     subjectUserId?: string | null;
+    requestId?: string | null;
     payload?: Record<string, unknown>;
   },
 ): Promise<void> {
@@ -127,6 +128,7 @@ export async function writeEvent(
       message: event.message ?? null,
       actor_user_id: event.actorUserId ?? null,
       subject_user_id: event.subjectUserId ?? null,
+      request_id: event.requestId ?? null,
       payload: event.payload ?? {},
     });
   } catch (err) {

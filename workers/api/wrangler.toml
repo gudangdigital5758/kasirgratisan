@@ -22,6 +22,8 @@ SYNC_ENABLED = "true"
 #          ONESIGNAL_APP_ID | ONESIGNAL_REST_API_KEY | ADMIN_EMAILS | ADMIN_ORIGIN
 #          PAYMENT_PROVIDER | MIDTRANS_SERVER_KEY | MIDTRANS_IS_PRODUCTION
 #          SUMOPOD_API_KEY | SUMOPOD_WEBHOOK_SECRET | SUMOPOD_WEBHOOK_TOKEN
+#          SUMOPOD_ALLOW_TOKEN_FALLBACK ("false" → Svix-only webhook, SEC-012)
+#          AUTO_FAIL_STALE_PENDING ("true" → cron stale-pending menandai FAILED)
 
 # Rate limit lintas-isolate (SEC-002) — dibuat via `wrangler kv namespace create RATE_LIMIT_KV`
 [[kv_namespaces]]

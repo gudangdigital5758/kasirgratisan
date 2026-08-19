@@ -51,4 +51,10 @@ export interface Env {
   SUMOPOD_WEBHOOK_SECRET?: string;
   /** SumoPod webhook token (whtok_...) — alternatif verifikasi sederhana. */
   SUMOPOD_WEBHOOK_TOKEN?: string;
+  /** "false" → tolak webhook SumoPod tanpa signature Svix valid (SEC-012).
+   *  Default: fallback token tetap diizinkan (backward-compat); produksi
+   *  disarankan "false" setelah pengiriman Svix terverifikasi di dashboard. */
+  SUMOPOD_ALLOW_TOKEN_FALLBACK?: string;
+  /** "true" → cron stale-pending otomatis menandai FAILED (default: alert saja). */
+  AUTO_FAIL_STALE_PENDING?: string;
 }

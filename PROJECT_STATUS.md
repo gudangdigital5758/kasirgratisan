@@ -78,3 +78,10 @@ Item di atas ditandai hanya dengan evidence source code/migrations/tests/config.
 - Ambiguity sweep: **SELESAI** - 32 function billing diperiksa; hanya FUL-001 + FUL-007 confirmed (keduanya fixed di repo); sisanya SAFE.
 - Worker tests: 55/55 x3, typecheck clean, secret scan bersih.
 - Local verification (2026-08-18): harness DB 3x PASS (embedded Postgres 18/UTF8; 21 asersi A-H, 0 FAIL; 1 run tanpa output = artefak tooling lokal port-5432, bukan repo). Fix dibuktikan pure rename via `scripts/verify-raw-rename.mjs`. Worker 55/55 x3, typecheck clean, lint 0 error.
+
+## FUL-010 — SUMOPOD STATUS ENDPOINT INVALID (2026-08-18)
+- Root cause: `getSumopodPaymentStatus` memanggil `GET /api-pay.sumopod.com/api/v1/payments/{orderId}` yang **tidak terdaftar** (404 `page not found` dengan key valid; hanya `POST /api/v1/payments` terbukti). Akibat: polling verify SumoPod tidak pernah sukses; error ditelan → PENDING menggantung tanpa jalur pulih; kontributor pola 9 PENDING (FUL-008).
+- Status repository hardening: **DONE (repo)** — webhook amount wajib + dedupe event + audit trail platform_events + gate token fallback (SEC-012) + verifikasi error tercatat + cron stale-pending alert (default non-destruktif). Test worker 63/63 x3 (2026-08-18).
+- Status endpoint fix: **BLOCKED** — butuh dokumentasi endpoint status dari dashboard merchant SumoPod (satu-satunya sumber otoritatif); tidak ada docs publik. Tanpa itu, tidak ada path yang benar untuk diverifikasi.
+- FUL-009 (status 2 payment): tetap **BLOCKED** sampai endpoint benar + SUMOPOD_API_KEY tersedia lokal.
+- Worker tests: 63/63 x3, typecheck clean, lint 0 error (2026-08-18). Production function tidak diubah.

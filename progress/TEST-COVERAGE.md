@@ -4,7 +4,7 @@ Status: **BASELINE + WORKER TESTS + INTEGRATION** (2026-08-17: root 26 file/132 
 
 ## Worker API (2026-08-17 — TST-001/002 + env guards + payout + rate limit + voucher)
 
-Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock. Total: 8 file / 55 test.
+Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node env) + `worker.fetch()` dengan env & fetch Supabase di-mock. Total: 10 file / 63 test (2026-08-18: +8 test hardening FUL-010).
 
 | File | Test | Cakupan |
 |---|---|---|
@@ -16,6 +16,10 @@ Jalankan: `cd workers/api && npm test` (masuk CI api job). Infra: vitest (node e
 | `tests/affiliate-payout.test.ts` | 3 | BILL-004: RPC `fn_affiliate_payout_create` dipanggil dengan semua komisi & tanpa insert langsung; periode existing → skipped; RPC skipped → tidak dihitung |
 | `tests/rate-limit.test.ts` | 4 | SEC-002: KV fixed-window (blokir setelah max, bucket reset, key terpisah), fallback in-memory |
 | `tests/vouchers.test.ts` | 20 | computeEffect (percent/free_days/lifetime, clamp), periode (extend dari period_end, lifetime, duration), validateVoucherForUser (nonaktif, window waktu, plan mismatch, kuota, max_per_user, first_time_only, valid), recordRedemption payload |
+| `tests/verify-payment.test.ts` | 1 | 2026-08-18: `GET /api/payments/verify/:id` SumoPod saat status lookup gagal → tetap PENDING + `payment.verify_sumopod_error` tercatat (FUL-010 hardening) |
+| `tests/cron-stale.test.ts` | 3 | 2026-08-18 `POST /api/cron/stale-pending`: default alert-only non-destruktif, `AUTO_FAIL_STALE_PENDING=true` → FAILED, production tanpa secret → 403 |
+
+**Hardening FUL-010 (2026-08-18, repo):** webhook SumoPod kini (a) wajib `amount` pada event paid (fail-closed 400), (b) dedupe event via `request_id` (svix-id/body.id) sebelum fulfill, (c) audit trail `webhook.sumopod` ke `platform_events` (menutup gap FUL-008), (d) gate SEC-012 `SUMOPOD_ALLOW_TOKEN_FALLBACK=false` (default backward-compat + warn), dan (e) verifyPayment SumoPod mencatat error status-lookup ke platform_events. Cron `flagStalePendingPayments` (deteksi PENDING >48 jam, alert-only default). Test `team-login` rate-limit diberi timeout 30s (flake FUL-002: 11× PBKDF2 >5s default vitest pada mesin lambat).
 
 ## DB integration (TST-002 — concurrency RPC SQL)
 

@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import type { AppEnv, AppContext } from './helpers';
 import { requireUser, resolveOwnedStoreId } from './helpers';
 import { sbGet, sbPost, sbPatch } from '../lib/supabase';
+import { writeEvent } from '../lib/admin';
 import { notifySubscriptionActivated } from '../lib/lifecycle';
 import { fulfillCompletedPayment } from '../lib/payments';
 import {
@@ -846,8 +847,17 @@ paymentsRoutes.post('/payments/verify/:id', async (c: AppContext) => {
       try {
         st = await getSumopodPaymentStatus(c.env, id);
       } catch (err) {
-        // API sementara tidak bisa dihubungi — jangan gagalkan polling, biarkan PENDING.
+        // FUL-010: endpoint status SumoPod belum tersedia/dikenal — jangan gagalkan
+        // polling (tetap PENDING), TAPI catat ke platform_events agar tidak hilang
+        // diam-diam (gap FUL-008).
         console.warn('[verify sumopod] status lookup', err);
+        await writeEvent(c.env, {
+          level: 'warn',
+          type: 'payment.verify_sumopod_error',
+          source: 'api',
+          subjectUserId: userId,
+          payload: { paymentId: id, error: err instanceof Error ? err.message : 'status_lookup_failed' },
+        });
         return c.json({
           message: 'Menunggu pembayaran',
           transaction: { id, status: 'PENDING' },

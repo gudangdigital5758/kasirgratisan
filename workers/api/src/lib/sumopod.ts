@@ -123,7 +123,12 @@ export async function verifySumopodSignature(
   return signatures.some((s) => s === expected);
 }
 
-/** Verifikasi alternatif sederhana: header X-Webhook-Token. */
+/**
+ * Verifikasi alternatif sederhana: header X-Webhook-Token.
+ * SEC-012: gunakan hanya bila SUMOPOD_ALLOW_TOKEN_FALLBACK !== 'false'
+ * (default true = backward-compat; produksi disarankan "false" setelah Svix
+ * terverifikasi). Keputusan gate ada di pemanggil (index.ts webhook handler).
+ */
 export function verifySumopodToken(env: Env, token?: string | null): boolean {
   const expected = env.SUMOPOD_WEBHOOK_TOKEN || '';
   return Boolean(expected && token && token === expected);

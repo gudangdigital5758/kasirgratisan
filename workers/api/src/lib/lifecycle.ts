@@ -6,7 +6,8 @@
 
 import type { Env } from '../env';
 import { sendEmail, sendPush, sendWhatsApp } from './notify';
-import { sbGet, sbPost } from './supabase';
+import { sbGet, sbPatch, sbPost } from './supabase';
+import { writeEvent } from './admin';
 import { isDunningEnabled } from './platform-settings';
 
 const APP = 'https://profitku.my.id';
@@ -312,4 +313,64 @@ export async function runDunningCron(env: Env): Promise<{ checked: number; sent:
   }
 
   return { checked: subs.length, sent };
+}
+
+/**
+ * Cron harian: deteksi payment PENDING yang menggantung (> 48 jam) — menutup
+ * gap FUL-008/FUL-010 (payment hanya selesai via webhook; tanpa jalur pulih).
+ * Default: NON-DESTRUKTIF — hanya menulis alert ke platform_events.
+ * AUTO_FAIL_STALE_PENDING=true → tandai FAILED (opsional, keputusan ops).
+ */
+export async function flagStalePendingPayments(
+  env: Env,
+): Promise<{ checked: number; alerted: number; failed: number }> {
+  const result = { checked: 0, alerted: 0, failed: 0 };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('[stale-pending] Supabase belum dikonfigurasi — skip');
+    return result;
+  }
+
+  const cutoff = new Date(Date.now() - 48 * 3600 * 1000);
+  const autoFail = env.AUTO_FAIL_STALE_PENDING === 'true';
+
+  type Row = {
+    id: string;
+    user_id: string;
+    amount: number;
+    provider: string | null;
+    created_at: string;
+  };
+  const rows = await sbGet<Row[]>(
+    env,
+    `payments?status=eq.PENDING&created_at=lt.${cutoff.toISOString()}&select=id,user_id,amount,provider,created_at&limit=200`,
+  ).catch(() => [] as Row[]);
+  result.checked = rows.length;
+
+  for (const p of rows) {
+    const ageHours = Math.round((Date.now() - new Date(p.created_at).getTime()) / 3600000);
+    await writeEvent(env, {
+      level: 'warn',
+      type: 'payment.stale_pending',
+      source: 'cron',
+      subjectUserId: p.user_id,
+      payload: {
+        paymentId: p.id,
+        amount: p.amount,
+        provider: p.provider,
+        ageHours,
+        autoFailed: autoFail,
+      },
+    });
+    result.alerted += 1;
+
+    if (autoFail) {
+      await sbPatch(env, `payments?id=eq.${p.id}`, {
+        status: 'FAILED',
+        raw: { stalePending: { flaggedAt: new Date().toISOString(), autoFailed: true } },
+      }).catch(() => undefined);
+      result.failed += 1;
+    }
+  }
+
+  return result;
 }

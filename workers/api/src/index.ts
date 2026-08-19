@@ -27,7 +27,7 @@ import type { Env } from './env';
 import { getUserFromJwt, sbGet, sbPatch } from './lib/supabase';
 import { sendEmail } from './lib/notify';
 import { r2Configured, cleanupExpiredBackups, cleanupQuotaReservations } from './lib/backups';
-import { runDunningCron } from './lib/lifecycle';
+import { runDunningCron, flagStalePendingPayments } from './lib/lifecycle';
 import { resolveAdmin, writeEvent } from './lib/admin';
 import { isMaintenanceMode } from './lib/platform-settings';
 import { rateLimit, rateLimitKey, type RateLimitKv } from './lib/rate-limit';
@@ -519,10 +519,23 @@ app.post('/webhook/sumopod', async (c) => {
     rawBody,
   });
   const tokOk = verifySumopodToken(c.env, token);
+  // SEC-012: fallback token hanya boleh dipakai bila eksplisit diizinkan.
+  const tokenFallbackAllowed = c.env.SUMOPOD_ALLOW_TOKEN_FALLBACK !== 'false';
+  if (!sigOk && tokOk && !tokenFallbackAllowed) {
+    console.warn('[sumopod-webhook] token fallback ditolak (SUMOPOD_ALLOW_TOKEN_FALLBACK=false)', orderId);
+    return c.json({ error: 'invalid signature' }, 401);
+  }
+  if (!sigOk && tokOk) {
+    // Backward-compat: fallback masih dipakai — catat agar bisa dimatikan setelah Svix terverifikasi.
+    console.warn('[sumopod-webhook] token fallback dipakai (SEC-012) — set SUMOPOD_ALLOW_TOKEN_FALLBACK=false bila Svix aktif', orderId);
+  }
   if (!sigOk && !tokOk) {
     console.warn('[sumopod-webhook] invalid signature', orderId);
     return c.json({ error: 'invalid signature' }, 401);
   }
+
+  // Id unik event untuk dedupe + audit trail (gap FUL-008).
+  const eventId = String(body.id || body.event_id || svixId || `${eventType}:${orderId}`);
 
   try {
      type Pay = {
@@ -568,6 +581,13 @@ app.post('/webhook/sumopod', async (c) => {
     const pay = pays[0];
     if (!pay) {
       console.warn('[sumopod-webhook] payment not found', orderId);
+      await writeEvent(c.env, {
+        level: 'warn',
+        type: 'webhook.sumopod',
+        source: 'sumopod',
+        requestId: eventId,
+        payload: { orderId, eventType, action: 'unknown_order' },
+      });
       return c.json({ ok: true, skipped: 'unknown_order' });
     }
 
@@ -575,9 +595,55 @@ app.post('/webhook/sumopod', async (c) => {
       return c.json({ ok: true, skipped: 'provider_mismatch' });
     }
 
+    // Dedupe: event id yang sama tidak diproses dua kali (guard tambahan di atas
+    // idempotency RPC alreadyDone). Bila lookup gagal, lanjutkan (tidak memblokir).
+    const existingEvt = await sbGet<{ id: string }[]>(
+      c.env,
+      `platform_events?request_id=eq.${encodeURIComponent(eventId)}&select=id&limit=1`,
+    ).catch(() => [] as { id: string }[]);
+    if (existingEvt[0]) {
+      console.warn('[sumopod-webhook] duplicate event', eventId);
+      return c.json({ ok: true, skipped: 'duplicate_event' });
+    }
+    await writeEvent(c.env, {
+      type: 'webhook.sumopod',
+      source: 'sumopod',
+      subjectUserId: pay.user_id,
+      requestId: eventId,
+      payload: {
+        paymentId: pay.id,
+        orderId,
+        eventType,
+        amount: Number.isFinite(Number(data.amount ?? data.gross_amount ?? data.paid_amount))
+          ? Number(data.amount ?? data.gross_amount ?? data.paid_amount)
+          : null,
+      },
+    });
+
     const eventAmount = Number(data.amount ?? data.gross_amount ?? data.paid_amount);
-    if (isSumopodPaidEvent(eventType) && Number.isFinite(eventAmount) && Math.round(eventAmount) !== Number(pay.amount)) {
+    // Fail-closed: event paid WAJIB membawa nominal (bila field amount tidak ada).
+    if (isSumopodPaidEvent(eventType) && !Number.isFinite(eventAmount)) {
+      console.warn('[sumopod-webhook] paid event tanpa amount', orderId);
+      await writeEvent(c.env, {
+        level: 'error',
+        type: 'webhook.sumopod',
+        source: 'sumopod',
+        subjectUserId: pay.user_id,
+        requestId: eventId,
+        payload: { paymentId: pay.id, orderId, eventType, error: 'payment amount missing' },
+      });
+      return c.json({ error: 'payment amount missing' }, 400);
+    }
+    if (isSumopodPaidEvent(eventType) && Math.round(eventAmount) !== Number(pay.amount)) {
       console.warn('[sumopod-webhook] amount mismatch', orderId, eventAmount, pay.amount);
+      await writeEvent(c.env, {
+        level: 'error',
+        type: 'webhook.sumopod',
+        source: 'sumopod',
+        subjectUserId: pay.user_id,
+        requestId: eventId,
+        payload: { paymentId: pay.id, orderId, eventType, eventAmount, payAmount: pay.amount, error: 'amount_mismatch' },
+      });
       return c.json({ error: 'payment amount mismatch' }, 400);
     }
 
@@ -597,6 +663,13 @@ app.post('/webhook/sumopod', async (c) => {
         await sbPatch(c.env, `payments?id=eq.${pay.id}`, {
           status: 'FAILED',
           raw: { ...(pay.raw || {}), sumopod: { eventType, data } },
+        });
+        await writeEvent(c.env, {
+          type: 'webhook.sumopod',
+          source: 'sumopod',
+          subjectUserId: pay.user_id,
+          requestId: eventId,
+          payload: { paymentId: pay.id, orderId, eventType, action: 'failed' },
         });
       }
       return c.json({ ok: true, status: 'FAILED' });
@@ -636,6 +709,10 @@ export default {
         // hanya memproses bila periode bulan sebelumnya belum punya baris.
         runMonthlyPayouts(env).then((r) => {
           console.log('[cron affiliate-payout]', JSON.stringify(r));
+        }),
+        // Deteksi payment PENDING menggantung (>48 jam) — alert, bukan auto-repair.
+        flagStalePendingPayments(env).then((r) => {
+          console.log('[cron stale-pending]', r);
         }),
       ]),
     );

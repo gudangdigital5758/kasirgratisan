@@ -136,6 +136,8 @@ describe('POST /api/team/login (PIN PBKDF2 — SEC-001)', () => {
   });
 
   it('rate limit login: 10/menit/IP, percobaan ke-11 → 429', async () => {
+    // 11 login PBKDF2 (210k iterasi) sequential — butuh budget lebih dari
+    // timeout default vitest 5s di mesin lambat (flake FUL-002).
     const { hashPin } = await import('../src/lib/pin');
     const pbkdf2Hash = await hashPin('1234', MEMBER_ID);
     stubSupabase((url, init) => {
@@ -153,6 +155,6 @@ describe('POST /api/team/login (PIN PBKDF2 — SEC-001)', () => {
       lastStatus = (await loginRequest(ip, '1234')).status;
     }
     expect(lastStatus).toBe(429);
-  });
+  }, 30_000);
 });
 
