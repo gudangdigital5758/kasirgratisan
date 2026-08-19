@@ -339,10 +339,11 @@ export async function flagStalePendingPayments(
     amount: number;
     provider: string | null;
     created_at: string;
+    raw?: Record<string, unknown> | null;
   };
   const rows = await sbGet<Row[]>(
     env,
-    `payments?status=eq.PENDING&created_at=lt.${cutoff.toISOString()}&select=id,user_id,amount,provider,created_at&limit=200`,
+    `payments?status=eq.PENDING&created_at=lt.${cutoff.toISOString()}&select=id,user_id,amount,provider,created_at,raw&limit=200`,
   ).catch(() => [] as Row[]);
   result.checked = rows.length;
 
@@ -366,7 +367,7 @@ export async function flagStalePendingPayments(
     if (autoFail) {
       await sbPatch(env, `payments?id=eq.${p.id}`, {
         status: 'FAILED',
-        raw: { stalePending: { flaggedAt: new Date().toISOString(), autoFailed: true } },
+        raw: { ...(p.raw || {}), stalePending: { flaggedAt: new Date().toISOString(), autoFailed: true } },
       }).catch(() => undefined);
       result.failed += 1;
     }
