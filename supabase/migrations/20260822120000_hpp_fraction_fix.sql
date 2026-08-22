@@ -1,5 +1,6 @@
--- FIX HPP DESIMAL (audit 2026-08-22) - STATUS: MENUNGGU APPROVAL USER.
--- JANGAN eksekusi ke Supabase produksi sebelum disetujui.
+-- FIX HPP DESIMAL (audit 2026-08-22) - STATUS: DIEKSEKUSI ke produksi 2026-08-22
+-- (via Supabase Management API; verifikasi pasca: kedua RPC memuat round(),
+--  sisa products pecahan = 0; pre-count juga 0). Idempotent -- aman re-run.
 --
 -- Latar: nilai pecahan (mis. 10333.567) sempat lolos tersimpan di
 -- sync_records.data (jsonb). Worker kini memvalidasi & membulatkan di trust
