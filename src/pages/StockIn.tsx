@@ -61,7 +61,7 @@ export default function StockInPage() {
 
   const handleSave = async () => {
     const qty = Number(quantity);
-    const price = Number(buyPrice);
+    const price = Math.round(Number(buyPrice) || 0);
     if (!productId || !supplierId || qty <= 0 || price <= 0) {
       toast.error(t('stockIn.toast.fillAll'));
       return;

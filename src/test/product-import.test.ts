@@ -26,14 +26,17 @@ describe('product import — cleanNumber', () => {
   it('handles Rp, spaces and mixed separators', () => {
     expect(cleanNumber('Rp 10.000')).toBe(10000);
     expect(cleanNumber('10,000')).toBe(10000);
-    expect(cleanNumber('1.234,56')).toBeCloseTo(1234.56, 2);
-    expect(cleanNumber('1,234.56')).toBeCloseTo(1234.56, 2);
+    // Semantik baru: hasil selalu integer (half-up) — harga/HPP tidak boleh desimal.
+    expect(cleanNumber('1.234,56')).toBe(1235);
+    expect(cleanNumber('1,234.56')).toBe(1235);
     expect(cleanNumber('1.234.567')).toBe(1234567);
-    expect(cleanNumber('1.234.567,89')).toBeCloseTo(1234567.89, 2);
-    expect(cleanNumber('12.5')).toBeCloseTo(12.5, 2);
-    expect(cleanNumber('12,50')).toBeCloseTo(12.5, 2);
+    expect(cleanNumber('1.234.567,89')).toBe(1234568);
+    expect(cleanNumber('12.5')).toBe(13);
+    expect(cleanNumber('12,50')).toBe(13);
     expect(cleanNumber('1.234')).toBe(1234);
     expect(cleanNumber('  Rp 15.000  ')).toBe(15000);
+    // Kasus bug laporan: '10.333,567' harus menjadi 10334, bukan 10333567.
+    expect(cleanNumber('10.333,567')).toBe(10334);
   });
 
   it('plain integers parse directly', () => {

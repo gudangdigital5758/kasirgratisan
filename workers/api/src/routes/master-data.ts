@@ -9,6 +9,7 @@ import type { AppEnv, AppContext } from './helpers';
 import { requireActiveSubscription, requireMenu, requireUser } from './helpers';
 import { sbGet, sbPatch, sbPost, SupabaseError } from '../lib/supabase';
 import { writeEvent } from '../lib/admin';
+import { toRupiah } from '../lib/money';
 
 const masterRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -88,13 +89,13 @@ masterRoutes.post('/products', async (c: AppContext) => {
 
   const name = String(body.name ?? '').trim().slice(0, 120);
   const sku = String(body.sku ?? '').trim().slice(0, 60);
-  const price = Number(body.price);
-  const hpp = Number(body.hpp);
+  const price = toRupiah(body.price);
+  const hpp = toRupiah(body.hpp);
   const unit = String(body.unit ?? '').trim().slice(0, 20) || 'pcs';
   if (!name) return c.json({ error: 'Nama produk wajib' }, 400);
   if (!sku) return c.json({ error: 'SKU wajib & unik' }, 400);
-  if (!Number.isFinite(price) || price < 0) return c.json({ error: 'Harga jual tidak valid' }, 400);
-  if (!Number.isFinite(hpp) || hpp < 0) return c.json({ error: 'Harga pokok tidak valid' }, 400);
+  if (price === null) return c.json({ error: 'Harga jual tidak valid' }, 400);
+  if (hpp === null) return c.json({ error: 'Harga pokok tidak valid' }, 400);
   const categorySyncId = body.categorySyncId && UUID_RE.test(body.categorySyncId) ? body.categorySyncId : null;
   const iso = new Date().toISOString();
   const syncId = crypto.randomUUID();
@@ -192,13 +193,13 @@ masterRoutes.patch('/products/:syncId', async (c: AppContext) => {
       patch['sku'] = sku;
     }
     if (body.price !== undefined) {
-      const price = Number(body.price);
-      if (!Number.isFinite(price) || price < 0) return c.json({ error: 'Harga jual tidak valid' }, 400);
+      const price = toRupiah(body.price);
+      if (price === null) return c.json({ error: 'Harga jual tidak valid' }, 400);
       patch['price'] = price;
     }
     if (body.hpp !== undefined) {
-      const hpp = Number(body.hpp);
-      if (!Number.isFinite(hpp) || hpp < 0) return c.json({ error: 'Harga pokok tidak valid' }, 400);
+      const hpp = toRupiah(body.hpp);
+      if (hpp === null) return c.json({ error: 'Harga pokok tidak valid' }, 400);
       patch['hpp'] = hpp;
     }
     if (body.unit !== undefined) {

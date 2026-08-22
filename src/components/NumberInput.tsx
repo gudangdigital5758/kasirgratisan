@@ -36,13 +36,14 @@ const formatDecimal = (raw: string, locale: string) => {
  * raw dot-decimal. Mengembalikan '' bila tidak ada digit sama sekali.
  */
 const parseDecimal = (input: string): string => {
-  const cleaned = input.replace(/[^\d,]/g, ''); // buang titik ribuan & karakter lain
-  if (!cleaned.includes(',')) return cleaned.replace(/,/g, '');
+  // Format ID: titik = ribuan (dibuang), koma = desimal (hanya yang pertama).
+  const cleaned = input.replace(/[^\d,]/g, '');
+  if (!/\d/.test(cleaned)) return ''; // string kosong / tanpa digit sama sekali
   const firstComma = cleaned.indexOf(',');
+  if (firstComma < 0) return cleaned;
   const intPart = cleaned.slice(0, firstComma);
-  const decPart = cleaned.slice(firstComma + 1).replace(/,/g, ''); // koma tambahan diabaikan
-  if (intPart === '' && decPart === '') return '';
-  return `${intPart}.${decPart}`; // mis. "12.", "12.5", ".5"
+  const decPart = cleaned.slice(firstComma + 1).replace(/,/g, ''); // koma ganda diabaikan
+  return `${intPart || '0'}.${decPart}`; // ",5" -> "0.5"; "12," -> "12."; "12,3,4" -> "12.34"
 };
 
 /**

@@ -56,6 +56,7 @@ export interface ImportValidationContext {
 /**
  * Parsing angka dari string Excel: menangani "Rp", spasi, pemisah ribuan
  * (titik/koma) dan desimal. Mengembalikan -1 bila tidak bisa diparsing.
+ * Hasil selalu integer (half-up) — harga/HPP/stok tidak boleh desimal.
  *
  * Aturan disambiguasi:
  * - Bila ada titik DAN koma → separator terakhir = desimal, sisanya ribuan.
@@ -106,7 +107,7 @@ export function cleanNumber(val: string): number {
   // separator lain setelah konversi desimal.
 
   const parsed = Number(normalized);
-  return isNaN(parsed) ? -1 : parsed;
+  return isNaN(parsed) ? -1 : Math.round(parsed);
 }
 
 /** Parsing kolom "Kelola Stok": default true; kata kunci negatif → false. */

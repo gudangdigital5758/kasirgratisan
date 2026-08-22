@@ -9,6 +9,7 @@ import type { AppEnv, AppContext } from './helpers';
 import { requireActiveSubscription, requireMenu, requireUser } from './helpers';
 import { sbGet, sbPatch, sbPost, SupabaseError } from '../lib/supabase';
 import { writeEvent } from '../lib/admin';
+import { toRupiah } from '../lib/money';
 
 const financeRoutes = new Hono<AppEnv>();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -276,8 +277,8 @@ financeRoutes.post('/finance/stock', async (c: AppContext) => {
   if (!UUID_RE.test(productSyncId)) return c.json({ error: 'Produk tidak valid' }, 400);
   const qty = Number(body.qty);
   if (!Number.isFinite(qty) || qty <= 0 || qty > 99999) return c.json({ error: 'Jumlah harus 1-99999' }, 400);
-  const buyPrice = Number(body.buyPrice);
-  if (type === 'in' && (!Number.isFinite(buyPrice) || buyPrice < 0)) {
+  const buyPrice = toRupiah(body.buyPrice);
+  if (type === 'in' && buyPrice === null) {
     return c.json({ error: 'Harga beli tidak valid' }, 400);
   }
   try {
@@ -339,8 +340,8 @@ financeRoutes.post('/finance/shifts/open', async (c: AppContext) => {
   if (guard) return guard;
   const subGuard = await requireActiveSubscription(c, storeId);
   if (subGuard) return subGuard;
-  const openingCash = Number(body.openingCash);
-  if (!Number.isFinite(openingCash) || openingCash < 0) {
+  const openingCash = toRupiah(body.openingCash);
+  if (openingCash === null) {
     return c.json({ error: 'Uang awal tidak valid' }, 400);
   }
   const iso = new Date().toISOString();
@@ -399,8 +400,8 @@ financeRoutes.post('/finance/shifts/:syncId/close', async (c: AppContext) => {
   const subGuard = await requireActiveSubscription(c, storeId);
   if (subGuard) return subGuard;
   if (!UUID_RE.test(syncId)) return c.json({ error: 'syncId tidak valid' }, 400);
-  const closingCash = Number(body.closingCash);
-  if (!Number.isFinite(closingCash) || closingCash < 0) {
+  const closingCash = toRupiah(body.closingCash);
+  if (closingCash === null) {
     return c.json({ error: 'Uang tunai akhir tidak valid' }, 400);
   }
   try {
